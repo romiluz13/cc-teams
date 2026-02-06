@@ -73,6 +73,8 @@ These are loaded automatically by the lead's SKILL_HINTS mechanism. You don't ne
 ## Complementary Skills (Work Together with CC100x)
 
 **Add to `~/.claude/CLAUDE.md`:**
+```markdown
+## Complementary Skills (Work Together with CC100x)
 
 **Skills are additive, not exclusive.** CC100x provides orchestration. Domain skills provide expertise. Both work together.
 
@@ -83,7 +85,12 @@ These are loaded automatically by the lead's SKILL_HINTS mechanism. You don't ne
 | MongoDB, schema, queries, indexes | `mongodb-agent-skills:mongodb-schema-design` or `mongodb-query-and-index-optimize` |
 | React, Next.js, frontend, UI | `react-best-practices` |
 
-**To add your own skills:** Add rows to the table above. Run `/help` to see all available skills.
+[Skills Index]
+|mongodb-agent-skills:{mongodb-schema-design/SKILL.md,mongodb-query-and-index-optimize/SKILL.md}
+|vercel-agent-skills:{react-best-practices/SKILL.md}
+```
+
+**To add your own skills:** Add rows to the table and Skills Index above. Run `/help` to see all available skills.
 ```
 
 ---
