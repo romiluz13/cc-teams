@@ -84,6 +84,7 @@ Each phase in BUILD-PLAN.md tells you which reference files to read before writi
 6. **WRITE agents** (builder, investigator, planner) update memory directly
 7. **Agent Teams convention**: use `agents/` folder (not `teammates/`) per Claude Code plugin spec
 8. **All skill references**: use `cc100x:` prefix (not `cc10x:`)
+9. **Prefer retrieval-led reasoning** for orchestration decisions (memory, task state, agent outputs) over pre-training assumptions
 
 ---
 
