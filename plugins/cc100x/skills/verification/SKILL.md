@@ -261,7 +261,7 @@ Goal check: All boxes checked?
 ```
 
 ### When to Apply
-- After integration-verifier runs
+- After verifier runs
 - After any "feature complete" claim
 - Before marking BUILD workflow as done
 

@@ -273,7 +273,7 @@ When merging findings across reviewers:
 | Post-build review | Yes | - |
 | Quick check (< 50 lines) | No | Single quality-reviewer |
 | Security-critical code only | No | Single security-reviewer |
-| Post-remediation re-review | Abbreviated (quality only) | - |
+| Post-remediation re-review | Yes (full arena) | - |
 
 ---
 

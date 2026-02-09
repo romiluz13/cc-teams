@@ -147,7 +147,7 @@ TaskCreate({
 **Where Your Input Helps:**
 - [Flag any uncertain decisions - "Not sure if X should use Y or Z - went with Y"]
 - [Flag any scope questions - "Interpreted 'fast' as <100ms - correct?"]
-**What's Next:** Hunter scans for silent failures, verifier runs E2E tests. If critical issues found, we'll fix before workflow completes.
+**What's Next:** Hunter scans for silent failures, then full Review Arena (security/performance/quality + challenge) runs, then verifier executes E2E tests. If critical issues are found, we'll fix before workflow completes.
 
 ### TDD Evidence (REQUIRED)
 **RED Phase:**

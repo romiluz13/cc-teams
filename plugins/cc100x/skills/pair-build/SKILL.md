@@ -1,13 +1,13 @@
 ---
 name: pair-build
-description: "Real-time pair programming using Agent Teams. Builder implements with live reviewer feedback, then hunter and verifier run final checks."
+description: "Real-time pair programming using Agent Teams. Builder implements with live reviewer feedback, then hunter, full Review Arena, and verifier enforce post-build quality."
 ---
 
 # Pair Build Protocol
 
 ## Overview
 
-Pair Build creates a real-time pair programming experience. The Builder implements code module by module, pausing after each to get feedback from the Live Reviewer. After implementation, the Hunter scans for silent failures and the Verifier runs E2E tests.
+Pair Build creates a real-time pair programming experience. The Builder implements code module by module, pausing after each to get feedback from the Live Reviewer. After implementation, the Hunter scans for silent failures, then a full Review Arena (security/performance/quality + challenge) runs before the Verifier executes E2E checks.
 
 **Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
 
@@ -38,7 +38,10 @@ Implement fresh from tests. Period.
 | **builder** | Implements code using TDD | READ+WRITE | Phase 1 (entire implementation) |
 | **live-reviewer** | Reviews in real-time as builder works | READ-ONLY | Phase 1 (alongside builder) |
 | **hunter** | Scans for silent failures | READ-ONLY | Phase 2 (after builder completes) |
-| **verifier** | Runs E2E verification | READ-ONLY | Phase 3 (after hunter completes) |
+| **security-reviewer** | Full post-build security review | READ-ONLY | Phase 3 (after hunter completes) |
+| **performance-reviewer** | Full post-build performance review | READ-ONLY | Phase 3 (after hunter completes) |
+| **quality-reviewer** | Full post-build quality review | READ-ONLY | Phase 3 (after hunter completes) |
+| **verifier** | Runs E2E verification | READ-ONLY | Phase 4 (after review challenge) |
 
 **File ownership:** ONLY the builder edits files. All other teammates are READ-ONLY.
 
@@ -171,15 +174,30 @@ Hunter scans the entire implementation for:
 
 **If CRITICAL issues found:** Lead creates remediation task for builder.
 
-### Phase 3: E2E Verification (Verifier)
+### Phase 3: Comprehensive Review Arena (Security + Performance + Quality)
 
 **Starts after hunter completes.**
+
+Run a full review gate (not live-review quick checks):
+
+1. Spawn security-reviewer, performance-reviewer, and quality-reviewer in parallel
+2. Each reviewer performs full-stage review with Router Contract output
+3. Lead runs challenge round and merges a unified verdict
+4. If any CRITICAL issues remain, route remediation before verification
+
+**Why this gate exists:** Live-reviewer is intentionally focused and fast. This phase restores full multi-dimensional depth before ship decisions.
+
+### Phase 4: E2E Verification (Verifier)
+
+**Starts after Review Arena challenge completes.**
 
 Verifier runs:
 1. All unit tests
 2. Integration tests (if available)
 3. E2E scenarios
 4. Build verification
+
+Verifier must consider findings from hunter + all reviewers.
 
 Every scenario needs PASS/FAIL with exit code evidence.
 
@@ -259,7 +277,11 @@ CC100X BUILD: {feature}
 ├── CC100X builder: Implement {feature}
 ├── CC100X live-reviewer: Real-time review (starts with builder)
 ├── CC100X hunter: Silent failure audit (blocked by builder)
-├── CC100X verifier: E2E verification (blocked by hunter)
+├── CC100X security-reviewer: Security review (blocked by hunter)
+├── CC100X performance-reviewer: Performance review (blocked by hunter)
+├── CC100X quality-reviewer: Quality review (blocked by hunter)
+├── CC100X BUILD Review Arena: Challenge round (blocked by all 3 reviewers)
+├── CC100X verifier: E2E verification (blocked by challenge round)
 └── CC100X Memory Update: Persist build learnings (blocked by verifier)
 ```
 
@@ -272,10 +294,11 @@ If hunter finds CRITICAL issues or verifier fails:
 1. Lead creates `CC100X REM-FIX: {issue}` task
 2. **Circuit breaker:** If 3+ REM-FIX tasks exist → AskUserQuestion (research/fix/skip/abort)
 3. Builder fixes the issue
-4. Abbreviated re-review (quality reviewer) + re-hunt
-5. Re-verification (affected scenarios only)
-6. If passes → proceed to Memory Update
-7. If fails again → escalate to user
+4. Full-spectrum re-review (security + performance + quality) + challenge
+5. Re-hunt for silent failures
+6. Re-verification (affected scenarios only)
+7. If passes → proceed to Memory Update
+8. If fails again → escalate to user
 
 **Code changes without re-review break orchestration integrity.**
 
@@ -307,6 +330,9 @@ At workflow end, lead collects from all teammates:
 | Builder | What was built, TDD evidence, patterns used |
 | Live Reviewer | Code quality observations, pattern adherence |
 | Hunter | Error handling patterns, silent failure risks |
+| Security Reviewer | Security risks and mitigations |
+| Performance Reviewer | Performance bottlenecks and optimizations |
+| Quality Reviewer | Correctness and maintainability findings |
 | Verifier | E2E results, integration observations |
 
 All notes merged and persisted to `.claude/cc100x/` files.

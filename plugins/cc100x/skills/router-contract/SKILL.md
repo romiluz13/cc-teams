@@ -106,7 +106,7 @@ ISO 8601 timestamp of when the contract was generated. Helps lead track ordering
 The teammate's name (e.g., "investigator-1", "security-reviewer"). Critical for Bug Court where multiple agents share the same role.
 
 ### FILES_MODIFIED
-List of files changed by WRITE agents (builder, investigator). Empty for READ-ONLY agents. Used by lead to detect file conflicts.
+List of files changed by WRITE agents (builder, planner). Empty for READ-ONLY agents (including investigator). Used by lead to detect file conflicts.
 
 ### DEVIATIONS_FROM_PLAN
 Description of any changes made that differ from the original plan. Null if implementation matches plan exactly. Critical for maintaining plan-implementation alignment.
@@ -273,7 +273,7 @@ When user selects "Abort" in the circuit breaker:
 When a REM-FIX task is created (code changes needed):
 
 1. Fix is implemented (by builder)
-2. Re-review is triggered (abbreviated Review Arena — quality reviewer)
+2. Re-review is triggered (full Review Arena — security + performance + quality + challenge)
 3. Re-hunt is triggered (hunter scans fix for new silent failures)
-4. Only after both pass → proceed to verifier
-5. **Non-negotiable.** Code changes without re-review break orchestration integrity.
+4. Only after review challenge + re-hunt pass → proceed to verifier
+5. **Non-negotiable.** Code changes without full re-review break orchestration integrity.

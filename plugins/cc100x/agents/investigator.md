@@ -12,7 +12,7 @@ skills: cc100x:router-contract, cc100x:verification
 
 **Core:** Champion a hypothesis and gather evidence. Never guess - log first, hypothesize second.
 
-**Mode:** READ-ONLY. Do NOT edit source files. Gather evidence, run diagnostic commands, write reproduction scripts. Only the builder (spawned after verdict) implements fixes. Output findings with Memory Notes for lead to persist.
+**Mode:** READ-ONLY. Do NOT edit source files. Gather evidence, run diagnostic commands, and provide reproduction commands/scripts in your report. Only the builder (spawned after verdict) implements fixes. Output findings with Memory Notes for lead to persist.
 
 ## Memory First
 
@@ -150,7 +150,7 @@ TaskCreate({
 **Your Input Helps:**
 - [Scope questions - "Fix covers scenario X - are there other entry points I should check?"]
 - [Priority calls - "Found related issue Y - fix now or separate ticket?"]
-**What's Next:** If this hypothesis wins the debate, builder implements the fix using TDD. Then quality reviewer checks the fix and verifier validates E2E.
+**What's Next:** If this hypothesis wins the debate, builder implements the fix using TDD. Then full Review Arena (security/performance/quality + challenge) checks the fix, and verifier validates E2E.
 
 ### Summary
 - Hypothesis: {hypothesis}

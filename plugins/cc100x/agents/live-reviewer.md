@@ -144,7 +144,7 @@ TaskCreate({
 **Key Observations:** [Code quality observations, pattern adherence]
 **Assumptions I Made:** [List assumptions - user can validate]
 **Your Input Helps:** [Any uncertain decisions]
-**What's Next:** Hunter scans for silent failures, verifier runs E2E tests. If critical issues found, we'll fix before workflow completes.
+**What's Next:** Hunter scans for silent failures, then a full Review Arena gate runs (security/performance/quality + challenge), and verifier runs E2E tests last. If critical issues are found, we'll fix before workflow completes.
 
 ### Modules Reviewed
 | Module | File | Verdict | Notes |

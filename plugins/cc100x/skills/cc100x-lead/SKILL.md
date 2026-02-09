@@ -38,8 +38,8 @@ description: |
 | Workflow | Protocol | Team Composition |
 |----------|----------|-----------------|
 | **REVIEW** | `cc100x:review-arena` | 3 reviewers (security, performance, quality) |
-| **DEBUG** | `cc100x:bug-court` | 2-5 investigators → builder for fix |
-| **BUILD** | `cc100x:pair-build` | Builder + Live Reviewer → Hunter → Verifier |
+| **DEBUG** | `cc100x:bug-court` | 2-5 investigators → builder fix → Review Arena (3 reviewers + challenge) → verifier |
+| **BUILD** | `cc100x:pair-build` | Builder + Live Reviewer → Hunter → Review Arena (3 reviewers + challenge) → Verifier |
 | **PLAN** | Plan Approval Mode | Single planner (mode: "plan", lead approves) |
 
 ---
@@ -207,7 +207,7 @@ Task lists can be shared across sessions via `CLAUDE_CODE_TASK_LIST_ID`. Treat T
 # 1. Parent workflow task
 TaskCreate({
   subject: "CC100X BUILD: {feature_summary}",
-  description: "User request: {request}\n\nWorkflow: BUILD (Pair Build)\nTeam: Builder + Live Reviewer → Hunter → Verifier\n\nPlan: {plan_file or 'N/A'}",
+  description: "User request: {request}\n\nWorkflow: BUILD (Pair Build)\nTeam: Builder + Live Reviewer → Hunter → Review Arena (security, performance, quality) → Verifier\n\nPlan: {plan_file or 'N/A'}",
   activeForm: "Building {feature}"
 })
 # Returns workflow_task_id
@@ -237,16 +237,52 @@ TaskCreate({
 # Returns hunter_task_id
 TaskUpdate({ taskId: hunter_task_id, addBlockedBy: [builder_task_id] })
 
-# 5. Verifier task (blocked by hunter)
+# 5. Security reviewer task (blocked by hunter)
+TaskCreate({
+  subject: "CC100X security-reviewer: Security review of build output",
+  description: "Review implementation for auth, injection, secrets, OWASP concerns, XSS/CSRF.\nUse full review standards (not live-review quick checks).\nOutput Router Contract.",
+  activeForm: "Security review"
+})
+# Returns sec_task_id
+TaskUpdate({ taskId: sec_task_id, addBlockedBy: [hunter_task_id] })
+
+# 6. Performance reviewer task (blocked by hunter)
+TaskCreate({
+  subject: "CC100X performance-reviewer: Performance review of build output",
+  description: "Review implementation for N+1 queries, loops, memory leaks, caching, bundle and API efficiency.\nUse full review standards.\nOutput Router Contract.",
+  activeForm: "Performance review"
+})
+# Returns perf_task_id
+TaskUpdate({ taskId: perf_task_id, addBlockedBy: [hunter_task_id] })
+
+# 7. Quality reviewer task (blocked by hunter)
+TaskCreate({
+  subject: "CC100X quality-reviewer: Quality review of build output",
+  description: "Review implementation for correctness, patterns, complexity, error handling, tests, maintainability.\nUse full review standards.\nOutput Router Contract.",
+  activeForm: "Quality review"
+})
+# Returns qual_task_id
+TaskUpdate({ taskId: qual_task_id, addBlockedBy: [hunter_task_id] })
+
+# 8. Build Review Arena challenge round (blocked by all 3 reviewers)
+TaskCreate({
+  subject: "CC100X BUILD Review Arena: Challenge round",
+  description: "Share each reviewer's findings with the others.\nChallenge and resolve conflicts (security wins on CRITICAL).\nMerge final review verdict for downstream verifier.",
+  activeForm: "Running build challenge round"
+})
+# Returns build_challenge_task_id
+TaskUpdate({ taskId: build_challenge_task_id, addBlockedBy: [sec_task_id, perf_task_id, qual_task_id] })
+
+# 9. Verifier task (blocked by build challenge)
 TaskCreate({
   subject: "CC100X verifier: E2E verification",
-  description: "Run tests, verify E2E functionality.\nEvery scenario needs PASS/FAIL with exit code evidence.\nConsider ALL findings from hunter.\nOutput Router Contract.",
+  description: "Run tests, verify E2E functionality.\nEvery scenario needs PASS/FAIL with exit code evidence.\nConsider ALL findings from hunter + security/performance/quality reviewers.\nOutput Router Contract.",
   activeForm: "Verifying integration"
 })
 # Returns verifier_task_id
-TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [hunter_task_id] })
+TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [build_challenge_task_id] })
 
-# 6. Memory Update task (blocked by verifier - TASK-ENFORCED)
+# 10. Memory Update task (blocked by verifier - TASK-ENFORCED)
 TaskCreate({
   subject: "CC100X Memory Update: Persist build learnings",
   description: "REQUIRED: Collect Memory Notes from ALL teammate outputs and persist to memory files.\n\n**Instructions:**\n1. Find all '### Memory Notes' sections from completed teammates\n2. Persist learnings to .claude/cc100x/activeContext.md ## Learnings\n3. Persist patterns to .claude/cc100x/patterns.md ## Common Gotchas\n4. Persist verification to .claude/cc100x/progress.md ## Verification\n\n**Pattern:**\nRead(file_path=\".claude/cc100x/activeContext.md\")\nEdit(old_string=\"## Learnings\", new_string=\"## Learnings\\n- [from agent]: {insight}\")\nRead(file_path=\".claude/cc100x/activeContext.md\")  # Verify\n\nRepeat for patterns.md and progress.md.",
@@ -260,7 +296,7 @@ TaskUpdate({ taskId: memory_task_id, addBlockedBy: [verifier_task_id] })
 ```
 TaskCreate({
   subject: "CC100X DEBUG: {error_summary}",
-  description: "User request: {request}\n\nWorkflow: DEBUG (Bug Court)\nTeam: Investigators → Debate → Fix → Review",
+  description: "User request: {request}\n\nWorkflow: DEBUG (Bug Court)\nTeam: Investigators → Debate → Fix → Review Arena (security, performance, quality) → Verifier",
   activeForm: "Debugging {error}"
 })
 
@@ -302,21 +338,46 @@ TaskCreate({
 # Returns fix_task_id
 TaskUpdate({ taskId: fix_task_id, addBlockedBy: [debate_task_id] })
 
+# Full-spectrum post-fix review (blocked by fix)
 TaskCreate({
-  subject: "CC100X quality-reviewer: Review the fix",
-  description: "Review the fix for correctness, patterns, no regressions.\nOutput Router Contract.",
-  activeForm: "Reviewing fix"
+  subject: "CC100X security-reviewer: Security review of the fix",
+  description: "Review fix for auth/injection/secrets/OWASP risks and security regressions.\nOutput Router Contract.",
+  activeForm: "Security review"
 })
-# Returns review_task_id
-TaskUpdate({ taskId: review_task_id, addBlockedBy: [fix_task_id] })
+# Returns fix_sec_task_id
+TaskUpdate({ taskId: fix_sec_task_id, addBlockedBy: [fix_task_id] })
+
+TaskCreate({
+  subject: "CC100X performance-reviewer: Performance review of the fix",
+  description: "Review fix for latency, N+1, loops, memory, and throughput regressions.\nOutput Router Contract.",
+  activeForm: "Performance review"
+})
+# Returns fix_perf_task_id
+TaskUpdate({ taskId: fix_perf_task_id, addBlockedBy: [fix_task_id] })
+
+TaskCreate({
+  subject: "CC100X quality-reviewer: Quality review of the fix",
+  description: "Review fix for correctness, patterns, complexity, and maintainability.\nOutput Router Contract.",
+  activeForm: "Quality review"
+})
+# Returns fix_qual_task_id
+TaskUpdate({ taskId: fix_qual_task_id, addBlockedBy: [fix_task_id] })
+
+TaskCreate({
+  subject: "CC100X DEBUG Review Arena: Challenge round",
+  description: "Share security/performance/quality findings.\nChallenge and resolve conflicts before verification (security wins on CRITICAL).",
+  activeForm: "Running debug challenge round"
+})
+# Returns debug_challenge_task_id
+TaskUpdate({ taskId: debug_challenge_task_id, addBlockedBy: [fix_sec_task_id, fix_perf_task_id, fix_qual_task_id] })
 
 TaskCreate({
   subject: "CC100X verifier: Verify fix E2E",
-  description: "Verify fix works E2E. Run all tests. Verify original symptom resolved.",
+  description: "Verify fix works E2E. Run all tests. Verify original symptom resolved.\nConsider ALL findings from security/performance/quality reviewers.",
   activeForm: "Verifying fix"
 })
 # Returns verifier_task_id
-TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [review_task_id] })
+TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [debug_challenge_task_id] })
 
 # Memory Update task (blocked by verifier - TASK-ENFORCED)
 TaskCreate({
@@ -571,7 +632,10 @@ skills: cc100x:session-memory, cc100x:verification
 | Detected Pattern | Skill | Agents |
 |------------------|-------|--------|
 | **BUILD workflow** (any build/implement/create) | `cc100x:test-driven-development`, `cc100x:code-generation`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | builder |
-| **REVIEW workflow** (any review/audit/check) | `cc100x:code-review-patterns`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | security-reviewer, performance-reviewer, quality-reviewer, live-reviewer |
+| **REVIEW workflow** (any review/audit/check) | `cc100x:code-review-patterns`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | security-reviewer, performance-reviewer, quality-reviewer |
+| **BUILD live loop** (real-time Pair Build feedback) | `cc100x:code-review-patterns`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | live-reviewer |
+| **BUILD post-hunt comprehensive review** | `cc100x:code-review-patterns`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | security-reviewer, performance-reviewer, quality-reviewer |
+| **DEBUG post-fix comprehensive review** | `cc100x:code-review-patterns`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | security-reviewer, performance-reviewer, quality-reviewer |
 | **DEBUG workflow** (any debug/fix/error) | `cc100x:debugging-patterns`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | investigator |
 | **PLAN workflow** (any plan/design/architect) | `cc100x:planning-patterns`, `cc100x:brainstorming`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | planner |
 | **BUILD/DEBUG post-build** (hunter phase) | `cc100x:code-review-patterns`, `cc100x:architecture-patterns`, `cc100x:frontend-patterns` | hunter |
@@ -582,7 +646,7 @@ skills: cc100x:session-memory, cc100x:verification
 
 **Detection runs BEFORE agent invocation. Pass detected skills in SKILL_HINTS.**
 
-**Workflow-based skills are ALWAYS passed for the matching workflow.** They are not conditional — every BUILD gets TDD+code-gen, every REVIEW gets code-review-patterns, etc. This mirrors CC10x's guaranteed skill loading via agent frontmatter.
+**Workflow-based skills are ALWAYS passed for the matching workflow/stage.** They are not conditional — every BUILD gets TDD+code-gen, every REVIEW and post-fix/post-hunt comprehensive review gate gets code-review-patterns, etc. This mirrors CC10x's guaranteed quality coverage while preserving Agent Teams structure.
 
 **Note:** `cc100x:router-contract`, `cc100x:verification`, and `cc100x:session-memory` are NOT in this table because they load via agent frontmatter (unconditional). Every agent gets router-contract + verification; WRITE agents (builder, planner) additionally get session-memory. These do NOT need SKILL_HINTS.
 
@@ -671,20 +735,30 @@ If count ≥ 3 → AskUserQuestion:
 ```
 WHEN any CC100X REM-FIX task COMPLETES:
   │
-  ├─→ 1. TaskCreate({ subject: "CC100X quality-reviewer: Re-review after remediation" })
-  │      → Returns re_reviewer_id
+  ├─→ 1. TaskCreate({ subject: "CC100X security-reviewer: Re-review after remediation" })
+  │      → Returns re_sec_id
   │
-  ├─→ 2. TaskCreate({ subject: "CC100X hunter: Re-hunt after remediation" })
+  ├─→ 2. TaskCreate({ subject: "CC100X performance-reviewer: Re-review after remediation" })
+  │      → Returns re_perf_id
+  │
+  ├─→ 3. TaskCreate({ subject: "CC100X quality-reviewer: Re-review after remediation" })
+  │      → Returns re_qual_id
+  │
+  ├─→ 4. TaskCreate({ subject: "CC100X Remediation Review Arena: Challenge round" })
+  │      → Returns re_challenge_id
+  │      TaskUpdate({ taskId: re_challenge_id, addBlockedBy: [re_sec_id, re_perf_id, re_qual_id] })
+  │
+  ├─→ 5. TaskCreate({ subject: "CC100X hunter: Re-hunt after remediation" })
   │      → Returns re_hunter_id
   │
-  ├─→ 3. Find verifier task:
+  ├─→ 6. Find verifier task:
   │      TaskList() → Find task where subject contains "verifier"
   │      → verifier_task_id
   │
-  ├─→ 4. Block verifier on re-reviews:
-  │      TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [re_reviewer_id, re_hunter_id] })
+  ├─→ 7. Block verifier on re-reviews:
+  │      TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [re_challenge_id, re_hunter_id] })
   │
-  └─→ 5. Resume execution (re-reviews run before verifier)
+  └─→ 8. Resume execution (re-reviews run before verifier)
 ```
 
 **Why:** Code changes must be re-reviewed before shipping (orchestration integrity).
@@ -762,7 +836,7 @@ When parallel teammates complete (e.g., 3 reviewers in Review Arena), their outp
      content="Here are findings from other reviewers: {REVIEWER_2_FINDINGS + REVIEWER_3_FINDINGS}. Challenge or agree?")
    # Repeat for other reviewers
 
-4. For downstream teammates (e.g., verifier after hunt):
+4. For downstream teammates (e.g., verifier after hunt + review challenge):
    Include ALL findings in teammate prompt:
    "## Previous Findings\n### Hunter\n{HUNTER_FINDINGS}\n### Reviewer\n{REVIEWER_FINDINGS}"
 ```
@@ -831,12 +905,16 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 
 1. **No file isolation.** Two teammates editing the same file = overwrites. Builder OWNS all writes. Reviewers/investigators are READ-ONLY.
 2. **No session resumption.** `/resume` does NOT restore teammates. See Session Interruption Recovery above.
-3. **No nested teams.** Bug Court's post-fix "abbreviated Review Arena" must reuse the existing team, not spawn a new team. Spawn reviewer teammates into the existing team instead.
+3. **No nested teams.** Bug Court/Pair Build post-fix or post-hunt review gates must reuse the existing team, not spawn a new team. Spawn reviewer teammates into the existing team instead.
 4. **Lead's history doesn't carry over.** When creating a team, lead's conversation history is NOT available to teammates. All context must be passed via task descriptions, messages, or memory files.
 5. **Teammates CAN see CLAUDE.md + project skills.** Unlike CC10x subagents, Agent Teams teammates load CLAUDE.md and project-level skills automatically.
 6. **No synchronization primitives.** Pair Build's builder-reviewer sync uses message-based polling, not blocking waits.
 7. **Delegate mode is MANDATORY.** Lead must enter delegate mode (Shift+Tab) after team creation to prevent accidentally implementing code.
 8. **Token cost awareness.** Agent Teams uses significantly more tokens than single-agent workflows. Each teammate has its own context window. Minimize unnecessary parallel spawns — only parallelize when the protocol requires it (e.g., 3 reviewers in Review Arena, multiple investigators in Bug Court).
+9. **One team at a time per session.** Clean up current team before starting a new one in the same session.
+10. **Lead is fixed for team lifetime.** The creator session remains the lead; do not assume leadership transfer to teammates.
+11. **Permission inheritance at spawn.** Teammates start with lead permission mode; per-teammate permission tuning can only happen after spawn.
+12. **Broadcast sparingly.** Prefer targeted `message` over `broadcast`; broadcast token cost scales with team size.
 
 ## Agent Teams Display & Controls
 

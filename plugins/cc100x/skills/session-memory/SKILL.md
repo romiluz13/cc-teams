@@ -138,7 +138,7 @@ Without memory persistence:
 
 ### Read
 - **Lead (always):** loads all 3 files before workflow selection and before resuming Tasks.
-- **WRITE agents** (builder, investigator, planner): load memory files at task start via this skill.
+- **WRITE agents** (builder, planner): load memory files at task start via this skill.
 - **READ-ONLY agents** (reviewers, hunter, verifier): receive memory summary in prompt, do NOT load this skill.
 
 ### Write

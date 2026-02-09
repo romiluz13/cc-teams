@@ -31,6 +31,10 @@ If you haven't completed Phase 1, you cannot propose fixes.
 |----------|------|------|
 | **investigator-1** through **investigator-N** | Hypothesis champion | **READ-ONLY** (gather evidence, run tests, NO source edits) |
 | **builder** (Phase 5 only) | Fix implementer | READ+WRITE (implements the winning fix) |
+| **security-reviewer** (Phase 6) | Security review of fix | READ-ONLY |
+| **performance-reviewer** (Phase 6) | Performance review of fix | READ-ONLY |
+| **quality-reviewer** (Phase 6) | Quality review of fix | READ-ONLY |
+| **verifier** (Phase 7) | E2E verification of fix | READ-ONLY |
 
 **CRITICAL:** Investigators are READ-ONLY. They gather evidence and run diagnostic commands but do NOT edit source code. Only the builder (spawned after verdict) implements the fix. This prevents file conflicts between parallel investigators.
 
@@ -80,12 +84,12 @@ Each investigator works independently to test their hypothesis.
 1. Read memory files
 2. Gather evidence FOR their hypothesis
 3. Gather evidence AGAINST other hypotheses (if accessible)
-4. Write diagnostic test scripts (RED phase — demonstrate the bug)
+4. Produce diagnostic test commands/scripts in their report (RED phase — demonstrate the bug)
 5. Document root cause analysis with evidence
 6. Output Router Contract
 
 **File ownership during investigation:**
-- Investigators are READ-ONLY — they read code, run tests, add temp diagnostic scripts
+- Investigators are READ-ONLY — they read code, run tests, and provide reproduction scripts/commands in their output
 - Investigators do NOT modify source files
 - Only ONE agent (builder) will implement the fix after verdict
 - The lead decides which hypothesis wins based on evidence
@@ -142,13 +146,21 @@ Assign builder to implement fix based on winning root cause:
 - Builder must follow TDD: regression test FIRST (must fail before fix), then minimal fix
 - Builder verifies regression test passes + full test suite passes
 
-### Phase 6: Review the Fix
+### Phase 6: Full-Spectrum Review the Fix
 
-Trigger abbreviated Review Arena (quality-reviewer only, unless fix touches security-sensitive code).
+Run Review Arena triad on the fix:
+- security-reviewer checks auth/injection/secrets/OWASP regressions
+- performance-reviewer checks latency/throughput/memory regressions
+- quality-reviewer checks correctness/patterns/maintainability
+- lead runs challenge round to resolve conflicts
 
-**CRITICAL: No nested teams.** Do NOT create a new Agent Team for the review. Spawn the quality-reviewer into the existing Bug Court team.
+**CRITICAL: No nested teams.** Do NOT create a new Agent Team for the review. Spawn all 3 reviewers into the existing Bug Court team.
 
-### Phase 7: Persist Memory
+### Phase 7: Verify the Fix
+
+Verifier runs after challenge round and must consider all reviewer findings plus root-cause evidence.
+
+### Phase 8: Persist Memory
 
 Lead persists:
 - Root cause → `patterns.md ## Common Gotchas`
@@ -313,8 +325,11 @@ CC100X DEBUG: {error_summary}
 ├── CC100X investigator-3: Test hypothesis - {h3}
 ├── CC100X Bug Court: Debate round (blocked by all investigators)
 ├── CC100X builder: Implement winning fix (blocked by debate)
-├── CC100X quality-reviewer: Review the fix (blocked by fix)
-├── CC100X verifier: Verify fix E2E (blocked by review)
+├── CC100X security-reviewer: Review fix security (blocked by fix)
+├── CC100X performance-reviewer: Review fix performance (blocked by fix)
+├── CC100X quality-reviewer: Review fix quality (blocked by fix)
+├── CC100X DEBUG Review Arena: Challenge round (blocked by all 3 reviewers)
+├── CC100X verifier: Verify fix E2E (blocked by challenge round)
 └── CC100X Memory Update: Persist debug learnings (blocked by verifier)
 ```
 

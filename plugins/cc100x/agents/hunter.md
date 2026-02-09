@@ -124,7 +124,7 @@ TaskCreate({
 **Your Input Helps:**
 - [Intentional patterns - "Is the empty catch in config.ts intentional? Looks suspicious but might be by design"]
 - [Business context - "Is silent retry acceptable here, or should user see error?"]
-**What's Next:** If CRITICAL issues found, builder fixes them before we proceed. Then re-hunt to ensure fixes don't introduce new issues. Finally, integration verification.
+**What's Next:** If CRITICAL issues are found, builder fixes them before we proceed. Then full Review Arena runs (security/performance/quality + challenge), followed by re-hunt if needed, and integration verification runs last.
 
 ### Summary
 - Total handlers audited: [count]
