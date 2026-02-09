@@ -21,7 +21,7 @@ The Router Contract is a machine-readable YAML block output by every teammate at
 
 Every teammate MUST include this section at the end of their output:
 
-```markdown
+````markdown
 ### Router Contract (MACHINE-READABLE)
 ```yaml
 STATUS: [value from agent-specific list below]
@@ -41,7 +41,7 @@ MEMORY_NOTES:
   patterns: ["pattern or gotcha discovered"]
   verification: ["evidence of what was verified"]
 ```
-```
+````
 
 ---
 
@@ -57,7 +57,7 @@ MEMORY_NOTES:
 | **hunter** | `CLEAN`, `ISSUES_FOUND` | CLEAN requires CRITICAL_ISSUES=0 |
 | **verifier** | `PASS`, `FAIL` | PASS requires all scenarios passed |
 | **investigator** | `EVIDENCE_FOUND`, `INVESTIGATING`, `BLOCKED` | EVIDENCE_FOUND requires reproduction evidence |
-| **planner** | `PLAN_CREATED`, `NEEDS_CLARIFICATION` | PLAN_CREATED requires plan file saved + CONFIDENCE>=5 |
+| **planner** | `PLAN_CREATED`, `NEEDS_CLARIFICATION` | PLAN_CREATED requires plan file saved + CONFIDENCE>=50 |
 
 ---
 
@@ -71,7 +71,7 @@ Agent's self-reported completion status. See table above for valid values per ag
 - Reviewers: >=80 to report findings
 - Builder: based on assumption certainty
 - Investigator: based on evidence strength
-- Planner: 1-10 scale (mapped to 10-100)
+- Planner: >=50 required for `PLAN_CREATED`
 
 ### CRITICAL_ISSUES
 Count of blocking issues found. Only reviewers and hunter use this.
@@ -184,10 +184,10 @@ VARIANTS_COVERED: [count]
 ### Planner
 ```yaml
 STATUS: PLAN_CREATED | NEEDS_CLARIFICATION
-# CONTRACT RULE: STATUS=PLAN_CREATED requires PLAN_FILE is valid path and CONFIDENCE>=5
+# CONTRACT RULE: STATUS=PLAN_CREATED requires PLAN_FILE is valid path and CONFIDENCE>=50
 PLAN_FILE: "[path]"
 PHASES: [count]
-CONFIDENCE: [1-10]
+CONFIDENCE: [0-100]
 ```
 
 ---

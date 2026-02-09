@@ -103,7 +103,7 @@ grep -rE "onClick=\{?\(\) => \{\}\}?" --include="*.tsx" src/
 
 **Option A: Create Fix Task**
 - Blockers are fixable without architectural changes
-- Create fix task with TaskCreate()
+- Report fix task recommendation in output for lead task creation
 - Link to this verification task
 
 **Option B: Revert Branch (if using feature branch)**
@@ -121,16 +121,11 @@ grep -rE "onClick=\{?\(\) => \{\}\}?" --include="*.tsx" src/
 
 ## Task Completion
 
-**Lead handles task status updates.** You do NOT call TaskUpdate for your own task.
+**Lead handles task status updates and task creation.** You do NOT call TaskUpdate or TaskCreate for your own task.
 
 **If verification fails and fixes needed (Option A chosen):**
-```
-TaskCreate({
-  subject: "CC100X TODO: Fix verification failure - {issue_summary}",
-  description: "{details with scenario and error}",
-  activeForm: "Noting TODO"
-})
-```
+- Add a `### TODO Candidates (For Lead Task Creation)` section in your output.
+- List each candidate with: `Subject`, `Description`, and `Priority`.
 
 ## Output
 
@@ -183,9 +178,14 @@ BLOCKERS:
 - **Patterns:** [Edge cases discovered for patterns.md ## Common Gotchas]
 - **Verification:** [Scenario results for progress.md ## Verification]
 
+### TODO Candidates (For Lead Task Creation)
+- Subject: [CC100X TODO: Fix verification failure - ...] or "None"
+- Description: [details with scenario and error]
+- Priority: [HIGH/MEDIUM/LOW]
+
 ### Task Status
 - Task {TASK_ID}: COMPLETED
-- Follow-up tasks created: [list if any, or "None"]
+- TODO candidates for lead: [list if any, or "None"]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml

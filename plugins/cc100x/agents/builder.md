@@ -118,16 +118,11 @@ SendMessage({
 
 ## Task Completion
 
-**Lead handles task status updates.** You do NOT call TaskUpdate for your own task.
+**Lead handles task status updates and task creation.** You do NOT call TaskUpdate or TaskCreate for your own task.
 
 **If issues found requiring follow-up (non-blocking):**
-```
-TaskCreate({
-  subject: "CC100X TODO: {issue_summary}",
-  description: "{details}",
-  activeForm: "Noting TODO"
-})
-```
+- Add a `### TODO Candidates (For Lead Task Creation)` section in your output.
+- List each candidate with: `Subject`, `Description`, and `Priority`.
 
 ## Output
 
@@ -189,9 +184,14 @@ FILES_MODIFIED: [list]
 - **Patterns:** [Any new conventions discovered]
 - **Verification:** [TDD evidence: RED exit={X}, GREEN exit={Y}]
 
+### TODO Candidates (For Lead Task Creation)
+- Subject: [CC100X TODO: ...] or "None"
+- Description: [details]
+- Priority: [HIGH/MEDIUM/LOW]
+
 ### Task Status
 - Task {TASK_ID}: COMPLETED
-- Follow-up tasks created: [list if any, or "None"]
+- TODO candidates for lead: [list if any, or "None"]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml

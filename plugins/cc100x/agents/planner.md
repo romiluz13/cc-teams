@@ -155,17 +155,17 @@ Read(file_path=".claude/cc100x/activeContext.md")
 
 | Score | Meaning | Action |
 |-------|---------|--------|
-| 1-4 | Low confidence | Plan needs more detail/context |
-| 5-6 | Medium | Acceptable for smaller features |
-| 7-8 | High | Good for most features |
-| 9-10 | Very high | Comprehensive, ready for execution |
+| 0-49 | Low confidence | Plan needs more detail/context |
+| 50-69 | Medium | Acceptable for smaller features |
+| 70-89 | High | Good for most features |
+| 90-100 | Very high | Comprehensive, ready for execution |
 
 **Factors affecting confidence:**
-- Context References included with file:line? (+2)
-- All edge cases documented? (+1)
-- Test commands specific? (+1)
-- Risk mitigations defined? (+1)
-- File paths exact? (+1)
+- Context references included with file:line? (+25)
+- Edge cases documented? (+15)
+- Test commands specific and executable? (+20)
+- Risk mitigations defined? (+20)
+- File paths exact and scoped? (+20)
 
 ## Memory Updates (Read-Edit-Verify)
 
@@ -181,7 +181,7 @@ Read(file_path=".claude/cc100x/activeContext.md")
 
 ## Task Completion
 
-**Lead handles task status updates.** You do NOT call TaskUpdate for your own task.
+**Lead handles task status updates and task creation.** You do NOT call TaskUpdate or TaskCreate for your own task.
 
 ## Output
 
@@ -216,7 +216,7 @@ If task involves technologies with complementary skills (from CLAUDE.md), list t
 - [Match from CLAUDE.md Complementary Skills table]
 Note: CC100x internal skills load via agent frontmatter and CLAUDE.md visibility — only list user-installed complementary skills here.
 
-### Confidence Score: X/10
+### Confidence Score: X/100
 - [reason for score]
 - [factors that could improve it]
 
@@ -229,23 +229,23 @@ Note: CC100x internal skills load via agent frontmatter and CLAUDE.md visibility
 
 ### Router Handoff (Stable Extraction)
 STATUS: [PLAN_CREATED/NEEDS_CLARIFICATION]
-CONFIDENCE: [1-10]
+CONFIDENCE: [0-100]
 PLAN_FILE: "[path]"
 PHASES: [count]
 
 ### Memory Notes (For Workflow-Final Persistence)
 - **Learnings:** [Planning approach and key insights]
 - **Patterns:** [Architectural decisions made]
-- **Verification:** [Plan: {PLAN_FILE} with {CONFIDENCE}/10 confidence]
+- **Verification:** [Plan: {PLAN_FILE} with {CONFIDENCE}% confidence]
 
 ### Task Status
 - Task {TASK_ID}: COMPLETED
-- Follow-up tasks created: None
+- TODO candidates for lead: None
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
 STATUS: PLAN_CREATED | NEEDS_CLARIFICATION
-CONFIDENCE: [1-10]
+CONFIDENCE: [0-100]
 PLAN_FILE: "[path to saved plan, e.g., docs/plans/2026-02-05-feature-plan.md]"
 PHASES: [count of phases in plan]
 RISKS_IDENTIFIED: [count of risks identified]
@@ -261,7 +261,7 @@ DEVIATIONS_FROM_PLAN: null
 MEMORY_NOTES:
   learnings: ["Planning approach and key insights"]
   patterns: ["Architectural decisions made"]
-  verification: ["Plan: {PLAN_FILE} with {CONFIDENCE}/10 confidence"]
+  verification: ["Plan: {PLAN_FILE} with {CONFIDENCE}% confidence"]
 ```
-**CONTRACT RULE:** STATUS=PLAN_CREATED requires PLAN_FILE is valid path and CONFIDENCE>=5
+**CONTRACT RULE:** STATUS=PLAN_CREATED requires PLAN_FILE is valid path and CONFIDENCE>=50
 ```

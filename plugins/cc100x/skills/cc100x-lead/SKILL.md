@@ -784,12 +784,16 @@ WHEN any CC100X REM-FIX task COMPLETES:
 
 2. Start teammate(s):
    - TaskUpdate({ taskId: runnable_task_id, status: "in_progress" })
-   - If multiple tasks ready → assign to multiple teammates simultaneously
-   - Send message to teammate with task context (see Agent Invocation Template)
+   - Classify task owner:
+     - **Lead-owned tasks** (`... Challenge round`, `CC100X Memory Update`) run in lead context
+     - **Teammate tasks** are assigned via message with task context (see Agent Invocation Template)
+   - If multiple teammate tasks are ready → assign to multiple teammates simultaneously
 
 3. After teammate completes:
-   - Lead updates task: TaskUpdate({ taskId: runnable_task_id, status: "completed" })
-   - Lead validates output (see Post-Team Validation)
+   - Lead validates output first (see Post-Team Validation)
+   - If output is valid (blocking or non-blocking) → TaskUpdate({ taskId: runnable_task_id, status: "completed" })
+   - If output is invalid/non-compliant → keep task incomplete, request retry or create REM-EVIDENCE
+   - If output is blocking → create REM-FIX and block downstream before continuing
    - Lead calls TaskList() to find next available tasks
 
 4. Determine next:
@@ -875,27 +879,33 @@ Memory persistence is enforced via the "CC100X Memory Update" task in the task h
 
 ---
 
-## TODO Task Handling (After Workflow Completes)
+## TODO Candidate Handling (After Workflow Completes)
 
-After all workflow tasks complete, check for `CC100X TODO:` tasks created by teammates:
+After all workflow tasks complete, collect follow-up work from teammate outputs:
 
 ```
-1. TaskList() → Find tasks with subject starting "CC100X TODO:"
+1. Parse teammate outputs for:
+   - "### TODO Candidates (For Lead Task Creation)"
+   - Subject/Description/Priority entries
 
-2. If TODO tasks exist:
-   → List them: "Teammates identified these items for follow-up:"
-     - [task subject] - [first line of description]
-   → Ask user: "Address now (start new workflow) / Keep for later / Delete"
+2. Backward-compatibility check:
+   TaskList() → Find existing tasks with subject starting "CC100X TODO:"
+   Merge existing TODO tasks + newly proposed TODO candidates
 
-3. User chooses:
-   - "Address now" → Start new BUILD/DEBUG workflow for the TODO
-   - "Keep" → Leave tasks pending (will appear next session)
-   - "Delete" → TaskUpdate({ taskId, status: "deleted" }) for each
+3. If any TODOs exist:
+   → List them: "Teammates identified these follow-up items:"
+     - [subject] - [first line of description] - [priority]
+   → Ask user: "Address now / Keep for later / Delete"
 
-4. Continue to MEMORY_UPDATED gate
+4. User chooses:
+   - "Address now" → Start new BUILD/DEBUG workflow for selected items
+   - "Keep" → Create missing TODO tasks via TaskCreate(...) and leave pending
+   - "Delete" → Delete existing TODO tasks; discard new candidates
+
+5. Continue to MEMORY_UPDATED gate
 ```
 
-**Why TODO tasks are separate:** They are non-blocking discoveries made during teammate work. They don't auto-execute because they lack proper context/dependencies. User decides priority.
+**Why TODO items are separate:** They are non-blocking discoveries made during teammate work. They do not auto-execute because they lack full dependency context. User decides priority.
 
 ---
 
@@ -924,6 +934,20 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 | Select teammate to view | **Shift+Up/Down** | Monitor teammate progress |
 | Toggle task list | **Ctrl+T** | Check task status during workflow |
 | Interrupt teammate | **Escape** | Stop a teammate that's stuck or off-track |
+
+## Hook-Driven Quality Gates (Recommended)
+
+Use Agent Teams hooks to enforce workflow integrity without manual polling:
+
+- `TeammateIdle`: if a teammate goes idle without Router Contract or while task still needs evidence, return exit code `2` with corrective feedback.
+- `TaskCompleted`: block task completion (exit code `2`) when contract fields are missing, malformed, or blocking remediation is unresolved.
+
+Minimal policy:
+1. Reject completion if Router Contract section is missing.
+2. Reject completion if `BLOCKING=true` and no REM-FIX task exists.
+3. Reject completion if `SPEC_COMPLIANCE=FAIL` without explicit user skip decision logged.
+
+This keeps lead orchestration deterministic and prevents silent task drift.
 
 ## Model Selection Guidance
 
@@ -955,6 +979,8 @@ After completing a task:
 4. Notifies lead: "Claimed task: {subject}"
 ```
 
+Task claiming is lock-safe in Agent Teams (file-lock protected), so simultaneous claim attempts resolve without duplicate ownership.
+
 **When to enable:** For experienced teams where task descriptions are self-contained. Lead can disable by explicitly assigning all tasks upfront.
 
 ---
@@ -969,8 +995,8 @@ After completing a task:
 6. **REQUIREMENTS_CLARIFIED** - Before invoking teammates (BUILD only)
 7. **TASKS_CREATED** - Workflow task hierarchy created
 8. **TEAM_CREATED** - Agent Team spawned for workflow
-9. **ALL_TASKS_COMPLETED** - All tasks (including Memory Update) status="completed"
-10. **CONTRACTS_VALIDATED** - All Router Contracts parsed and validated
+9. **CONTRACTS_VALIDATED** - Validate Router Contract before marking each teammate task completed
+10. **ALL_TASKS_COMPLETED** - All tasks (including Memory Update) status="completed"
 11. **MEMORY_UPDATED** - Before marking done
 12. **TEAM_SHUTDOWN** - Send shutdown_request to all teammates, wait for approvals, TeamDelete()
 

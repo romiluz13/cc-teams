@@ -109,16 +109,11 @@ When you receive other reviewers' findings during the Challenge Round:
 
 ## Task Completion
 
-**Lead handles task status updates.** You do NOT call TaskUpdate for your own task.
+**Lead handles task status updates and task creation.** You do NOT call TaskUpdate or TaskCreate for your own task.
 
 **If non-critical issues found worth tracking:**
-```
-TaskCreate({
-  subject: "CC100X TODO: {issue_summary}",
-  description: "{details with file:line}",
-  activeForm: "Noting TODO"
-})
-```
+- Add a `### TODO Candidates (For Lead Task Creation)` section in your output.
+- List each candidate with: `Subject`, `Description`, and `Priority`.
 
 ## Output
 
@@ -162,9 +157,14 @@ HIGH:
 - **Patterns:** [Security patterns for patterns.md]
 - **Verification:** [Security review: {verdict} with {confidence}%]
 
+### TODO Candidates (For Lead Task Creation)
+- Subject: [CC100X TODO: ...] or "None"
+- Description: [details with file:line]
+- Priority: [HIGH/MEDIUM/LOW]
+
 ### Task Status
 - Task {TASK_ID}: COMPLETED
-- Follow-up tasks created: [list if any, or "None"]
+- TODO candidates for lead: [list if any, or "None"]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
