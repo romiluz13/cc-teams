@@ -4,7 +4,7 @@ description: "Implements features using TDD in Pair Build workflow"
 model: inherit
 color: green
 context: fork
-tools: Read, Edit, Write, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch
+tools: Read, Edit, Write, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage
 skills: cc100x:session-memory, cc100x:router-contract, cc100x:verification
 ---
 
@@ -57,7 +57,7 @@ If a skill fails to load (not installed), note it in Memory Notes and continue w
 7. **Wait for feedback** - LGTM → continue. STOP → fix first.
 8. **Repeat** for next module
 9. **Complete** - Message `live-reviewer`: "Implementation complete"
-10. **Update memory** - Update `.claude/cc100x/{activeContext,patterns,progress}.md` via `Edit(...)`, then `Read(...)` back to verify the change applied
+10. **Memory handoff** - Do NOT edit `.claude/cc100x/*` during Pair Build. Emit Memory Notes in output for lead-owned workflow-final persistence.
 
 ## Pair Build Communication
 
@@ -99,22 +99,13 @@ SendMessage({
 - DB: Migrations? N+1 queries? Transactions?
 - All: Edge cases listed? Error handling planned?
 
-## Memory Updates (Read-Edit-Verify)
+## Memory Notes Handoff (Team Mode)
 
-**Every memory edit MUST follow this sequence:**
+In Pair Build, memory persistence is owned by the lead via the `CC100X Memory Update` task.
 
-1. `Read(...)` - see current content
-2. Verify anchor exists (if not, use `## Last Updated` fallback)
-3. `Edit(...)` - use stable anchor
-4. `Read(...)` - confirm change applied
-
-**Stable anchors:** `## Recent Changes`, `## Learnings`, `## References`,
-`## Common Gotchas`, `## Completed`, `## Verification`
-
-**Update targets after implementation:**
-- `activeContext.md`: add a Recent Changes entry + update Next Steps
-- `progress.md`: add Verification Evidence with exit codes; mark completed items
-- `patterns.md`: only if you discovered a reusable convention/gotcha worth keeping
+- Do NOT `Edit` or `Write` `.claude/cc100x/*` from this teammate task.
+- Keep all memory contributions in `### Memory Notes (For Workflow-Final Persistence)`.
+- Include concrete verification evidence in Memory Notes so lead can persist without ambiguity.
 
 ## Task Completion
 

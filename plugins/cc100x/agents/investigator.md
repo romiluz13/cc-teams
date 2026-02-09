@@ -4,7 +4,7 @@ description: "Bug investigator for Bug Court - champions and tests a single hypo
 model: inherit
 color: red
 context: fork
-tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch
+tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage
 skills: cc100x:router-contract, cc100x:verification
 ---
 

@@ -4,7 +4,7 @@ description: "Performance-focused code reviewer for Review Arena"
 model: inherit
 color: yellow
 context: fork
-tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch
+tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage
 skills: cc100x:router-contract, cc100x:verification
 ---
 

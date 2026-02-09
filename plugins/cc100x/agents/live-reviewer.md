@@ -4,7 +4,7 @@ description: "Real-time code reviewer in Pair Build - reviews modules as builder
 model: inherit
 color: blue
 context: fork
-tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch
+tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage
 skills: cc100x:router-contract, cc100x:verification
 ---
 

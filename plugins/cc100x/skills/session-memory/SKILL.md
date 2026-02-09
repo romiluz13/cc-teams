@@ -11,10 +11,17 @@ allowed-tools: Read, Write, Edit, Bash
 ```
 EVERY WORKFLOW MUST:
 1. LOAD memory at START (and before key decisions)
-2. UPDATE memory at END (and after learnings/decisions)
+2. PERSIST learnings at END (direct edit by memory owner, or Memory Notes handoff to memory owner)
 ```
 
 **Brevity Rule:** Memory is an index, not a document. Be brief—one line per item.
+
+## Agent Teams Ownership Override (CC100x Default)
+
+In CC100x team workflows, memory persistence is lead-owned by default:
+- Teammates: read memory + emit `### Memory Notes (For Workflow-Final Persistence)`.
+- Lead: executes the `CC100X Memory Update` task and writes `.claude/cc100x/*`.
+- Only edit memory from a teammate if the prompt explicitly includes `MEMORY_OWNER: teammate`.
 
 ## What "Memory" Actually Is (The Guts)
 
@@ -142,8 +149,9 @@ Without memory persistence:
 - **READ-ONLY agents** (reviewers, hunter, verifier): receive memory summary in prompt, do NOT load this skill.
 
 ### Write
-- **WRITE agents:** update memory directly at task end using `Edit(...)` + `Read(...)` verify pattern.
-- **READ-ONLY agents:** output `### Memory Notes (For Workflow-Final Persistence)` section. The task-enforced "CC100X Memory Update" task ensures these are persisted.
+- **Lead (default in team workflows):** updates memory directly at workflow-final via the `CC100X Memory Update` task.
+- **Teammates (default):** output `### Memory Notes (For Workflow-Final Persistence)` section; do not edit `.claude/cc100x/*`.
+- **Explicit exception:** if prompt says `MEMORY_OWNER: teammate`, that teammate may use `Edit(...)` + `Read(...)` verify pattern.
 
 ### Concurrency Rule (Agent Teams)
 
@@ -496,7 +504,7 @@ Edit(file_path=".claude/cc100x/patterns.md",
      new_string="## Common Gotchas\n- [Gotcha]: [Solution / how to avoid]\n")
 ```
 
-### When Completing Tasks (UPDATE)
+### When Completing Tasks (UPDATE - Memory Owner Only)
 
 ```
 # Read progress.md, then record completion with evidence
@@ -519,20 +527,22 @@ Edit(file_path=".claude/cc100x/progress.md",
 
 1. **START**: Load memory files before any work
 2. **DURING**: Note learnings and decisions
-3. **END**: Update memory files with new context
+3. **END**: Persist context via one of:
+   - Memory owner path: update memory files directly
+   - Teammate path: emit Memory Notes for lead-owned persistence
 
-If an agent cannot safely update memory (e.g., no `Edit` tool available, or READ-ONLY agent):
+If an agent is NOT the memory owner (default for teammates in CC100x):
 - Include "memory-worthy" notes in the agent output (decisions, learnings, verification evidence).
 - The lead must persist those notes into `.claude/cc100x/*.md` using `Edit(...)` + Read-back verification.
 
-**Failure to update memory = incomplete work.**
+**Failure to persist memory context (directly or via Memory Notes) = incomplete work.**
 
 ## Red Flags - STOP IMMEDIATELY
 
 If you catch yourself:
 - Starting work WITHOUT loading memory
 - Making decisions WITHOUT checking Decisions section
-- Completing work WITHOUT updating memory
+- Completing work WITHOUT persisting memory context
 - Saying "I'll remember" instead of writing to memory
 
 **STOP. Load/update memory FIRST.**

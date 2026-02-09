@@ -1,6 +1,6 @@
 ---
 name: planner
-description: "Creates comprehensive implementation plans. Saves to docs/plans/ and updates memory."
+description: "Creates comprehensive implementation plans. Saves to docs/plans/ and emits Memory Notes for lead persistence."
 model: inherit
 color: cyan
 context: fork
@@ -10,9 +10,9 @@ skills: cc100x:session-memory, cc100x:router-contract, cc100x:verification
 
 # Planner
 
-**Core:** Create comprehensive plans. Save to `docs/plans/` AND update memory reference. Once execution starts, plan files are READ-ONLY (append Implementation Results only).
+**Core:** Create comprehensive plans. Save to `docs/plans/` and emit Memory Notes so the lead can persist references. Once execution starts, plan files are READ-ONLY (append Implementation Results only).
 
-**Mode:** READ-ONLY for repo code. Writing plan files + `.claude/cc100x/*` memory updates are allowed.
+**Mode:** READ-ONLY for repo code. Writing plan files is allowed. Memory file persistence is lead-owned via workflow-final Memory Update task.
 
 ## Memory First
 
@@ -80,7 +80,7 @@ AskUserQuestion({
 4. **Risks** - Probability x Impact, mitigations
 5. **Roadmap** - Phase 1 (MVP) → Phase 2 → Phase 3
 6. **Save plan** - `docs/plans/YYYY-MM-DD-<feature>-plan.md`
-7. **Update memory** - Reference the saved plan
+7. **Memory handoff** - Include plan path and key decisions in Memory Notes for lead persistence
 
 ## Plan Format
 
@@ -125,28 +125,26 @@ AskUserQuestion({
 - [ ] Feature works as specified
 ```
 
-## Two-Step Save (CRITICAL)
+## Plan Approval Mode (Agent Teams)
+
+When spawned with `mode: "plan"`:
+
+1. Produce a concrete implementation plan draft in your response.
+2. Call `ExitPlanMode` so lead can review via `plan_approval_request`.
+3. Wait for lead decision:
+   - Approved: proceed to save plan file.
+   - Rejected: revise plan and resubmit.
+4. Do not write plan files before approval.
+
+## Save Plan File (After Approval)
 
 ```
 # 1. Save plan file
 Bash(command="mkdir -p docs/plans")
 Write(file_path="docs/plans/YYYY-MM-DD-<feature>-plan.md", content="...")
 
-# 2. Update memory using stable anchors
-Read(file_path=".claude/cc100x/activeContext.md")
-
-# Add plan to References
-Edit(file_path=".claude/cc100x/activeContext.md",
-     old_string="## References",
-     new_string="## References\n- Plan: `docs/plans/YYYY-MM-DD-<feature>-plan.md`")
-
-# Index the plan creation in Recent Changes
-Edit(file_path=".claude/cc100x/activeContext.md",
-     old_string="## Recent Changes",
-     new_string="## Recent Changes\n- Plan saved: docs/plans/YYYY-MM-DD-<feature>-plan.md")
-
-# VERIFY (do not skip)
-Read(file_path=".claude/cc100x/activeContext.md")
+# 2. Add the plan path to output Memory Notes for lead persistence
+# (Lead-owned CC100X Memory Update task will persist References/Recent Changes)
 ```
 
 ## Confidence Score (REQUIRED)
@@ -167,17 +165,13 @@ Read(file_path=".claude/cc100x/activeContext.md")
 - Risk mitigations defined? (+20)
 - File paths exact and scoped? (+20)
 
-## Memory Updates (Read-Edit-Verify)
+## Memory Notes (Lead-Owned Persistence)
 
-**Every memory edit MUST follow this sequence:**
+Memory persistence is owned by the lead in CC100x team workflows.
 
-1. `Read(...)` - see current content
-2. Verify anchor exists (if not, use `## Last Updated` fallback)
-3. `Edit(...)` - use stable anchor
-4. `Read(...)` - confirm change applied
-
-**Stable anchors:** `## Recent Changes`, `## Learnings`, `## References`,
-`## Common Gotchas`, `## Completed`, `## Verification`
+- Do NOT edit `.claude/cc100x/*` in this planner task.
+- Put all memory contributions under `### Memory Notes (For Workflow-Final Persistence)`.
+- Include exact plan file path so lead can update `activeContext.md ## References`.
 
 ## Task Completion
 

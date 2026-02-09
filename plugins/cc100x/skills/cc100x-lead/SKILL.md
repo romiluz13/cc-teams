@@ -44,6 +44,31 @@ description: |
 
 ---
 
+## Agent Teams Preflight (MANDATORY)
+
+Before creating or resuming any workflow:
+
+1. **Agent Teams enabled**
+   - Confirm `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in environment/settings.
+   - If not enabled: stop and ask user to enable (do not run fallback orchestration).
+
+2. **Single active team policy**
+   - One lead can manage one team at a time.
+   - If an old team is still active in this session: shut it down and `TeamDelete()` before starting a new workflow.
+
+3. **Deterministic team naming**
+   - Use `cc100x-{workflow}-{YYYYMMDD-HHMMSS}`.
+   - Persist the active team name in memory (`activeContext.md ## Recent Changes`) during workflow-final Memory Update.
+
+4. **Delegate mode required**
+   - After team creation, enter delegate mode immediately (`Shift+Tab`) before assigning any task.
+
+5. **Memory owner declared**
+   - In teammate prompts, set `MEMORY_OWNER: lead`.
+   - Teammates emit Memory Notes; lead persists memory in the final Memory Update task.
+
+---
+
 ## Memory Protocol (PERMISSION-FREE)
 
 **LOAD FIRST (Before routing):**
@@ -300,27 +325,16 @@ TaskCreate({
   activeForm: "Debugging {error}"
 })
 
-# One task per hypothesis
-TaskCreate({
-  subject: "CC100X investigator-1: Test hypothesis - {h1}",
-  description: "Champion hypothesis: '{h1}'\nGather evidence FOR this hypothesis. Try to PROVE it's the root cause.\nAlso gather evidence that could DISPROVE other hypotheses.\nError context: {error_details}\nMemory patterns: {common_gotchas}\n\nYou are READ-ONLY. Do NOT edit source code.\nOutput Router Contract at end.",
-  activeForm: "Investigating hypothesis 1"
-})
-# Returns inv1_task_id
-
-TaskCreate({
-  subject: "CC100X investigator-2: Test hypothesis - {h2}",
-  description: "[same structure as investigator-1 with h2]",
-  activeForm: "Investigating hypothesis 2"
-})
-# Returns inv2_task_id
-
-TaskCreate({
-  subject: "CC100X investigator-3: Test hypothesis - {h3}",
-  description: "[same structure as investigator-1 with h3]",
-  activeForm: "Investigating hypothesis 3"
-})
-# Returns inv3_task_id
+# One task per hypothesis (dynamic investigator count: 2-5)
+investigator_task_ids = []
+for each hypothesis h_i in {hypotheses}:
+  TaskCreate({
+    subject: "CC100X investigator-{i}: Test hypothesis - {h_i}",
+    description: "Champion hypothesis: '{h_i}'\nGather evidence FOR this hypothesis. Try to PROVE it's the root cause.\nAlso gather evidence that could DISPROVE other hypotheses.\nError context: {error_details}\nMemory patterns: {common_gotchas}\n\nYou are READ-ONLY. Do NOT edit source code.\nOutput Router Contract at end.",
+    activeForm: "Investigating hypothesis {i}"
+  })
+  # Returns inv_i_task_id
+  investigator_task_ids.append(inv_i_task_id)
 
 TaskCreate({
   subject: "CC100X Bug Court: Debate round",
@@ -328,7 +342,7 @@ TaskCreate({
   activeForm: "Running debate round"
 })
 # Returns debate_task_id
-TaskUpdate({ taskId: debate_task_id, addBlockedBy: [inv1_task_id, inv2_task_id, inv3_task_id] })
+TaskUpdate({ taskId: debate_task_id, addBlockedBy: investigator_task_ids })
 
 TaskCreate({
   subject: "CC100X builder: Implement fix for winning hypothesis",
@@ -590,12 +604,12 @@ When spawning a teammate, include this structured context:
 
 ---
 IMPORTANT:
-- If your tools include `Edit` **and you are not running in a parallel phase**, update `.claude/cc100x/{activeContext,patterns,progress}.md` at the end per `cc100x:session-memory` and `Read(...)` back to verify.
-- If you are running in a parallel phase (e.g., Review Arena, Bug Court investigation), prefer **no memory edits**; include a clearly labeled **Memory Notes** section so the lead can persist safely after parallel completion.
-- If your tools do NOT include `Edit`, you MUST include a `### Memory Notes (For Workflow-Final Persistence)` section with:
+- `MEMORY_OWNER: lead` (default). Teammates do NOT edit `.claude/cc100x/*` unless prompt explicitly overrides with `MEMORY_OWNER: teammate`.
+- Every teammate MUST include a clearly labeled `### Memory Notes (For Workflow-Final Persistence)` section with:
   - **Learnings:** [insights for activeContext.md]
   - **Patterns:** [gotchas for patterns.md]
   - **Verification:** [results for progress.md]
+- Lead persists these notes in the task-enforced `CC100X Memory Update` step.
 
 Execute the task and include 'Task {TASK_ID}: COMPLETED' in your output when done.
 ```
@@ -648,7 +662,7 @@ skills: cc100x:session-memory, cc100x:verification
 
 **Workflow-based skills are ALWAYS passed for the matching workflow/stage.** They are not conditional — every BUILD gets TDD+code-gen, every REVIEW and post-fix/post-hunt comprehensive review gate gets code-review-patterns, etc. This mirrors CC10x's guaranteed quality coverage while preserving Agent Teams structure.
 
-**Note:** `cc100x:router-contract`, `cc100x:verification`, and `cc100x:session-memory` are NOT in this table because they load via agent frontmatter (unconditional). Every agent gets router-contract + verification; WRITE agents (builder, planner) additionally get session-memory. These do NOT need SKILL_HINTS.
+**Note:** `cc100x:router-contract`, `cc100x:verification`, and `cc100x:session-memory` are NOT in this table because they load via agent frontmatter (unconditional). Every agent gets router-contract + verification; builder/planner also load session-memory for memory read discipline and Memory Notes structure. These do NOT need SKILL_HINTS.
 
 **Also check CLAUDE.md Complementary Skills table and include matching skills in SKILL_HINTS.**
 
@@ -772,6 +786,10 @@ WHEN any CC100X REM-FIX task COMPLETES:
 ### Execution Loop
 
 ```
+-1. Preflight gate:
+   - Confirm Agent Teams is enabled and current session has no stale active team.
+   - If resuming: recover/recreate teammates before assigning tasks.
+
 0. Enter delegate mode (FIRST):
    Press **Shift+Tab** after team creation.
    Lead MUST be in delegate mode before assigning ANY tasks.
@@ -935,41 +953,49 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 | Toggle task list | **Ctrl+T** | Check task status during workflow |
 | Interrupt teammate | **Escape** | Stop a teammate that's stuck or off-track |
 
-## Hook-Driven Quality Gates (Recommended)
+## Optional Hook-Driven Quality Gates (Disabled By Default)
 
-Use Agent Teams hooks to enforce workflow integrity without manual polling:
+CC100x core orchestration MUST work without hooks.
 
+If a project explicitly opts in, Agent Teams hooks can add extra enforcement:
 - `TeammateIdle`: if a teammate goes idle without Router Contract or while task still needs evidence, return exit code `2` with corrective feedback.
 - `TaskCompleted`: block task completion (exit code `2`) when contract fields are missing, malformed, or blocking remediation is unresolved.
 
-Minimal policy:
+Minimal optional policy:
 1. Reject completion if Router Contract section is missing.
 2. Reject completion if `BLOCKING=true` and no REM-FIX task exists.
 3. Reject completion if `SPEC_COMPLIANCE=FAIL` without explicit user skip decision logged.
 
-This keeps lead orchestration deterministic and prevents silent task drift.
+Default stance: keep hooks off unless user explicitly enables and validates them.
 
 ## Model Selection Guidance
 
-When spawning teammates, model selection affects cost and capability:
+Quality-first default (CC100x pre-production hardening): use `inherit` for every teammate.
 
-| Teammate | Recommended Model | Rationale |
-|----------|-------------------|-----------|
-| builder | `inherit` (Opus) | Needs full capability for TDD + implementation |
-| investigator | `inherit` (Opus) | Complex reasoning for hypothesis testing |
-| planner | `inherit` (Opus) | Architecture decisions need deep understanding |
-| security-reviewer | `inherit` (Opus) | Security analysis requires thoroughness |
-| performance-reviewer | `sonnet` | Performance patterns are more formulaic |
-| quality-reviewer | `sonnet` | Pattern matching is well-suited for Sonnet |
-| live-reviewer | `sonnet` | Quick feedback loop, doesn't need full Opus |
-| hunter | `sonnet` | Scan patterns are systematic, not creative |
-| verifier | `sonnet` | Test running and evidence collection |
+| Teammate | Quality-First (Default) | Balanced Override (Optional) |
+|----------|--------------------------|-------------------------------|
+| builder | `inherit` | `inherit` |
+| investigator | `inherit` | `inherit` |
+| planner | `inherit` | `inherit` |
+| security-reviewer | `inherit` | `inherit` |
+| performance-reviewer | `inherit` | `sonnet` |
+| quality-reviewer | `inherit` | `sonnet` |
+| live-reviewer | `inherit` | `sonnet` |
+| hunter | `inherit` | `sonnet` |
+| verifier | `inherit` | `sonnet` |
 
-**Override rule:** If a teammate is struggling (e.g., missing issues), re-spawn with `inherit` (Opus).
+**Override rule:** If any teammate misses issues, immediately re-run that stage with `inherit`.
 
-## Self-Claim Mode (Optional Optimization)
+## Self-Claim Mode (Explicit Opt-In Only)
 
-In addition to lead-assigned task ownership, teammates can self-claim unblocked tasks:
+Default is **disabled** to preserve deterministic role routing.
+
+Only enable self-claim when:
+- Task descriptions are fully role-agnostic
+- Role-specific sequencing is not required
+- User explicitly asks for autonomous claiming
+
+When enabled, teammates can self-claim unblocked tasks:
 
 ```
 After completing a task:
@@ -981,28 +1007,29 @@ After completing a task:
 
 Task claiming is lock-safe in Agent Teams (file-lock protected), so simultaneous claim attempts resolve without duplicate ownership.
 
-**When to enable:** For experienced teams where task descriptions are self-contained. Lead can disable by explicitly assigning all tasks upfront.
+**When not to enable:** BUILD/DEBUG phases with specialized roles (builder, investigators, reviewers, verifier). These should stay lead-assigned.
 
 ---
 
 ## Gates (Must Pass)
 
-1. **MEMORY_LOADED** - Before routing
-2. **TASKS_CHECKED** - Check TaskList() for active workflow
-3. **INTENT_CLARIFIED** - User intent is unambiguous (all workflows)
-4. **RESEARCH_EXECUTED** - Before planner (if research trigger detected)
-5. **RESEARCH_PERSISTED** - Save to docs/research/ + update activeContext.md (if research was executed)
-6. **REQUIREMENTS_CLARIFIED** - Before invoking teammates (BUILD only)
-7. **TASKS_CREATED** - Workflow task hierarchy created
-8. **TEAM_CREATED** - Agent Team spawned for workflow
-9. **CONTRACTS_VALIDATED** - Validate Router Contract before marking each teammate task completed
-10. **ALL_TASKS_COMPLETED** - All tasks (including Memory Update) status="completed"
-11. **MEMORY_UPDATED** - Before marking done
-12. **TEAM_SHUTDOWN** - Send shutdown_request to all teammates, wait for approvals, TeamDelete()
+1. **AGENT_TEAMS_READY** - Agent Teams enabled; no stale active team in session
+2. **MEMORY_LOADED** - Before routing
+3. **TASKS_CHECKED** - Check TaskList() for active workflow
+4. **INTENT_CLARIFIED** - User intent is unambiguous (all workflows)
+5. **RESEARCH_EXECUTED** - Before planner (if research trigger detected)
+6. **RESEARCH_PERSISTED** - Save to docs/research/ + update activeContext.md (if research was executed)
+7. **REQUIREMENTS_CLARIFIED** - Before invoking teammates (BUILD only)
+8. **TASKS_CREATED** - Workflow task hierarchy created
+9. **TEAM_CREATED** - Agent Team spawned for workflow
+10. **CONTRACTS_VALIDATED** - Validate Router Contract before marking each teammate task completed
+11. **ALL_TASKS_COMPLETED** - All tasks (including Memory Update) status="completed"
+12. **MEMORY_UPDATED** - Before marking done
+13. **TEAM_SHUTDOWN** - Send shutdown_request to all teammates, wait for approvals, TeamDelete()
 
 ---
 
-## Team Shutdown (Gate #12)
+## Team Shutdown (Gate #13)
 
 After workflow completes AND memory is updated:
 1. Send `shutdown_request` to each teammate via `SendMessage(type="shutdown_request", recipient="{name}")`
@@ -1023,7 +1050,7 @@ Example: `cc100x-build-20260206-143022`, `cc100x-debug-20260206-150000`
 3. **Every workflow reads memory first** - `.claude/cc100x/`
 4. **Teammates own file sets** - no two teammates edit the same file
 5. **READ-ONLY agents** include Memory Notes for lead to persist
-6. **WRITE agents** update memory directly
+6. **Lead owns memory persistence by default**; teammates provide Memory Notes unless explicitly assigned `MEMORY_OWNER: teammate`
 7. **Wait for teammates** - never implement while teammates are working
 8. **All skill references** use `cc100x:` prefix
 9. **No nested teams** - reuse existing team for sub-workflows
