@@ -2,12 +2,12 @@
 
 ### Next-Gen Orchestration on Agent Teams
 
-**Current version:** 0.1.0
+**Current version:** 0.1.2
 
 **Requires: Agent Teams enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)**
 
 <p align="center">
-  <strong>1 Lead</strong> &nbsp;•&nbsp; <strong>9 Agents</strong> &nbsp;•&nbsp; <strong>8 Skills</strong> &nbsp;•&nbsp; <strong>4 Workflows</strong> &nbsp;•&nbsp; <strong>6 Domain Skills</strong>
+  <strong>1 Lead</strong> &nbsp;•&nbsp; <strong>9 Agents</strong> &nbsp;•&nbsp; <strong>8 Workflow Skills</strong> &nbsp;•&nbsp; <strong>4 Workflows</strong> &nbsp;•&nbsp; <strong>9 Domain Skills</strong>
 </p>
 
 <p align="center">
@@ -52,6 +52,9 @@ YOU: "build a user auth system"
                     │   hunter (silent failure scan)                 │
                     │     │                                          │
                     │     ▼                                          │
+                    │   review arena (sec/perf/quality + challenge) │
+                    │     │                                          │
+                    │     ▼                                          │
                     │   verifier (E2E tests)                        │
                     └──────────────────────────────────────────────┘
 ```
@@ -62,10 +65,10 @@ YOU: "build a user auth system"
 
 | Intent | Trigger Words | What Happens |
 |--------|---------------|--------------|
-| **BUILD** | build, implement, create, make | **Pair Build**: Builder + Live Reviewer work together, then Hunter + Verifier |
+| **BUILD** | build, implement, create, make | **Pair Build**: Builder + Live Reviewer, then Hunter, Review Arena (triad + challenge), then Verifier |
 | **DEBUG** | debug, fix, error, bug, broken | **Bug Court**: Multiple investigators compete with hypotheses, then debate |
 | **REVIEW** | review, audit, check, analyze | **Review Arena**: 3 specialized reviewers challenge each other's findings |
-| **PLAN** | plan, design, architect, roadmap | Single planner with memory integration |
+| **PLAN** | plan, design, architect, roadmap | Single planner in Plan Approval Mode |
 
 ---
 
@@ -122,8 +125,8 @@ Reviewer: "LGTM"
 | **live-reviewer** | Real-time review during Pair Build | READ-ONLY |
 | **hunter** | Silent failure detection | READ-ONLY |
 | **verifier** | E2E integration verification | READ-ONLY |
-| **investigator** | Hypothesis champion in Bug Court | READ+WRITE |
-| **planner** | Comprehensive plan creation | WRITE (plans + memory only) |
+| **investigator** | Hypothesis champion in Bug Court | READ-ONLY |
+| **planner** | Comprehensive plan creation | WRITE (plan files only) |
 
 ---
 
@@ -140,7 +143,7 @@ Reviewer: "LGTM"
 | **router-contract** | YAML contract format for all agents |
 | **github-research** | External code research via Octocode/GitHub with tiered fallbacks |
 
-## The 6 Domain Skills
+## The 9 Domain Skills
 
 Domain skills provide deep expertise. Loaded automatically by the lead via SKILL_HINTS:
 
@@ -152,6 +155,9 @@ Domain skills provide deep expertise. Loaded automatically by the lead via SKILL
 | **planning-patterns** | planner | Plan structure, task granularity, risk assessment |
 | **code-generation** | builder | Pattern matching, minimal code, universal questions |
 | **github-research** | planner, investigator | External research, tiered fallbacks, checkpoint saves |
+| **architecture-patterns** | builder, reviewers, investigator, hunter, verifier, planner | Architecture consistency, API/layer patterns |
+| **frontend-patterns** | builder, reviewers, investigator, hunter, verifier, planner | UX/accessibility/loading-state frontend standards |
+| **brainstorming** | planner | Structured discovery and option framing |
 
 ---
 
@@ -186,7 +192,7 @@ CC100x survives context compaction:
 └── progress.md        # Completed work, verification evidence
 ```
 
-**Iron Law:** Every workflow loads memory at START and updates at END.
+**Iron Law:** Every workflow loads memory at START and persists at END (lead-owned Memory Update task by default).
 
 ---
 
@@ -234,8 +240,8 @@ Copy this README, paste it into Claude Code, and say: **"Set up cc100x for me"**
 ```markdown
 # CC100x Orchestration (Always On)
 
-IMPORTANT: ALWAYS invoke cc100x-lead on ANY development task. First action, no exceptions.
-IMPORTANT: Explore project first, then invoke the lead.
+IMPORTANT: For ANY development task, route through cc100x-lead before making code changes.
+IMPORTANT: Read-only exploration is allowed, but invoke the lead before Edit/Write/code-changing Bash.
 IMPORTANT: Never bypass the lead. It is the system.
 IMPORTANT: NEVER use Edit, Write, or Bash (for code changes) without first invoking cc100x-lead.
 
@@ -284,9 +290,9 @@ USER REQUEST
 │         Detects intent → Creates Agent Team → Delegates       │
 └─────────────────────────────────────────────────────────────┘
      │
-     ├── BUILD ──► [builder ◄──► live-reviewer] ──► hunter ──► verifier
+     ├── BUILD ──► [builder ◄──► live-reviewer] ──► hunter ──► [security ∥ performance ∥ quality] ──► challenge ──► verifier
      │
-     ├── DEBUG ──► [investigator-1 ∥ investigator-2 ∥ investigator-3] ──► debate ──► fix ──► review
+     ├── DEBUG ──► [investigator-1 ... investigator-N] ──► debate ──► fix ──► [security ∥ performance ∥ quality] ──► challenge ──► verifier
      │
      ├── REVIEW ─► [security ∥ performance ∥ quality] ──► challenge round ──► consensus
      │
@@ -388,6 +394,6 @@ MIT License
 ---
 
 <p align="center">
-  <strong>cc100x v0.1.0</strong><br>
+  <strong>cc100x v0.1.2</strong><br>
   <em>Next-Gen Orchestration on Agent Teams</em>
 </p>

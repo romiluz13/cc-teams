@@ -187,6 +187,22 @@ Run a full review gate (not live-review quick checks):
 
 **Why this gate exists:** Live-reviewer is intentionally focused and fast. This phase restores full multi-dimensional depth before ship decisions.
 
+**Non-bypass rule (hard):**
+- Verifier must remain blocked until the Build Review Arena challenge round is complete.
+- Hunter findings do not unlock verifier directly.
+- Remediation completion does not unlock verifier directly; re-review + challenge must run first.
+
+### Contract-First Relay for Dependency-Sensitive Changes
+
+When BUILD work includes cross-layer dependencies (API contract, response shape, URL conventions, streaming semantics), run contract-first relay before downstream integration checks:
+
+1. Upstream owner publishes explicit contract details to lead.
+2. Lead verifies contract for ambiguity.
+3. Lead forwards verified contract to affected teammates.
+4. Downstream work proceeds only after contract relay.
+
+This prevents parallel drift and late integration surprises.
+
 ### Phase 4: E2E Verification (Verifier)
 
 **Starts after Review Arena challenge completes.**

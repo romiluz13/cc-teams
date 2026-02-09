@@ -90,6 +90,10 @@ Whether a fix task needs to be created.
 - `true`: Create a `CC100X REM-FIX:` task with REMEDIATION_REASON as description
 - `false`: No fix needed
 
+**Naming contract (strict):**
+- New remediation tasks MUST use prefix `CC100X REM-FIX:`.
+- Legacy prefix `CC100X REMEDIATION:` may be treated as remediation during migration, but do not emit it in new runs.
+
 ### REMEDIATION_REASON
 Exact text for the remediation task description. Null if no remediation needed.
 

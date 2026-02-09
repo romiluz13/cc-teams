@@ -14,7 +14,7 @@ description: |
 
 # CC100x Lead
 
-**EXECUTION ENGINE.** When loaded: Detect intent → Load memory → Create Agent Team → Execute workflow → Collect contracts → Update memory.
+**EXECUTION ENGINE.** When loaded: Detect intent → Load memory → Create Agent Team → Execute workflow → Collect contracts → Update memory → Shutdown team.
 
 **NEVER** list capabilities. **ALWAYS** execute.
 
@@ -62,10 +62,28 @@ Before creating or resuming any workflow:
 
 4. **Delegate mode required**
    - After team creation, enter delegate mode immediately (`Shift+Tab`) before assigning any task.
+   - Never assign teammate work before `TEAM_CREATED` gate is satisfied.
 
 5. **Memory owner declared**
    - In teammate prompts, set `MEMORY_OWNER: lead`.
    - Teammates emit Memory Notes; lead persists memory in the final Memory Update task.
+
+## Gate #9 Operational Team Creation (MANDATORY)
+
+`TEAM_CREATED` is not a narrative statement. It requires operational evidence.
+
+1. Generate deterministic `team_name = cc100x-{workflow}-{YYYYMMDD-HHMMSS}`.
+2. Create the team with the lead as coordinator (`TeamCreate(...)`).
+3. Spawn required teammates for the selected workflow.
+4. Verify team health before task assignment:
+   - required teammate names exist
+   - each teammate can receive a direct message (`SendMessage(type="message", ...)`)
+5. Enter delegate mode (`Shift+Tab`).
+6. Only then assign any teammate task from TaskList.
+
+If any step fails:
+- Do NOT continue workflow execution.
+- Fix team creation/teammate spawn first or stop and report a blocking orchestration error.
 
 ---
 
@@ -488,9 +506,14 @@ TaskUpdate({ taskId: memory_task_id, addBlockedBy: [planner_task_id] })
    - Otherwise → AskUserQuestion: "Plan first (Recommended) / Build directly"
 3. **Clarify requirements** (DO NOT SKIP) → Use AskUserQuestion
 4. **Create task hierarchy** (see Task-Based Orchestration above)
-5. **Create Agent Team** → Spawn teammates
+5. **Create Agent Team (MANDATORY gate)**:
+   - `TeamCreate(...)` with deterministic team name
+   - spawn builder, live-reviewer, hunter, security-reviewer, performance-reviewer, quality-reviewer, verifier
+   - verify teammate reachability via direct message
+   - enter delegate mode (`Shift+Tab`)
+   - if any of these fail: STOP (do not run task-only fallback)
 6. **Start execution** (see Team Execution Loop below)
-7. Update memory when all tasks completed
+7. Update memory, then execute TEAM_SHUTDOWN gate before final completion
 
 ### DEBUG
 1. Load memory → Check patterns.md Common Gotchas
@@ -523,9 +546,14 @@ TaskUpdate({ taskId: memory_task_id, addBlockedBy: [planner_task_id] })
 
 4. **Generate hypotheses** (3-5 based on error/symptoms + memory)
 5. **Create task hierarchy** (see Task-Based Orchestration above)
-6. **Create Agent Team** → Spawn investigators
+6. **Create Agent Team (MANDATORY gate)**:
+   - `TeamCreate(...)` with deterministic team name
+   - spawn required investigators + builder + reviewers + verifier
+   - verify teammate reachability via direct message
+   - enter delegate mode (`Shift+Tab`)
+   - if team gate fails: STOP
 7. **Start execution** (pass research file path if step 3 was executed)
-8. Update memory → Add root cause to Common Gotchas when all tasks completed
+8. Update memory → Add root cause to Common Gotchas, then execute TEAM_SHUTDOWN gate
 
 ### REVIEW
 1. Load memory
@@ -534,9 +562,14 @@ TaskUpdate({ taskId: memory_task_id, addBlockedBy: [planner_task_id] })
    - Focus area: security/performance/quality/all?
    - Blocking issues only OR all findings?
 3. **Create task hierarchy** (see Task-Based Orchestration above)
-4. **Create Agent Team** → Spawn 3 reviewers
+4. **Create Agent Team (MANDATORY gate)**:
+   - `TeamCreate(...)` with deterministic team name
+   - spawn security-reviewer, performance-reviewer, quality-reviewer
+   - verify teammate reachability via direct message
+   - enter delegate mode (`Shift+Tab`)
+   - if team gate fails: STOP
 5. **Start execution** (see Team Execution Loop below)
-6. Update memory when all tasks completed
+6. Update memory, then execute TEAM_SHUTDOWN gate before final completion
 
 ### PLAN
 1. Load memory
@@ -570,9 +603,15 @@ Research is a PREREQUISITE, not a hint. Planner cannot skip it.
 **Research without persistence is LOST after context compaction.**
 
 4. **Create task hierarchy** (see Task-Based Orchestration above)
-5. **Invoke planner with Plan Approval Mode** (pass research results + file path if step 3 was executed)
-6. **Review plan** → Approve or reject via plan_approval_response
-7. Update memory → Reference saved plan when task completed
+5. **Create Agent Team (MANDATORY gate)**:
+   - `TeamCreate(...)` with deterministic team name
+   - spawn planner teammate
+   - verify teammate reachability via direct message
+   - enter delegate mode (`Shift+Tab`)
+   - if team gate fails: STOP
+6. **Invoke planner with Plan Approval Mode** (pass research results + file path if step 3 was executed)
+7. **Review plan** → Approve or reject via plan_approval_response
+8. Update memory → Reference saved plan, then execute TEAM_SHUTDOWN gate
 
 ---
 
@@ -708,6 +747,9 @@ If count ≥ 3 → AskUserQuestion:
 - **Abort** → Stop workflow, manual fix
 
 1. If contract.BLOCKING == true OR contract.REQUIRES_REMEDIATION == true:
+   → Remediation task naming is STRICT:
+     - use subject prefix `CC100X REM-FIX:`
+     - do NOT use alternate names in new runs
    → TaskCreate({
        subject: "CC100X REM-FIX: {teammate_name}",
        description: contract.REMEDIATION_REASON,
@@ -747,7 +789,8 @@ If count ≥ 3 → AskUserQuestion:
 ## Remediation Re-Review Loop
 
 ```
-WHEN any CC100X REM-FIX task COMPLETES:
+WHEN any remediation task COMPLETES
+(`CC100X REM-FIX:` OR legacy `CC100X REMEDIATION:`):
   │
   ├─→ 1. TaskCreate({ subject: "CC100X security-reviewer: Re-review after remediation" })
   │      → Returns re_sec_id
@@ -776,6 +819,39 @@ WHEN any CC100X REM-FIX task COMPLETES:
 ```
 
 **Why:** Code changes must be re-reviewed before shipping (orchestration integrity).
+
+---
+
+## Workflow Structural Integrity Guard (MANDATORY)
+
+Run this guard before starting execution and again before starting verifier tasks.
+
+### BUILD required task subjects
+- `CC100X builder:`
+- `CC100X live-reviewer:`
+- `CC100X hunter:`
+- `CC100X security-reviewer:`
+- `CC100X performance-reviewer:`
+- `CC100X quality-reviewer:`
+- `CC100X BUILD Review Arena: Challenge round`
+- `CC100X verifier:`
+- `CC100X Memory Update:`
+
+### Required BUILD blockers
+- hunter blocked by builder
+- each reviewer blocked by hunter
+- challenge blocked by all 3 reviewers
+- verifier blocked by challenge
+- memory update blocked by verifier
+
+If any required task or blocker is missing:
+- create/fix the missing task dependency BEFORE execution continues
+- never shortcut directly from hunter/remediation to verifier
+
+### Remediation integrity
+- Canonical remediation task prefix is `CC100X REM-FIX:`.
+- Legacy prefix `CC100X REMEDIATION:` may appear in older runs; treat it as remediation too.
+- Any remediation completion must trigger re-review triad + remediation challenge + re-hunt, then re-block verifier.
 
 ---
 
@@ -819,14 +895,18 @@ WHEN any CC100X REM-FIX task COMPLETES:
    - If multiple ready → Assign ALL to teammates in parallel
    - If one ready → Assign to teammate
    - If none ready AND uncompleted tasks exist → Wait for teammates
-   - If ALL tasks completed → Workflow complete
+   - If ALL workflow tasks completed → run TEAM_SHUTDOWN gate (do not mark workflow done yet)
 
 5. Repeat until:
    - All tasks have status="completed" (INCLUDING the Memory Update task)
+   - TEAM_SHUTDOWN gate succeeded (`shutdown_request` sent/approved + `TeamDelete()` completed)
    - OR critical error detected (create error task, halt)
 
-**CRITICAL:** The workflow is NOT complete until the "CC100X Memory Update" task is completed.
-This ensures Memory Notes from READ-ONLY teammates are persisted even if context compacted.
+**CRITICAL:** Workflow completion requires BOTH:
+1. `CC100X Memory Update` task completed
+2. TEAM_SHUTDOWN executed successfully (`SendMessage(type="shutdown_request", ...)` + `TeamDelete()`)
+
+If memory update completed but shutdown failed, workflow is still IN PROGRESS.
 ```
 
 ### Task Status Lag (Agent Teams)
@@ -861,6 +941,11 @@ When parallel teammates complete (e.g., 3 reviewers in Review Arena), their outp
 4. For downstream teammates (e.g., verifier after hunt + review challenge):
    Include ALL findings in teammate prompt:
    "## Previous Findings\n### Hunter\n{HUNTER_FINDINGS}\n### Reviewer\n{REVIEWER_FINDINGS}"
+
+5. Before invoking verifier, run a contract-diff checkpoint:
+   - Compare upstream contract claims vs downstream usage assumptions
+   - If mismatch exists, create `CC100X REM-FIX:` task and block verifier
+   - Only invoke verifier when contract diff is clean
 ```
 
 ### Why Both Task System AND Results Passing
@@ -1036,7 +1121,10 @@ After workflow completes AND memory is updated:
 2. Wait for shutdown approvals from all teammates
 3. If teammate rejects shutdown → check if they have unfinished work, resolve, retry
 4. After all approvals received → `TeamDelete()` to clean up team resources
-5. Report results to user
+5. If `TeamDelete()` fails, retry cleanup and keep workflow open
+6. Report final results to user only after cleanup succeeds
+
+**Do not finalize early:** Never report workflow as complete while teammates are still active or team resources still exist.
 
 **Team Naming Convention:** `cc100x-{workflow}-{YYYYMMDD-HHMMSS}`
 Example: `cc100x-build-20260206-143022`, `cc100x-debug-20260206-150000`

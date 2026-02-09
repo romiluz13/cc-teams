@@ -13,13 +13,13 @@ CC100x runtime truth is defined only by:
 
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:4`
 
-## 1) Entry and Routing
+## 1) Entry and Deterministic Routing
 
-CC100x has a single orchestration entrypoint (`cc100x-lead`) with deterministic routing.
+CC100x has one orchestration entrypoint (`cc100x-lead`) with strict routing:
 
-- ERROR signals route to DEBUG and have highest priority.
+- ERROR routes to DEBUG and has highest priority.
 - PLAN, REVIEW, and BUILD follow in that order.
-- Conflict handling is explicit: ERROR wins.
+- Ambiguity resolution is explicit: ERROR wins.
 
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:25`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:29`
@@ -28,76 +28,87 @@ Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:31`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:32`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:34`
 
-## 2) SDLC as One System
+## 2) SDLC as One Connected System
 
 The lifecycle is integrated and task-enforced:
 
-- BUILD: builder + live loop, then hunter, full review arena, verifier.
-- DEBUG: competing investigators, debate, builder fix, full review arena, verifier.
-- REVIEW: triad review + challenge merge.
-- PLAN: plan approval mode with lead approval handshake.
+- BUILD: Pair Build -> Hunter -> triad review + challenge -> Verifier.
+- DEBUG: 2-5 investigators -> debate -> builder fix -> triad review + challenge -> Verifier.
+- REVIEW: triad review + challenge round.
+- PLAN: planner in plan approval mode with lead handshake.
 
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:40`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:41`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:42`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:43`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:530`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:328`
 
-## 3) Workflow Protocols
+## 3) Agent Teams Preflight Is Mandatory
 
-Each workflow has a dedicated functional protocol:
+Before team execution or resume:
 
-- Pair Build protocol governs BUILD.
-- Bug Court protocol governs DEBUG.
-- Review Arena protocol governs REVIEW and post-fix/post-build review depth.
-
-Source: `plugins/cc100x/skills/pair-build/SKILL.md:6`
-Source: `plugins/cc100x/skills/pair-build/SKILL.md:177`
-Source: `plugins/cc100x/skills/pair-build/SKILL.md:190`
-Source: `plugins/cc100x/skills/bug-court/SKILL.md:6`
-Source: `plugins/cc100x/skills/bug-court/SKILL.md:149`
-Source: `plugins/cc100x/skills/bug-court/SKILL.md:159`
-Source: `plugins/cc100x/skills/review-arena/SKILL.md:6`
-Source: `plugins/cc100x/skills/review-arena/SKILL.md:123`
-
-## 4) Contract and Gating
-
-Every teammate outputs a Router Contract that the lead validates before progressing.
-
-- Contract schema is mandatory and machine-readable YAML.
-- Agent-specific STATUS values are constrained.
-- BLOCKING/REQUIRES_REMEDIATION drives REM-FIX task creation.
-- Circuit breaker applies before repeated remediations.
-
-Source: `plugins/cc100x/skills/router-contract/SKILL.md:20`
-Source: `plugins/cc100x/skills/router-contract/SKILL.md:48`
-Source: `plugins/cc100x/skills/router-contract/SKILL.md:195`
-Source: `plugins/cc100x/skills/router-contract/SKILL.md:207`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:688`
-
-## 5) Memory and Continuity
-
-Memory is a protocol, not optional note-taking:
-
-- Lead always loads memory before routing.
-- Memory update is task-enforced at workflow end.
-- READ-ONLY agents emit Memory Notes; lead persists workflow-final.
-- Stable anchors are required for safe memory edits.
+- Agent Teams must be enabled.
+- Session must not keep stale active team state.
+- Team naming is deterministic.
+- Lead enters delegate mode before assignment.
+- `TEAM_CREATED` is an operational gate (not narrative): team exists, required teammates are spawned, direct messaging is reachable.
+- Teammate prompts declare default memory owner as lead.
 
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:47`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:285`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:855`
-Source: `plugins/cc100x/skills/session-memory/SKILL.md:146`
-Source: `plugins/cc100x/skills/session-memory/SKILL.md:300`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:57`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:61`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:67`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:73`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:76`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:786`
 
-## 6) File Ownership and Agent Roles
+## 4) Task Graph and Memory-Update Closure
 
-Write/read boundaries are strict:
+Workflow execution is DAG-first and closure-gated:
 
-- Builder owns code writes.
-- Planner may write planning/memory artifacts.
-- Investigator is read-only during hypothesis phase.
-- Reviewers, hunter, verifier, and live-reviewer are read-only.
+- Workflow tasks are explicitly created and dependency-gated.
+- BUILD structural integrity is enforced (required tasks and blockers).
+- Verifier cannot bypass challenge (no hunter/remediation direct unlock).
+- Every workflow includes a `CC100X Memory Update` task.
+- Workflow cannot complete until Memory Update and TEAM_SHUTDOWN both succeed.
+
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:202`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:825`
+Source: `plugins/cc100x/skills/pair-build/SKILL.md:190`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:310`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:396`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:443`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:470`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:905`
+
+## 5) Router Contract Is Non-Negotiable
+
+Every teammate must emit machine-readable Router Contract YAML. Lead validates contract before completion and routes remediation for blocking outcomes.
+
+Source: `plugins/cc100x/skills/router-contract/SKILL.md:20`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:671`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:688`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:710`
+
+## 6) Remediation and Re-Review Loop Integrity
+
+Blocking findings trigger remediation tasks, and remediation must pass re-review + re-hunt before verifier is allowed to close.
+
+Canonical remediation naming is `CC100X REM-FIX:`; legacy `CC100X REMEDIATION:` is accepted only for backward compatibility.
+
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:710`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:747`
+Source: `plugins/cc100x/skills/router-contract/SKILL.md:93`
+Source: `plugins/cc100x/skills/router-contract/SKILL.md:95`
+
+## 7) Role Ownership and File Safety
+
+Write/read boundaries are explicit:
+
+- Builder owns implementation writes.
+- Planner writes plan files; memory persistence remains lead-owned by default.
+- Investigator is read-only in hypothesis stage.
+- Reviewers/hunter/verifier/live-reviewer are read-only.
 
 Source: `plugins/cc100x/agents/builder.md:15`
 Source: `plugins/cc100x/agents/planner.md:15`
@@ -108,63 +119,68 @@ Source: `plugins/cc100x/agents/quality-reviewer.md:15`
 Source: `plugins/cc100x/agents/hunter.md:15`
 Source: `plugins/cc100x/agents/verifier.md:15`
 Source: `plugins/cc100x/agents/live-reviewer.md:15`
-Source: `plugins/cc100x/skills/router-contract/SKILL.md:109`
-Source: `plugins/cc100x/skills/session-memory/SKILL.md:141`
 
-## 7) Task DAG and Remediation Loop
+## 8) Memory Ownership Canon (Lead by Default)
 
-The orchestration engine is task-graph first:
+Memory persistence is owner-scoped:
 
-- Workflow tasks define dependency DAGs.
-- Downstream phases only open when blockers complete.
-- Any remediation re-enters full review + re-hunt before verifier.
-- Completion requires memory task completion.
+- Lead owns memory persistence in team workflows by default.
+- Teammates emit Memory Notes for workflow-final persistence.
+- Teammate direct memory edits require explicit override (`MEMORY_OWNER: teammate`).
 
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:177`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:187`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:733`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:803`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:806`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:607`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1053`
+Source: `plugins/cc100x/skills/session-memory/SKILL.md:19`
+Source: `plugins/cc100x/skills/session-memory/SKILL.md:152`
+Source: `plugins/cc100x/skills/session-memory/SKILL.md:154`
+Source: `plugins/cc100x/skills/session-memory/SKILL.md:538`
 
-## 8) Agent Teams Constraints
+## 9) Agent Teams Constraint Canon
 
-Constraints are first-class operational rules:
+Operational constraints are explicit:
 
-- Delegate mode required.
+- No teammate session restoration via `/resume`.
 - No nested teams.
-- No `/resume` teammate restoration.
-- One team per session.
-- Lead remains fixed for team lifetime.
-- Permission mode inheritance happens at spawn.
-- Shutdown requires approval flow then `TeamDelete()`.
+- One active team per session.
+- Lead identity is fixed for team lifetime.
+- Teammate permissions inherit from lead at spawn.
+- Broadcast is limited in favor of targeted messaging.
+- Shutdown requires approval flow and team deletion.
+- Failed `TeamDelete()` is retried; workflow is not finalized until cleanup succeeds.
 
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:775`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:908`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:907`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:914`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:915`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:916`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:979`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:985`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:935`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:936`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:942`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:943`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:944`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:945`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1032`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1038`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1124`
 
-## 9) Release Gates
+## 10) Hooks and Self-Claim Policy
 
-A workflow is done only if all mandatory gates pass:
+- Hooks are optional and disabled-by-default for core correctness.
+- Self-claim is explicit opt-in and disabled by default for role-specialized flows.
 
-- memory loaded
-- tasks checked
-- tasks created
-- team created
-- all tasks completed
-- contracts validated
-- memory updated
-- team shutdown
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:956`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:989`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1010`
 
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:962`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:975`
+## 11) Release Gates
 
-## 10) Documentation Rule
+A workflow is complete only when mandatory gates pass, including:
 
-If a statement in any bible/design doc conflicts with functional files, functional files win.
+- `AGENT_TEAMS_READY`
+- `CONTRACTS_VALIDATED`
+- `ALL_TASKS_COMPLETED`
+- `MEMORY_UPDATED`
+- `TEAM_SHUTDOWN`
 
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:993`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1014`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1016`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1028`
+
+## 12) Documentation Governance Rule
+
+If any non-functional doc conflicts with runtime files, functional files win.

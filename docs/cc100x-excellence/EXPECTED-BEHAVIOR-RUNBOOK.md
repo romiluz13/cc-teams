@@ -32,6 +32,7 @@ It is intentionally behavior-first (not synthetic scoring-first).
 
 ### Agent Teams lifecycle
 - [ ] Lead performs Agent Teams preflight before team execution.
+- [ ] Lead executes explicit team creation gate (team created + teammates reachable) before task assignment.
 - [ ] Lead enters delegate mode after team creation and stays orchestration-only.
 - [ ] Lead assigns or coordinates tasks; lead does not do feature implementation work.
 - [ ] Team is cleaned up at end: shutdown requests then delete team resources.
@@ -41,6 +42,7 @@ It is intentionally behavior-first (not synthetic scoring-first).
 - [ ] Dependencies are DAG-safe (`addBlockedBy` forward-only).
 - [ ] Parallel phases run in parallel only when protocol requires it.
 - [ ] Workflow is not considered complete before `CC100X Memory Update` completes.
+- [ ] Workflow is not considered complete before `TEAM_SHUTDOWN` succeeds.
 
 ### Router Contract enforcement
 - [ ] Every teammate output ends with `### Router Contract (MACHINE-READABLE)` YAML.
@@ -109,6 +111,7 @@ Expected runtime behavior:
 - [ ] Builder and live-reviewer coordinate in real time using direct teammate messaging.
 - [ ] Builder owns all writes; other teammates are read-only.
 - [ ] Post-build sequence runs: hunter -> 3 reviewers (parallel) -> challenge -> verifier -> memory update.
+- [ ] No shortcut path from hunter/remediation directly to verifier.
 - [ ] Verifier reports evidence with commands and exit codes.
 
 Expected artifacts:
@@ -165,6 +168,7 @@ Never acceptable:
 ### Remediation re-review loop
 - [ ] After REM-FIX completion, lead creates re-review tasks (security/performance/quality).
 - [ ] Challenge round and re-hunt run before verifier is unblocked.
+- [ ] Remediation task naming uses `CC100X REM-FIX:` (legacy `CC100X REMEDIATION:` accepted only for backward compatibility).
 
 ### Circuit breaker
 - [ ] If REM-FIX count reaches 3+, lead triggers explicit user choice:
@@ -290,6 +294,7 @@ Use one real task per scenario. Mark each check `V` or `X`.
 - Expected:
   - [ ] Shutdown requests sent to teammates.
   - [ ] Team delete after approvals.
+  - [ ] Workflow not finalized if team deletion fails.
 
 ---
 
@@ -297,6 +302,7 @@ Use one real task per scenario. Mark each check `V` or `X`.
 
 - [ ] Lead implements code directly in workflow.
 - [ ] Team workflows complete without Memory Update task completion.
+- [ ] Team workflows complete without TEAM_SHUTDOWN success.
 - [ ] Remediation-required contracts are ignored.
 - [ ] Non-builder teammate writes source files.
 - [ ] Reviewer/investigator messaging phases do not function.

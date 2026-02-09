@@ -169,6 +169,12 @@ Message the other reviewers directly to debate any findings."
 - Allow 2-3 rounds of debate
 - Intervene if debate becomes unproductive
 
+**Challenge completion criteria (required):**
+1. All 3 reviewers acknowledged peer findings (no silent reviewer).
+2. At least one cross-review response from each reviewer (agreement or challenge).
+3. Conflicts are resolved or explicitly escalated with rationale.
+4. Lead publishes merged verdict before downstream verifier/remediation decisions.
+
 **Memory concurrency rule:** NO memory edits during Phase 1 or Phase 2. All reviewers are READ-ONLY for memory files. Memory Notes are collected by lead at Phase 3.
 
 ### Phase 3: Consensus

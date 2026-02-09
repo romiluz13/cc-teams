@@ -3,6 +3,8 @@
 ## Purpose
 Define the pre-production benchmark corpus used to compare CC100x against CC10x and validate quality gates from `KPI-SCORECARD.md`.
 
+Current state: this document defines the benchmark corpus and artifact conventions; benchmark runner scripts are planned but not yet implemented.
+
 ## Corpus Design Principles
 1. Cover the entire SDLC: PLAN, BUILD, REVIEW, DEBUG.
 2. Include realistic ambiguity and failure modes.
@@ -93,10 +95,9 @@ Total cases: `24`
 
 ## Execution Protocol
 1. Run full corpus with `deterministic` profile first.
-2. Run full corpus with `adaptive` profile.
-3. Run full corpus with `turbo-quality` profile.
-4. Compare each profile against CC10x baseline `B0`.
-5. Record all runs in decision log before any release decision.
+2. Compare deterministic results against CC10x baseline `B0`.
+3. Record all runs in decision log before any release decision.
+4. If additional profiles are introduced later (`adaptive`, `turbo-quality`), run the same corpus and compare against deterministic + `B0`.
 
 ## Fixture and Artifact Conventions
 1. Fixtures: `artifacts/eval/fixtures/<case_id>/`

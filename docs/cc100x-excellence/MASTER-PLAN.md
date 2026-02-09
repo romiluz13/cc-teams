@@ -14,6 +14,9 @@ This plan is **compaction-safe** and should be treated as the single source of t
 - Current functional runtime files:
   - `plugins/cc100x/skills/*`
   - `plugins/cc100x/agents/*`
+- Phase A docs are complete (`KPI-SCORECARD`, `BENCHMARK-CASES`, `DECISION-LOG`).
+- Phase B/C runtime hardening is implemented for deterministic orchestration.
+- Phase D benchmark harness scripts are still planned (not yet present in `scripts/`).
 
 ---
 
@@ -53,34 +56,27 @@ This plan is **compaction-safe** and should be treated as the single source of t
 
 ---
 
-## 5) File-Level Change Plan (Exact)
+## 5) Artifact Status (As Of 2026-02-09)
 ## Delete
 - `None`.
 
-## Create (documentation + evaluation harness)
-1. `docs/cc100x-excellence/MASTER-PLAN.md` (this file)
+## Present in repo
+1. `docs/cc100x-excellence/MASTER-PLAN.md`
 2. `docs/cc100x-excellence/KPI-SCORECARD.md`
 3. `docs/cc100x-excellence/BENCHMARK-CASES.md`
 4. `docs/cc100x-excellence/DECISION-LOG.md`
-5. `scripts/eval/run-benchmark.sh`
-6. `scripts/eval/score-benchmark.sh`
+5. Runtime hardening across:
+   - `plugins/cc100x/skills/cc100x-lead/SKILL.md`
+   - `plugins/cc100x/skills/router-contract/SKILL.md`
+   - `plugins/cc100x/skills/review-arena/SKILL.md`
+   - `plugins/cc100x/skills/bug-court/SKILL.md`
+   - `plugins/cc100x/skills/pair-build/SKILL.md`
+   - `plugins/cc100x/agents/*.md`
 
-## Edit (functional runtime)
-1. `plugins/cc100x/skills/cc100x-lead/SKILL.md`
-2. `plugins/cc100x/skills/router-contract/SKILL.md`
-3. `plugins/cc100x/skills/review-arena/SKILL.md`
-4. `plugins/cc100x/skills/bug-court/SKILL.md`
-5. `plugins/cc100x/skills/pair-build/SKILL.md`
-6. `plugins/cc100x/agents/builder.md`
-7. `plugins/cc100x/agents/hunter.md`
-8. `plugins/cc100x/agents/investigator.md`
-9. `plugins/cc100x/agents/live-reviewer.md`
-10. `plugins/cc100x/agents/performance-reviewer.md`
-11. `plugins/cc100x/agents/planner.md`
-12. `plugins/cc100x/agents/quality-reviewer.md`
-13. `plugins/cc100x/agents/security-reviewer.md`
-14. `plugins/cc100x/agents/verifier.md`
-15. `package.json` (benchmark scripts only)
+## Planned (not yet implemented)
+1. `scripts/eval/run-benchmark.sh`
+2. `scripts/eval/score-benchmark.sh`
+3. `package.json` benchmark script entries
 
 ---
 
@@ -129,20 +125,20 @@ Exit Criteria:
 - KPI thresholds approved
 - benchmark case template approved
 
-## Phase B — Lead Intelligence + Task Graph Hardening
+## Phase B — Lead Intelligence + Task Graph Hardening (Implemented for deterministic path)
 Deliver:
-- profile-based orchestration
-- adaptive fan-out rules
-- stricter task owner/state semantics
+- deterministic orchestration hardening
+- strict task state/ownership semantics
 
 Primary file:
 - `plugins/cc100x/skills/cc100x-lead/SKILL.md`
 
 Exit Criteria:
-- deterministic profile unchanged behavior
-- adaptive/turbo profiles documented and testable
+- deterministic behavior remains stable
+- task DAG safety and recovery semantics are explicit
+- profile extensions (`adaptive`, `turbo-quality`) remain roadmap-only
 
-## Phase C — Contract & Protocol Hardening
+## Phase C — Contract & Protocol Hardening (Implemented)
 Deliver:
 - Router Contract v2 (soft rollout)
 - hardened challenge behavior in Review Arena + Bug Court + Pair Build
@@ -244,15 +240,15 @@ CC100x can be called best-in-class only if:
 ---
 
 ## 12) Next Action List (Immediate)
-1. Create `KPI-SCORECARD.md` with exact thresholds.
-2. Create `BENCHMARK-CASES.md` with 20+ representative scenarios.
-3. Create `DECISION-LOG.md` with phase-by-phase approvals.
-4. Add eval scripts and package.json entries.
-5. Begin Phase B edits in `cc100x-lead` using profile-based orchestration.
+1. Implement `scripts/eval/run-benchmark.sh` and `scripts/eval/score-benchmark.sh`.
+2. Add benchmark script entries in `package.json`.
+3. Execute deterministic benchmark corpus and persist artifacts.
+4. Update decision log with Phase D evidence and release recommendation.
+5. Reassess whether additional execution profiles are needed after deterministic benchmark results.
 
 ---
 
 ## 13) Compaction Resume Prompt
 If chat compacts, resume with:
 
-"Use `docs/cc100x-excellence/MASTER-PLAN.md` as the single source of truth. Continue from Phase A by creating KPI-SCORECARD, BENCHMARK-CASES, and DECISION-LOG with measurable gates, then stop for approval before functional runtime edits."
+"Use `docs/cc100x-excellence/MASTER-PLAN.md` as the single source of truth. Phase A/B/C are complete for deterministic runtime; continue with Phase D by implementing benchmark scripts and collecting reproducible evidence."

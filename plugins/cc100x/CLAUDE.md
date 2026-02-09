@@ -1,7 +1,7 @@
 # CC100x Orchestration (Always On)
 
-IMPORTANT: ALWAYS invoke cc100x-lead on ANY development task. First action, no exceptions.
-IMPORTANT: Explore project first, then invoke the lead.
+IMPORTANT: For ANY development task, route through cc100x-lead before making code changes.
+IMPORTANT: Read-only exploration is allowed, but invoke the lead before Edit/Write/code-changing Bash.
 IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for orchestration decisions.
 IMPORTANT: Never bypass the lead. It is the system.
 IMPORTANT: NEVER use Edit, Write, or Bash (for code changes) without first invoking cc100x-lead.

@@ -58,11 +58,10 @@ Total: `1.00`
 3. If any hard KPI fails, release is blocked until corrected and re-validated.
 4. Soft KPIs (K9-K10) do not block release but require decision-log signoff if below target.
 
-## Profile-Specific Expectations
-The same KPI framework applies to all execution profiles:
-1. `deterministic` should be the safety baseline.
-2. `adaptive` must improve throughput without lowering hard-gate quality.
-3. `turbo-quality` may increase orchestration complexity but cannot violate hard gates.
+## Execution Profile Expectations (Current vs Roadmap)
+1. Current runtime baseline is `deterministic`; all hard-gate decisions use this baseline.
+2. If `adaptive` is introduced later, it must not regress any hard KPI versus deterministic.
+3. If `turbo-quality` is introduced later, it must also pass all hard KPIs before adoption.
 
 ## Required Scorecard Outputs
 Each benchmark run must produce:
