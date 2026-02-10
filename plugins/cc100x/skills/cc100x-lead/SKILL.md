@@ -667,6 +667,10 @@ IMPORTANT:
   - **Learnings:** [insights for activeContext.md]
   - **Patterns:** [gotchas for patterns.md]
   - **Verification:** [results for progress.md]
+- Every teammate status reply MUST include one of:
+  - `WORKING` (actively progressing)
+  - `BLOCKED: {reason}` (cannot proceed)
+  - `DONE` (work finished, Router Contract included)
 - Lead persists these notes in the task-enforced `CC100X Memory Update` step.
 
 Execute the task and include 'Task {TASK_ID}: COMPLETED' in your output when done.
@@ -726,6 +730,28 @@ skills: cc100x:session-memory, cc100x:verification
 
 ---
 
+## Artifact Governance (MANDATORY)
+
+CC100x workflows are message-first. Teammates should not create ad-hoc report files.
+
+Approved durable artifact paths:
+- `docs/plans/` (planner output)
+- `docs/research/` (lead research persistence)
+- `docs/reviews/` (only when user explicitly requests a saved review file)
+
+Forbidden by default:
+- Root-level teammate reports like `CHALLENGE_ROUND_*.md`, `SECURITY_REVIEW*.md`, `ROUTER_CONTRACT*.json`
+- Any unrequested `*.md`, `*.json`, `*.txt` report artifact outside approved paths
+
+Enforcement rules:
+1. If teammate output claims "created/saved/wrote file" for an unauthorized path:
+   - create `CC100X REM-EVIDENCE: unauthorized artifact claim`
+   - block downstream tasks
+   - request corrected output with inline findings + Router Contract only
+2. Lead may allow exceptions only with explicit user instruction (record decision in memory).
+
+---
+
 ## Post-Team Validation (Router Contract)
 
 After each teammate completes (or team finishes), validate using Router Contracts:
@@ -739,6 +765,20 @@ If NOT found → Teammate output is non-compliant. Create REM-EVIDENCE task:
     subject: "CC100X REM-EVIDENCE: {teammate} missing Router Contract",
     description: "Teammate output lacks Router Contract section. Re-run teammate or manually verify output quality.",
     activeForm: "Collecting teammate contract"
+  })
+  Block downstream tasks and STOP.
+```
+
+### Step 1.5: Validate Artifact Claims
+```
+Scan teammate output for file-creation claims ("created", "saved", "wrote", "exported").
+If a claimed artifact path exists:
+  - ensure path is in approved durable paths or explicitly user-approved
+If claim is unauthorized OR path is missing:
+  TaskCreate({
+    subject: "CC100X REM-EVIDENCE: unauthorized artifact claim",
+    description: "Teammate claimed artifact outside approved paths or missing file evidence.",
+    activeForm: "Validating artifact claims"
   })
   Block downstream tasks and STOP.
 ```
@@ -930,10 +970,21 @@ If memory update completed but shutdown failed, workflow is still IN PROGRESS.
 
 ### Task Status Lag (Agent Teams)
 
-Teammates sometimes forget to mark tasks completed or report status. Lead must:
-- After sending work to a teammate, check back periodically
-- If teammate goes idle without completing task → send nudge message
-- If teammate is unresponsive → check task output, mark task manually if work is done
+Teammates sometimes idle between turns or lag task updates. Use deterministic escalation:
+
+1. **T+2 minutes without status update**
+   - Send nudge: "Reply with WORKING / BLOCKED / DONE + short reason."
+2. **T+5 minutes**
+   - Send direct status request with deadline and unblock options.
+3. **T+8 minutes**
+   - If still no useful response, spawn replacement teammate and reassign task.
+4. **T+10 minutes**
+   - Keep original task blocked/stale, continue with reassigned path.
+
+Notes:
+- Idle is normal when a task is blocked by dependencies; do not escalate if blockedBy is unresolved.
+- Never keep workflow in ambiguous idle state beyond escalation ladder.
+- Record reassignment decisions in Memory Notes.
 
 ---
 
@@ -1138,10 +1189,11 @@ Task claiming is lock-safe in Agent Teams (file-lock protected), so simultaneous
 After workflow completes AND memory is updated:
 1. Send `shutdown_request` to each teammate via `SendMessage(type="shutdown_request", recipient="{name}")`
 2. Wait for shutdown approvals from all teammates
-3. If teammate rejects shutdown → check if they have unfinished work, resolve, retry
-4. After all approvals received → `TeamDelete()` to clean up team resources
-5. If `TeamDelete()` fails, retry cleanup and keep workflow open
-6. Report final results to user only after cleanup succeeds
+3. If teammate rejects shutdown → check unfinished work, resolve, retry
+4. Retry shutdown loop up to 3 attempts with short backoff (for slow tool completion)
+5. After approvals → `TeamDelete()` to clean up team resources
+6. If `TeamDelete()` fails, retry up to 3 times and keep workflow open
+7. Report final results to user only after cleanup succeeds
 
 **Do not finalize early:** Never report workflow as complete while teammates are still active or team resources still exist.
 

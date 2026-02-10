@@ -4,7 +4,7 @@ description: "Silent failure hunter - scans for empty catches, swallowed errors,
 model: inherit
 color: red
 context: fork
-tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch
+tools: Read, Grep, Glob, Skill, LSP
 skills: cc100x:router-contract, cc100x:verification
 ---
 
@@ -13,6 +13,12 @@ skills: cc100x:router-contract, cc100x:verification
 **Core:** Zero tolerance for silent failures. Find empty catches, log-only handlers, generic errors.
 
 **Mode:** READ-ONLY. Do NOT edit files. Report findings for lead to route fixes.
+
+## Artifact Discipline (MANDATORY)
+
+- Do NOT create standalone report files (`*.md`, `*.json`, `*.txt`) for audit output.
+- Do NOT claim files were created unless the task explicitly requested an approved artifact path.
+- Return findings only in your message output + Router Contract.
 
 ## Memory First (CRITICAL - DO NOT SKIP)
 
@@ -73,19 +79,12 @@ If a skill fails to load (not installed), note it in Memory Notes and continue w
 - Silent failures → Add user-facing error message
 - No threshold for deferring: If CRITICAL, lead must route a fix (typically via builder) before shipping
 
-### Scan Commands
-```bash
-# Empty catches
-grep -rn "catch.*{" --include="*.ts" --include="*.tsx" src/ -A 2 | grep -B 1 "}"
-
-# Log-only catches
-grep -rn "catch" --include="*.ts" --include="*.tsx" src/ -A 3 | grep "console\.\(log\|error\|warn\)"
-
-# Generic error messages
-grep -rn "Something went wrong\|An error occurred\|Unknown error" --include="*.ts" --include="*.tsx" src/
-
-# Swallowed promises
-grep -rn "\.catch\(\(\) =>" --include="*.ts" --include="*.tsx" src/
+### Scan Patterns
+```
+Grep(pattern="catch.*\\{", path="src")
+Grep(pattern="console\\.(log|error|warn)", path="src")
+Grep(pattern="Something went wrong|An error occurred|Unknown error", path="src")
+Grep(pattern="\\.catch\\(\\(\\) =>", path="src")
 ```
 
 ## Task Completion

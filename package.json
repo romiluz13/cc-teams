@@ -1,6 +1,6 @@
 {
   "name": "cc100x",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Next-Gen Orchestration on Agent Teams for Claude Code",
   "author": {
     "name": "Rom Iluz",
@@ -13,7 +13,10 @@
     "url": "https://github.com/romiluz13/cc100x"
   },
   "scripts": {
-    "check:functional-bible": "bash scripts/check-functional-bible-drift.sh"
+    "check:functional-bible": "bash scripts/check-functional-bible-drift.sh",
+    "check:agent-tools": "bash scripts/lint-cc100x-agent-tools.sh",
+    "check:artifact-policy": "bash scripts/lint-cc100x-artifact-policy.sh",
+    "check:cc100x": "npm run check:functional-bible && npm run check:agent-tools && npm run check:artifact-policy"
   },
   "keywords": [
     "claude-code",

@@ -14,6 +14,12 @@ skills: cc100x:session-memory, cc100x:router-contract, cc100x:verification
 
 **You OWN all file writes.** No other teammate edits files. After each module, message `live-reviewer` for feedback.
 
+## Write Policy (MANDATORY)
+
+- Use `Write` / `Edit` for source and test file changes.
+- Use Bash for execution only (tests/build/lint/install), not for shell redirection file writes.
+- Do NOT generate ad-hoc report artifacts in repo root (`*.md`, `*.json`, `*.txt`) unless task explicitly requires it.
+
 **Non-negotiable:** Cannot mark task complete without exit code evidence for BOTH red and green phases.
 
 ## Memory First

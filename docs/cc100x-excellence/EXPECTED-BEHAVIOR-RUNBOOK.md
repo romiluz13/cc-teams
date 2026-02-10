@@ -36,6 +36,7 @@ It is intentionally behavior-first (not synthetic scoring-first).
 - [ ] Lead enters delegate mode after team creation and stays orchestration-only.
 - [ ] Lead assigns or coordinates tasks; lead does not do feature implementation work.
 - [ ] Team is cleaned up at end: shutdown requests then delete team resources.
+- [ ] Shutdown uses retry/wait logic; workflow does not finalize until `TeamDelete()` succeeds.
 
 ### Task orchestration
 - [ ] Workflow creates explicit `CC100X ...` task hierarchy.
@@ -49,6 +50,7 @@ It is intentionally behavior-first (not synthetic scoring-first).
 - [ ] Every teammate output ends with `### Router Contract (MACHINE-READABLE)` YAML.
 - [ ] Lead validates contract before marking task complete.
 - [ ] If contract missing or malformed, lead creates remediation evidence path (non-silent failure).
+- [ ] Unauthorized artifact claims trigger `CC100X REM-EVIDENCE` (no silent proceed).
 
 ### Memory behavior
 - [ ] Teammates read memory at start.
@@ -183,6 +185,7 @@ Never acceptable:
 
 ### Task status lag / idle handling
 - [ ] Lead nudges teammates if task state lags or teammate idles unexpectedly.
+- [ ] Lead follows deterministic escalation ladder (nudge -> status request -> reassign).
 - [ ] Lead does not prematurely close workflow while tasks remain incomplete.
 
 ---
@@ -196,6 +199,7 @@ Never acceptable:
 - [ ] Parallel reviewer execution is used in review arenas.
 - [ ] Parallel investigator execution is used in bug court.
 - [ ] Lead remains coordinator and synthesizer, not code implementer.
+- [ ] Read-only review agents remain read-only by capability (no write/edit/shell-write path).
 
 ---
 
@@ -210,6 +214,7 @@ If session is interrupted mid-workflow:
 Never acceptable:
 - [ ] Restart from scratch without checking existing task DAG.
 - [ ] Orphaned in-progress tasks ignored.
+- [ ] Finalizing workflow while stale team resources still exist.
 
 ---
 

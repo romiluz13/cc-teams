@@ -112,6 +112,7 @@ Write/read boundaries are explicit:
 - Planner writes plan files; memory persistence remains lead-owned by default.
 - Investigator is read-only in hypothesis stage.
 - Reviewers/hunter/verifier/live-reviewer are read-only.
+- Read-only review agents are capability-constrained (no `Write`/`Edit`; no ad-hoc artifact generation path).
 
 Source: `plugins/cc100x/agents/builder.md:15`
 Source: `plugins/cc100x/agents/planner.md:15`
@@ -122,6 +123,12 @@ Source: `plugins/cc100x/agents/quality-reviewer.md:15`
 Source: `plugins/cc100x/agents/hunter.md:15`
 Source: `plugins/cc100x/agents/verifier.md:15`
 Source: `plugins/cc100x/agents/live-reviewer.md:15`
+
+## 7.1) Artifact Governance Canon
+
+- Teammates should return findings in messages + Router Contracts, not root-level report files.
+- Approved durable artifacts are path-scoped (`docs/plans/`, `docs/research/`, and `docs/reviews/` only when explicitly requested).
+- Unauthorized artifact claims must route to `CC100X REM-EVIDENCE`.
 
 ## 8) Memory Ownership Canon (Lead by Default)
 
@@ -150,6 +157,7 @@ Operational constraints are explicit:
 - Broadcast is limited in favor of targeted messaging.
 - Shutdown requires approval flow and team deletion.
 - Failed `TeamDelete()` is retried; workflow is not finalized until cleanup succeeds.
+- Idle/task-lag handling is deterministic (nudge -> status request -> reassignment ladder).
 
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:935`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:936`

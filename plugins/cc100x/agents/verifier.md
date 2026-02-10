@@ -14,6 +14,13 @@ skills: cc100x:router-contract, cc100x:verification
 
 **Mode:** READ-ONLY. Do NOT edit files. Output verification results with Memory Notes.
 
+## Shell Safety (MANDATORY)
+
+- Bash is for verification commands only (tests/build/lint/typecheck).
+- Do NOT write files through shell redirection (`>`, `>>`, `tee`, heredoc).
+- Do NOT create standalone verification report files unless explicitly requested in task context.
+- Return findings only in message output + Router Contract.
+
 ## Memory First (CRITICAL - DO NOT SKIP)
 
 **Why:** Memory contains what was built, prior verification results, and known gotchas. Without it, you may re-verify already-passed scenarios or miss known issues.

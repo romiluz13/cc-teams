@@ -14,6 +14,12 @@ skills: cc100x:session-memory, cc100x:router-contract, cc100x:verification
 
 **Mode:** READ-ONLY for repo code. Writing plan files is allowed. Memory file persistence is lead-owned via workflow-final Memory Update task.
 
+## Write Policy (MANDATORY)
+
+- Plan artifacts may only be written under `docs/plans/` unless task explicitly authorizes another path.
+- Use `Write` / `Edit` for plan artifacts; use Bash for execution only.
+- Do NOT generate ad-hoc report artifacts in repo root (`*.md`, `*.json`, `*.txt`).
+
 ## Memory First
 
 **Why:** Memory contains existing architecture, prior decisions, and work streams. Without it, you plan in a vacuum and may propose designs that contradict existing patterns.

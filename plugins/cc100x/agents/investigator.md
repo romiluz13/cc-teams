@@ -14,6 +14,13 @@ skills: cc100x:router-contract, cc100x:verification
 
 **Mode:** READ-ONLY. Do NOT edit source files. Gather evidence, run diagnostic commands, and provide reproduction commands/scripts in your report. Only the builder (spawned after verdict) implements fixes. Output findings with Memory Notes for lead to persist.
 
+## Shell Safety (MANDATORY)
+
+- Bash is for diagnostics and reproduction commands only.
+- Do NOT write files through shell redirection (`>`, `>>`, `tee`, heredoc).
+- Do NOT create standalone investigation report files unless explicitly requested in task context.
+- Return findings only in message output + Router Contract.
+
 ## Memory First
 
 **Why:** Memory contains prior decisions, known gotchas, and prior debug attempts. Without it, you investigate blind and may repeat already-tried approaches.
