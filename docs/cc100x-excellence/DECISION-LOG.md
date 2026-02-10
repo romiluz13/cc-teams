@@ -125,6 +125,21 @@ No major orchestration change should be considered final without a decision entr
 - **Evidence:** `docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md`, `docs/cc100x-excellence/MASTER-PLAN.md`.
 - **Follow-ups:** Execute S1 first, validate with `npm run check:cc100x`, then progress sequentially.
 
+## DEC-20260210-003
+- **Status:** APPROVED
+- **Date:** 2026-02-10
+- **Phase:** B
+- **Title:** Execute S1 state vocabulary and severity escalation normalization
+- **Owner:** @rom.iluz
+- **Scope:** `plugins/cc100x/skills/cc100x-lead/SKILL.md`, `docs/cc100x-excellence/EXPECTED-BEHAVIOR-RUNBOOK.md`, `scripts/lint-cc100x-protocol-integrity.sh`
+- **Context:** Live retros showed ambiguity around idle vs progress signals and inconsistent escalation semantics.
+- **Decision:** Add normalized runtime states (`working`, `idle-blocked`, `idle-unresponsive`, `stalled`, `done`) and enforce deterministic LOW/MEDIUM/HIGH/CRITICAL escalation actions.
+- **Alternatives Considered:** Keep time-based nudges only; rejected due to repeated ambiguity and weak failure semantics.
+- **Risk Assessment:** Low
+- **Rollback Plan:** Remove S1 sections from lead/runbook/lint and revert to prior idle ladder semantics.
+- **Evidence:** Updated S1 runtime and validation docs + successful `npm run check:cc100x`.
+- **Follow-ups:** Execute S2 handoff/resume integrity with the same pattern (runtime + runbook + lint + decision entry).
+
 ## Pending Decisions
 1. DEC-Phase-B profile semantics finalization (`deterministic/adaptive/turbo-quality`).
 2. DEC-Phase-C Router Contract v2 field set and strictness strategy.

@@ -1036,9 +1036,45 @@ If any required task or blocker is missing:
 If memory update completed but shutdown failed, workflow is still IN PROGRESS.
 ```
 
+## Operational State Vocabulary (MANDATORY)
+
+Use these states consistently in lead communications and routing decisions:
+
+1. `working`
+   - only when there is fresh evidence from this turn (new tool output, concrete progress, or new contract signal)
+2. `idle-blocked`
+   - task is blocked by unresolved dependencies (`blockedBy` not complete)
+3. `idle-unresponsive`
+   - task is runnable but teammate does not provide useful status/progress
+4. `stalled`
+   - escalation ladder exhausted (or repeated unresponsive cycles) and workflow cannot safely progress
+5. `done`
+   - task completed and Router Contract validated
+
+Never report `working` without fresh evidence in the current turn.
+
 ### Task Status Lag (Agent Teams)
 
-Teammates sometimes idle between turns or lag task updates. Use deterministic escalation:
+Teammates sometimes idle between turns or lag task updates. Use deterministic escalation.
+
+#### Severity Escalation Model (MANDATORY)
+
+Map lag conditions to deterministic severity:
+
+1. **LOW**
+   - Condition: `idle-blocked` with unresolved dependencies
+   - Action: no escalation, continue dependency-driven wait
+2. **MEDIUM**
+   - Condition: runnable task reaches T+5 with no useful update (`idle-unresponsive`)
+   - Action: send direct status request with deadline
+3. **HIGH**
+   - Condition: no useful response by T+8
+   - Action: spawn replacement teammate and reassign the task
+4. **CRITICAL**
+   - Condition: no progress by T+10 after reassignment OR repeated HIGH on same task
+   - Action: mark path as `stalled`, freeze downstream starts, and ask user for explicit decision (continue with fallback / narrow scope / abort)
+
+Record MEDIUM/HIGH/CRITICAL decisions in workflow-final Memory Notes.
 
 1. **T+2 minutes without status update**
    - Send nudge: "Reply with WORKING / BLOCKED / DONE + short reason."
@@ -1047,7 +1083,8 @@ Teammates sometimes idle between turns or lag task updates. Use deterministic es
 3. **T+8 minutes**
    - If still no useful response, spawn replacement teammate and reassign task.
 4. **T+10 minutes**
-   - Keep original task blocked/stale, continue with reassigned path.
+   - If reassigned path is still not progressing, classify as CRITICAL (`stalled`), freeze downstream starts, and ask user for explicit decision.
+   - Otherwise keep original task blocked/stale and continue with reassigned path.
 
 Notes:
 - Idle is normal when a task is blocked by dependencies; do not escalate if blockedBy is unresolved.

@@ -39,6 +39,12 @@ It is intentionally behavior-first (not synthetic scoring-first).
 - [ ] Team is cleaned up at end: shutdown requests then delete team resources.
 - [ ] Shutdown uses retry/wait logic; workflow does not finalize until `TeamDelete()` succeeds.
 
+### Operational state and escalation
+- [ ] Lead uses normalized runtime states: `working`, `idle-blocked`, `idle-unresponsive`, `stalled`, `done`.
+- [ ] Lead never reports `working` without fresh current-turn evidence.
+- [ ] Lead applies severity escalation model for lag/unresponsive paths: `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`.
+- [ ] Each severity level maps to deterministic action (wait, status request, reassign, user decision).
+
 ### Task orchestration
 - [ ] Workflow creates explicit `CC100X ...` task hierarchy.
 - [ ] Workflow task hierarchy is created in the team-scoped task list (post-`TeamCreate`), not in a stale pre-team context.
@@ -199,6 +205,7 @@ Never acceptable:
 - [ ] Lead does not prematurely close workflow while tasks remain incomplete.
 - [ ] Lead does not claim "working" without fresh evidence from current turn.
 - [ ] Lead labels idle state explicitly (`idle-blocked` vs `idle-unresponsive`), not vague idle spam.
+- [ ] Repeated unresponsive path escalates to `stalled`/`CRITICAL` with explicit user decision before unsafe continuation.
 
 ---
 

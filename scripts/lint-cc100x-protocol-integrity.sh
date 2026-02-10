@@ -34,6 +34,8 @@ require_pattern "^## Gates \(Must Pass\)" "Lead must define mandatory gates sect
 require_pattern "^## Phase-Scoped Teammate Activation \(MANDATORY\)" "Lead must define phase-scoped teammate activation"
 require_pattern "^## Orphan Task Recovery \(MANDATORY\)" "Lead must define deterministic orphan task recovery"
 require_pattern "^## Workflow Identity Stamp \(MANDATORY\)" "Lead must define workflow identity stamping"
+require_pattern "^## Operational State Vocabulary \(MANDATORY\)" "Lead must define operational state vocabulary"
+require_pattern "^#### Severity Escalation Model \(MANDATORY\)" "Lead must define severity escalation model"
 
 # Team shutdown requirements
 require_pattern "shutdown_request" "Lead must require shutdown_request messages"
@@ -48,6 +50,12 @@ require_pattern "T\+10 minutes" "Lead must define T+10 idle escalation"
 require_pattern "status unknown, status request sent" "Lead must avoid fake working claims when teammate state is unknown"
 require_pattern "idle-blocked" "Lead must distinguish blocked idle state"
 require_pattern "idle-unresponsive" "Lead must distinguish unresponsive idle state"
+require_pattern "stalled" "Lead must define stalled state"
+require_pattern "\*\*LOW\*\*" "Lead must define LOW severity condition"
+require_pattern "\*\*MEDIUM\*\*" "Lead must define MEDIUM severity condition"
+require_pattern "\*\*HIGH\*\*" "Lead must define HIGH severity condition"
+require_pattern "\*\*CRITICAL\*\*" "Lead must define CRITICAL severity condition"
+require_pattern "ask user for explicit decision" "Lead must require user decision on critical stall"
 
 # Orphan / identity controls
 require_pattern "Workflow Instance: \\{team_name\\}" "Lead must stamp tasks with workflow instance"
