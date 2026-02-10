@@ -42,8 +42,16 @@ It is intentionally behavior-first (not synthetic scoring-first).
 ### Task orchestration
 - [ ] Workflow creates explicit `CC100X ...` task hierarchy.
 - [ ] Workflow task hierarchy is created in the team-scoped task list (post-`TeamCreate`), not in a stale pre-team context.
+- [ ] Every workflow task description is identity-stamped:
+  - `Workflow Instance: ...`
+  - `Workflow Kind: ...`
+  - `Project Root: ...`
 - [ ] Dependencies are DAG-safe (`addBlockedBy` forward-only).
 - [ ] Parallel phases run in parallel only when protocol requires it.
+- [ ] Startup orphan sweep runs before routing/resume:
+  - stale scoped `in_progress` tasks are re-queued (`pending`) or deleted deterministically
+  - only one active workflow instance remains per project
+  - foreign-project tasks do not block current run
 - [ ] Workflow is not considered complete before `CC100X Memory Update` completes.
 - [ ] Workflow is not considered complete before `TEAM_SHUTDOWN` succeeds.
 
@@ -189,6 +197,8 @@ Never acceptable:
 - [ ] Lead nudges teammates if task state lags or teammate idles unexpectedly.
 - [ ] Lead follows deterministic escalation ladder (nudge -> status request -> reassign).
 - [ ] Lead does not prematurely close workflow while tasks remain incomplete.
+- [ ] Lead does not claim "working" without fresh evidence from current turn.
+- [ ] Lead labels idle state explicitly (`idle-blocked` vs `idle-unresponsive`), not vague idle spam.
 
 ---
 
@@ -210,8 +220,10 @@ Never acceptable:
 If session is interrupted mid-workflow:
 - [ ] Lead detects in-progress tasks and missing teammates.
 - [ ] Existing task state is preserved (no blind reset).
+- [ ] Scoped orphan tasks are normalized before resume (`in_progress` without active teammate -> `pending`).
 - [ ] Team is recreated if needed and only missing teammates are respawned.
 - [ ] Execution resumes from task DAG state.
+- [ ] Only one active workflow instance is resumed for current project.
 
 Never acceptable:
 - [ ] Restart from scratch without checking existing task DAG.

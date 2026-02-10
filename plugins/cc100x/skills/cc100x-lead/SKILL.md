@@ -186,7 +186,26 @@ Memory update rules (do not improvise):
 TaskList()  # Check for pending/in-progress workflow tasks
 ```
 
-**Orphan check:** If any CC100X task has status="in_progress" → Ask user: Resume (reset to pending) / Complete (skip) / Delete.
+## Orphan Task Recovery (MANDATORY)
+
+Do not leave orphan tasks in `in_progress`. Resolve deterministically before routing.
+
+1. Run `TaskList()`.
+2. Scope tasks to this project/workflow identity:
+   - `subject` starts with `CC100X `
+   - description includes `Project Root: {cwd}` OR legacy task has no root stamp but clearly belongs to current run
+3. For scoped tasks with `status="in_progress"`:
+   - if owning teammate is missing/not running/not reachable: `TaskUpdate({ taskId, status: "pending" })`
+   - if task belongs to a non-active workflow instance: `TaskUpdate({ taskId, status: "deleted" })`
+4. If multiple workflow parent tasks are active in this project, keep only one canonical instance:
+   - prefer the one matching current team name in memory
+   - otherwise prefer the newest task id
+   - mark other pending/in-progress sibling workflow trees as `deleted`
+5. Re-run `TaskList()` and continue only when:
+   - no scoped orphan `in_progress` tasks remain without an active reachable teammate
+   - exactly one active workflow instance exists for this project
+
+Only ask user if the workflow instance is truly ambiguous after this sweep (rare tie case).
 
 **If active CC100x workflow task exists (subject starts with `CC100X `):**
 - Resume from task state (use `TaskGet({ taskId })` for the task you plan to resume)
@@ -194,8 +213,9 @@ TaskList()  # Check for pending/in-progress workflow tasks
 - Check `blockedBy` to determine which teammate to run next
 
 **Safety rule (avoid cross-project collisions):**
-- If you find tasks that do NOT clearly belong to CC100x, do not resume them.
-- If unsure, ask the user whether to resume or create a fresh task hierarchy.
+- If you find tasks that do NOT clearly belong to this project/workflow identity, do not resume them.
+- Foreign-project tasks are ignored, not resumed.
+- Never let foreign tasks block current workflow progress.
 
 **Legacy compatibility:** Older CC100x versions may have created tasks with subjects starting `BUILD:` / `DEBUG:` / `REVIEW:` / `PLAN:` (without the `CC100X` prefix).
 - If such tasks exist, ask the user whether to resume the legacy tasks or start a fresh CC100X-namespaced workflow.
@@ -218,6 +238,22 @@ Task lists can be shared across sessions via `CLAUDE_CODE_TASK_LIST_ID`. Treat T
 3. If cycle detected → Skip the dependency, log warning, continue
 
 **Current design guarantees no cycles:** All workflows are DAGs with forward-only dependencies.
+
+## Workflow Identity Stamp (MANDATORY)
+
+Every `TaskCreate(...)` description must start with identity metadata:
+
+```
+Workflow Instance: {team_name}
+Workflow Kind: {BUILD|DEBUG|REVIEW|PLAN}
+Project Root: {cwd}
+```
+
+Rules:
+1. Apply this stamp to EVERY CC100X task (parent + children + remediation tasks).
+2. Use this stamp for orphan sweep and cross-project isolation.
+3. Do not resume or mutate tasks with a different `Project Root`.
+4. If stamp is missing (legacy task), treat cautiously and prefer fresh stamped tasks for new runs.
 
 ---
 
@@ -244,6 +280,7 @@ Task lists can be shared across sessions via `CLAUDE_CODE_TASK_LIST_ID`. Treat T
 ## Task-Based Orchestration
 
 **Create workflow task hierarchy only AFTER TeamCreate for that workflow.**
+**Stamp every task description with Workflow Identity metadata (see section above).**
 
 **Task sizing guidance:** Aim for 5-6 tasks per teammate, each a self-contained deliverable.
 
@@ -956,8 +993,9 @@ If any required task or blocker is missing:
    Lead MUST be in delegate mode before assigning ANY tasks.
    This prevents lead from accidentally implementing code.
 
-1. Find runnable tasks:
-   TaskList() → Find tasks where:
+1. Normalize then find runnable tasks:
+   TaskList() → run Orphan Task Recovery sweep first.
+   Then find tasks where:
    - status = "pending"
    - blockedBy is empty OR all blockedBy tasks are "completed"
 
@@ -1016,6 +1054,8 @@ Notes:
 - Idle from non-spawned or not-yet-needed roles is expected; do not treat as failure.
 - Never keep workflow in ambiguous idle state beyond escalation ladder.
 - Record reassignment decisions in Memory Notes.
+- Before saying "teammate is working", require fresh evidence from this turn (message/tool output).
+- If no fresh signal, report "status unknown, status request sent" (not "working").
 
 ## Lead Communication Discipline (MANDATORY)
 
@@ -1031,6 +1071,8 @@ Avoid:
 - Repeating "X is idle" messages without new action.
 - Asking user to choose options while escalation ladder is still in progress.
 - Long progress narration when no state changed.
+- Claiming a teammate is "working" without fresh evidence from current turn.
+- Using plain "idle" without context; always qualify as `idle-blocked` or `idle-unresponsive`.
 
 ---
 

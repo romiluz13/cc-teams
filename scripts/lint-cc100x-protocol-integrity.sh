@@ -32,6 +32,8 @@ require_pattern "^##+# Task Status Lag \(Agent Teams\)" "Lead must define Task S
 require_pattern "^## Team Shutdown \(Gate #13\)" "Lead must define Team Shutdown gate section"
 require_pattern "^## Gates \(Must Pass\)" "Lead must define mandatory gates section"
 require_pattern "^## Phase-Scoped Teammate Activation \(MANDATORY\)" "Lead must define phase-scoped teammate activation"
+require_pattern "^## Orphan Task Recovery \(MANDATORY\)" "Lead must define deterministic orphan task recovery"
+require_pattern "^## Workflow Identity Stamp \(MANDATORY\)" "Lead must define workflow identity stamping"
 
 # Team shutdown requirements
 require_pattern "shutdown_request" "Lead must require shutdown_request messages"
@@ -43,6 +45,14 @@ require_pattern "T\+2 minutes" "Lead must define T+2 idle escalation"
 require_pattern "T\+5 minutes" "Lead must define T+5 idle escalation"
 require_pattern "T\+8 minutes" "Lead must define T+8 idle escalation"
 require_pattern "T\+10 minutes" "Lead must define T+10 idle escalation"
+require_pattern "status unknown, status request sent" "Lead must avoid fake working claims when teammate state is unknown"
+require_pattern "idle-blocked" "Lead must distinguish blocked idle state"
+require_pattern "idle-unresponsive" "Lead must distinguish unresponsive idle state"
+
+# Orphan / identity controls
+require_pattern "Workflow Instance: \\{team_name\\}" "Lead must stamp tasks with workflow instance"
+require_pattern "Project Root: \\{cwd\\}" "Lead must stamp tasks with project root"
+require_pattern "run Orphan Task Recovery sweep first" "Execution loop must normalize orphans before scheduling"
 
 # Build structural blockers (no verifier shortcut)
 require_pattern "challenge blocked by all 3 reviewers" "Lead must enforce challenge blocked by all reviewers"

@@ -1,6 +1,6 @@
 {
   "name": "cc100x",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Next-generation orchestration built on Agent Teams. Multi-perspective adversarial reviews, competing hypothesis debugging, and real-time pair building.",
   "author": {
     "name": "Rom Iluz",

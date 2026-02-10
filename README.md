@@ -2,7 +2,7 @@
 
 ### Next-Gen Orchestration on Agent Teams
 
-**Current version:** 0.1.5
+**Current version:** 0.1.6
 
 **Requires: Agent Teams enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)**
 
@@ -417,6 +417,6 @@ MIT License
 ---
 
 <p align="center">
-  <strong>cc100x v0.1.5</strong><br>
+  <strong>cc100x v0.1.6</strong><br>
   <em>Next-Gen Orchestration on Agent Teams</em>
 </p>
