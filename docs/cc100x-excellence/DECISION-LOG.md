@@ -140,6 +140,21 @@ No major orchestration change should be considered final without a decision entr
 - **Evidence:** Updated S1 runtime and validation docs + successful `npm run check:cc100x`.
 - **Follow-ups:** Execute S2 handoff/resume integrity with the same pattern (runtime + runbook + lint + decision entry).
 
+## DEC-20260210-004
+- **Status:** APPROVED
+- **Date:** 2026-02-10
+- **Phase:** B
+- **Title:** Execute S2 session handoff + resume integrity hardening
+- **Owner:** @rom.iluz
+- **Scope:** `plugins/cc100x/skills/cc100x-lead/SKILL.md`, `docs/cc100x-excellence/EXPECTED-BEHAVIOR-RUNBOOK.md`, `docs/cc100x-excellence/BENCHMARK-CASES.md`, `scripts/lint-cc100x-protocol-integrity.sh`
+- **Context:** Live runs showed interruption ambiguity, teammate-loss confusion after `/resume`, and weak continuity evidence at compaction boundaries.
+- **Decision:** Make handoff payload schema mandatory, enforce deterministic resume checklist, extend interruption benchmark scenarios, and lock requirements in protocol lint.
+- **Alternatives Considered:** Keep interruption handling as advisory text only; rejected due to repeated nondeterministic recovery behavior.
+- **Risk Assessment:** Medium
+- **Rollback Plan:** Revert S2 sections in lead/runbook/benchmark/lint and return to pre-S2 recovery semantics.
+- **Evidence:** S2 runtime + runbook + benchmark + lint updates and successful `npm run check:cc100x`.
+- **Follow-ups:** Execute S3 adaptive depth (quick vs full) with deterministic gate compatibility.
+
 ## Pending Decisions
 1. DEC-Phase-B profile semantics finalization (`deterministic/adaptive/turbo-quality`).
 2. DEC-Phase-C Router Contract v2 field set and strictness strategy.

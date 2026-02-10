@@ -257,21 +257,75 @@ Rules:
 
 ---
 
+## Session Handoff Payload (MANDATORY)
+
+When a workflow may be resumed later (compaction boundary, interruption risk, user pause, or CRITICAL stall), emit and persist a handoff payload.
+
+Canonical payload shape:
+
+```yaml
+workflow_instance: "cc100x-build-20260210-150000"
+workflow_kind: "BUILD"
+project_root: "/absolute/path"
+team_name: "cc100x-build-20260210-150000"
+gate: "CONTRACTS_VALIDATED"
+timestamp_utc: "2026-02-10T23:05:00Z"
+task_snapshot:
+  in_progress: ["#9 CC100X builder: ..."]
+  pending_runnable: ["#11 CC100X hunter: ..."]
+  blocked: ["#12 CC100X security-reviewer: ... blocked by #11"]
+contracts:
+  last_validated: ["builder: PASS", "live-reviewer: PASS"]
+  unresolved_blocking: []
+remediation:
+  open_rem_fix_ids: []
+next_owner: "hunter"
+resume_entrypoint: "Run TaskList, verify #11 runnable, then assign hunter"
+stale_assumptions: []
+```
+
+Rules:
+1. Persist latest payload in `.claude/cc100x/progress.md` under `## Verification`.
+2. Never infer missing facts; use `unknown` when evidence is unavailable.
+3. `stale_assumptions` is required. Use an explicit empty list (`[]`) when none.
+4. Handoff payload is lead-owned and must be based on current TaskList + validated contracts.
+
+Emit payload at minimum when:
+1. escalation reaches `CRITICAL` (`stalled`);
+2. user asks to pause/continue later;
+3. long-running workflow crosses pre-compaction checkpoint (every 30+ tool calls);
+4. session is about to end while workflow tasks remain incomplete.
+
 ## Session Interruption Recovery (Agent Teams)
 
 **Problem:** `/resume` does NOT restore teammates. If session interrupted mid-workflow, teammates are gone.
 
-**Detection:** At session start, if memory shows an active workflow but TaskList shows in-progress tasks with no running teammates:
-1. Read team config at `~/.claude/teams/{team-name}/config.json`
-2. If team config is missing or members list is empty → teammates were lost
-3. Check which tasks are still pending/in-progress
+## Resume Checklist (MANDATORY)
 
-**Recovery Protocol:**
-1. Preserve all existing task state (don't delete tasks)
-2. Re-create the Agent Team with same name
-3. Re-spawn only the teammates needed for remaining tasks
-4. Pass context from task descriptions + memory files to re-spawned teammates
-5. Resume execution from where it stopped
+On resume or startup with active CC100X tasks, execute in order:
+
+1. Load memory files and read latest handoff payload from `.claude/cc100x/progress.md` (if present).
+2. Run `TaskList()` and apply Orphan Task Recovery sweep before any assignment.
+3. Rebuild truth from task state, not memory narrative:
+   - identify in-progress, runnable, blocked tasks;
+   - identify latest validated contracts and open remediation tasks.
+4. Validate team continuity:
+   - read `~/.claude/teams/{team-name}/config.json`;
+   - if missing/empty/non-matching expected roster, recreate team with same name.
+5. Respawn only teammates needed for runnable or near-runnable tasks (phase-scoped activation still applies).
+6. Revalidate blockers:
+   - verifier must remain blocked by challenge/remediation requirements;
+   - memory update must remain blocked by verifier.
+7. Publish a `RESUME_CONFIRMED` note to user:
+   - recovered workflow instance;
+   - current gate;
+   - next deterministic step.
+8. Continue from `resume_entrypoint` only after steps 1-7 succeed.
+
+Recovery rules:
+1. Preserve existing task state (do not reset workflow by default).
+2. Do not mark tasks completed based only on teammate claims from a prior session.
+3. If handoff payload conflicts with current TaskList, TaskList wins and conflict is logged in Memory Notes.
 
 **Prevention:** For long-running workflows (Bug Court multi-round, Pair Build multi-module), trigger pre-compaction memory checkpoint every 30+ tool calls.
 

@@ -246,10 +246,10 @@ CC100x can be called best-in-class only if:
 ---
 
 ## 12) Next Action List (Immediate)
-1. Execute Phase S1 from `BORROW-STRATEGY-NEURAL-HARMONY.md` (state vocabulary + severity escalation normalization).
+1. Execute Phase S3 from `BORROW-STRATEGY-NEURAL-HARMONY.md` (adaptive depth: quick vs full) after S1/S2 approvals.
 2. Run `npm run check:cc100x` and verify no protocol regressions.
-3. Update decision log with S1 approval/rejection evidence.
-4. Continue S2-S4 sequentially with validation after each phase.
+3. Update decision log with S3 approval/rejection evidence.
+4. Continue S3-S4 sequentially with validation after each phase.
 
 ---
 

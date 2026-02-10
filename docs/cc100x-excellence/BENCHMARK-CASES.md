@@ -56,6 +56,7 @@ primary_kpis: [K1, K5, K6, K8]
 | B-04 | BUILD | File-overlap stress (parallel safety) | High | High | deterministic profile expected | K6, K8, K10 |
 | B-05 | BUILD | Security-sensitive auth flow | Critical | Medium | pair-build + strong review arena | K1, K2, K3, K5 |
 | B-06 | BUILD | Performance-sensitive endpoint | High | Medium | pair-build + perf scrutiny | K1, K2, K5 |
+| B-07 | BUILD | Mid-remediation interruption + resume | Critical | High | pair-build recovery + handoff payload | K6, K7, K8, K10 |
 | R-01 | REVIEW | Seeded OWASP defects | Critical | Medium | review-arena triad + challenge | K2, K3, K8 |
 | R-02 | REVIEW | Seeded performance regressions | High | Medium | review-arena triad + challenge | K2, K3 |
 | R-03 | REVIEW | Maintainability/code smell cluster | Medium | Low | review-arena quality-heavy | K2 |
@@ -66,10 +67,11 @@ primary_kpis: [K1, K5, K6, K8]
 | D-02 | DEBUG | Intermittent race condition | Critical | High | bug-court with 4-5 hypotheses | K4, K5, K6 |
 | D-03 | DEBUG | External API behavior regression | High | Medium | bug-court + research-aware path | K4, K5 |
 | D-04 | DEBUG | Ambiguous multi-root-cause symptoms | Critical | High | bug-court full debate rigor | K4, K5, K10 |
-| D-05 | DEBUG | Session interruption recovery mid-flow | High | Medium | recovery protocol + resumed team | K6, K7, K8 |
+| D-05 | DEBUG | Session interruption recovery mid-flow | High | Medium | recovery protocol + handoff payload + resumed team | K6, K7, K8 |
 | D-06 | DEBUG | Multi-remediation loop stress | High | High | bug-court + remediation re-review | K5, K6, K8 |
+| D-07 | DEBUG | Mid-debate interruption + resume | Critical | High | bug-court recovery + handoff payload | K6, K7, K8, K10 |
 
-Total cases: `24`
+Total cases: `26`
 
 ## Pass Criteria by Workflow
 
@@ -92,6 +94,12 @@ Total cases: `24`
 1. Winning hypothesis maps to actual root cause.
 2. First fix is verified and stable where expected.
 3. Recovery behavior is correct after interruption scenarios.
+
+## Interruption / Resume Evidence (B-07, D-05, D-07)
+1. Handoff payload is emitted before interruption boundary with required fields.
+2. Resume uses TaskList state as source of truth; stale assumptions are explicit.
+3. Team is recreated only when continuity check fails; only required teammates are respawned.
+4. Resume continues from deterministic `resume_entrypoint`, not full workflow reset.
 
 ## Execution Protocol
 1. Run full corpus with `deterministic` profile first.

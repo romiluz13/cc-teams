@@ -36,6 +36,7 @@ It is intentionally behavior-first (not synthetic scoring-first).
 - [ ] Lead enters delegate mode after team creation and stays orchestration-only.
 - [ ] Lead assigns or coordinates tasks; lead does not do feature implementation work.
 - [ ] Teammates are spawned phase-scoped (on demand), not all at workflow kickoff.
+- [ ] Lead emits a structured handoff payload before pause/interruptible boundaries (not a vague narrative update).
 - [ ] Team is cleaned up at end: shutdown requests then delete team resources.
 - [ ] Shutdown uses retry/wait logic; workflow does not finalize until `TeamDelete()` succeeds.
 
@@ -58,6 +59,7 @@ It is intentionally behavior-first (not synthetic scoring-first).
   - stale scoped `in_progress` tasks are re-queued (`pending`) or deleted deterministically
   - only one active workflow instance remains per project
   - foreign-project tasks do not block current run
+- [ ] Resume uses deterministic checklist (TaskList truth + team continuity + blocker revalidation), not stale assumptions.
 - [ ] Workflow is not considered complete before `CC100X Memory Update` completes.
 - [ ] Workflow is not considered complete before `TEAM_SHUTDOWN` succeeds.
 
@@ -225,16 +227,26 @@ Never acceptable:
 ## 7. Interruption / Resume Expected Behavior
 
 If session is interrupted mid-workflow:
+- [ ] Lead loads latest handoff payload (if present) from memory before making resume decisions.
+- [ ] Handoff payload contains required fields:
+  - `workflow_instance`, `workflow_kind`, `project_root`, `team_name`
+  - `gate`, `task_snapshot`, `contracts`, `remediation`
+  - `next_owner`, `resume_entrypoint`, `stale_assumptions`
 - [ ] Lead detects in-progress tasks and missing teammates.
 - [ ] Existing task state is preserved (no blind reset).
 - [ ] Scoped orphan tasks are normalized before resume (`in_progress` without active teammate -> `pending`).
 - [ ] Team is recreated if needed and only missing teammates are respawned.
-- [ ] Execution resumes from task DAG state.
+- [ ] Blockers are revalidated before continuing:
+  - verifier still blocked by challenge/remediation path when required
+  - memory update still blocked by verifier
+- [ ] Execution resumes from task DAG state using explicit `resume_entrypoint`.
+- [ ] If handoff payload conflicts with TaskList state, TaskList wins and conflict is logged.
 - [ ] Only one active workflow instance is resumed for current project.
 
 Never acceptable:
 - [ ] Restart from scratch without checking existing task DAG.
 - [ ] Orphaned in-progress tasks ignored.
+- [ ] Resume continuation based only on old teammate claims without current-task verification.
 - [ ] Finalizing workflow while stale team resources still exist.
 
 ---
@@ -314,14 +326,23 @@ Use one real task per scenario. Mark each check `V` or `X`.
 
 ## S13 - Session interruption
 - Expected:
-  - [ ] Resume checks existing tasks.
-  - [ ] Missing teammates are respawned for remaining tasks.
+  - [ ] Interruption occurs during active execution (not only during shutdown).
+  - [ ] Lead emits handoff payload before/at interruption boundary.
+  - [ ] Resume checks existing tasks and applies orphan sweep.
+  - [ ] Missing teammates are respawned for remaining runnable tasks only.
+  - [ ] Resume continues from explicit `resume_entrypoint` without DAG reset.
 
 ## S14 - Team shutdown
 - Expected:
   - [ ] Shutdown requests sent to teammates.
   - [ ] Team delete after approvals.
   - [ ] Workflow not finalized if team deletion fails.
+
+## S15 - Handoff payload fidelity
+- Expected:
+  - [ ] Payload is persisted and references current workflow instance + gate.
+  - [ ] Payload task snapshot matches TaskList at resume time (or conflict is explicitly recorded).
+  - [ ] `stale_assumptions` is explicit (`[]` or listed assumptions), never omitted.
 
 ---
 

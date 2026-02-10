@@ -36,6 +36,8 @@ require_pattern "^## Orphan Task Recovery \(MANDATORY\)" "Lead must define deter
 require_pattern "^## Workflow Identity Stamp \(MANDATORY\)" "Lead must define workflow identity stamping"
 require_pattern "^## Operational State Vocabulary \(MANDATORY\)" "Lead must define operational state vocabulary"
 require_pattern "^#### Severity Escalation Model \(MANDATORY\)" "Lead must define severity escalation model"
+require_pattern "^## Session Handoff Payload \(MANDATORY\)" "Lead must define session handoff payload schema"
+require_pattern "^## Resume Checklist \(MANDATORY\)" "Lead must define resume checklist"
 
 # Team shutdown requirements
 require_pattern "shutdown_request" "Lead must require shutdown_request messages"
@@ -61,6 +63,10 @@ require_pattern "ask user for explicit decision" "Lead must require user decisio
 require_pattern "Workflow Instance: \\{team_name\\}" "Lead must stamp tasks with workflow instance"
 require_pattern "Project Root: \\{cwd\\}" "Lead must stamp tasks with project root"
 require_pattern "run Orphan Task Recovery sweep first" "Execution loop must normalize orphans before scheduling"
+require_pattern "stale_assumptions" "Handoff payload must require stale_assumptions field"
+require_pattern "resume_entrypoint" "Handoff payload must require resume_entrypoint field"
+require_pattern "RESUME_CONFIRMED" "Resume checklist must publish RESUME_CONFIRMED note"
+require_pattern "TaskList wins" "Resume conflict resolution must prefer TaskList truth"
 
 # Build structural blockers (no verifier shortcut)
 require_pattern "challenge blocked by all 3 reviewers" "Lead must enforce challenge blocked by all reviewers"
