@@ -57,7 +57,7 @@ Before creating or resuming any workflow:
    - If an old team is still active in this session: shut it down and `TeamDelete()` before starting a new workflow.
 
 3. **Deterministic team naming**
-   - Use `cc100x-{workflow}-{YYYYMMDD-HHMMSS}`.
+   - Use `cc100x-{project_key}-{workflow}-{YYYYMMDD-HHMMSS}`.
    - Persist the active team name in memory (`activeContext.md ## Recent Changes`) during workflow-final Memory Update.
 
 4. **Delegate mode required**
@@ -68,7 +68,7 @@ Before creating or resuming any workflow:
    - In teammate prompts, set `MEMORY_OWNER: lead`.
    - Teammates emit Memory Notes; lead persists memory in the final Memory Update task.
 
-## Gate #9 Operational Team Creation (MANDATORY)
+## Gate #8 Operational Team Creation (MANDATORY)
 
 `TEAM_CREATED` is not a narrative statement. It requires operational evidence.
 
@@ -1146,7 +1146,7 @@ If any required task or blocker is missing:
 
 ```
 -1. Preflight gate:
-   - Confirm Agent Teams is enabled and current session has no stale active team.
+   - Confirm Agent Teams is enabled and current project scope has no stale active team.
    - If resuming: recover/recreate teammates before assigning tasks.
 
 0. Enter delegate mode (FIRST):
@@ -1411,7 +1411,7 @@ Default stance: keep hooks off unless user explicitly enables and validates them
 
 ## Model Selection Guidance
 
-Quality-first default (CC100x pre-production hardening): use `inherit` for every teammate.
+Quality-first default (production-safe): use `inherit` for every teammate.
 
 | Teammate | Quality-First (Default) | Balanced Override (Optional) |
 |----------|--------------------------|-------------------------------|

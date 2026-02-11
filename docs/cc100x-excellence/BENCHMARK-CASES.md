@@ -1,7 +1,7 @@
 # CC100x Benchmark Cases
 
 ## Purpose
-Define the pre-production benchmark corpus used to compare CC100x against CC10x and validate quality gates from `KPI-SCORECARD.md`.
+Define the benchmark corpus used to validate production-safe CC100x upgrades against quality gates from `KPI-SCORECARD.md`.
 
 Current state: this document defines the benchmark corpus and artifact conventions; benchmark runner scripts are implemented under `scripts/eval/`.
 

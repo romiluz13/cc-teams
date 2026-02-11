@@ -198,7 +198,7 @@ CC100x survives context compaction:
 
 ## Quality Validation Harness (Phase D)
 
-CC100x now includes reproducible benchmark scaffolding for pre-prod promotion gates.
+CC100x includes reproducible benchmark scaffolding for production change-control gates.
 
 ```bash
 # Run static protocol checks

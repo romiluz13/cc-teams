@@ -1,7 +1,7 @@
 # CC100x Excellence KPI Scorecard
 
 ## Purpose
-Define measurable quality gates for promoting CC100x from pre-production to production without regressing CC10x core reliability.
+Define measurable quality gates for production-safe CC100x upgrades without regressing CC10x core reliability.
 
 This scorecard is quality-first. It intentionally excludes cost optimization.
 

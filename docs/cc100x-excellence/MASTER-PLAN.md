@@ -1,15 +1,15 @@
-# CC100x Excellence Program (Pre-Production)
+# CC100x Excellence Program (Production Governance)
 
 ## 0) Purpose
-Create a **best-in-class** CC100x before first production release by upgrading orchestration quality while preserving CC10x core DNA.
+Operate and improve CC100x in production with strict, evidence-backed upgrades while preserving CC10x core DNA.
 
-This plan is **compaction-safe** and should be treated as the single source of truth for pre-prod improvements.
+This plan is **compaction-safe** and should be treated as the single source of truth for post-launch governance and upgrades.
 
 ---
 
 ## 1) Current State Snapshot
 - CC10x is production-proven.
-- CC100x is functionally refactored for Agent Teams and not yet in production.
+- CC100x is live in production on Agent Teams foundations.
 - Runtime hooks are **not enabled** and remain optional.
 - Current functional runtime files:
   - `plugins/cc100x/skills/*`
@@ -65,7 +65,7 @@ This plan is **compaction-safe** and should be treated as the single source of t
 2. `docs/cc100x-excellence/KPI-SCORECARD.md`
 3. `docs/cc100x-excellence/BENCHMARK-CASES.md`
 4. `docs/cc100x-excellence/DECISION-LOG.md`
-5. `docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md`
+5. `archive/2026-02-11-post-launch-docs/docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md` (historical strategy snapshot)
 6. `docs/cc100x-excellence/PRODUCTION-READINESS-SYSTEM.md`
 5. Runtime hardening across:
    - `plugins/cc100x/skills/cc100x-lead/SKILL.md`
@@ -247,17 +247,15 @@ CC100x can be called best-in-class only if:
 ---
 
 ## 12) Next Action List (Immediate)
-1. Execute final live validation matrix using `EXPECTED-BEHAVIOR-RUNBOOK.md` + Harmony Report.
-   - Include `S18` (premature non-runnable teammate finding containment) and `S19` (cross-project stale team isolation) in the final run.
-2. Run `npm run check:cc100x` and verify no protocol regressions.
-3. Update `PHASE-E-VERDICT.md` with final live matrix outcomes and PR1-PR5 status.
-4. Record explicit Phase E production verdict in decision log (`READY NOW` / `READY WITH DECLARED LIMITS` / `NOT READY`).
-5. If not `READY NOW`, open only targeted remediation tasks (no architecture expansion).
-6. Apply production decision matrix from `PRODUCTION-READINESS-SYSTEM.md` and explicitly mark release status (`READY NOW` / `READY WITH DECLARED LIMITS` / `NOT READY`).
+1. Run `npm run check:cc100x` before and after any behavior-affecting change.
+2. Route all audits through `EXPECTED-BEHAVIOR-RUNBOOK.md` + Harmony Report.
+3. For each change, create/update one decision entry with scope, risk, rollback, evidence.
+4. Prefer targeted fixes over structural expansion; avoid role/skill sprawl.
+5. Keep production verdict state in `PHASE-E-VERDICT.md` aligned with real operational evidence.
 
 ---
 
 ## 13) Compaction Resume Prompt
 If chat compacts, resume with:
 
-"Use `docs/cc100x-excellence/MASTER-PLAN.md` as the single source of truth. Phase A/B/C are complete and Phase D harness is implemented; execute deterministic benchmark runs, score them, and update the decision log with evidence."
+"Use `docs/cc100x-excellence/MASTER-PLAN.md` as the single source of truth for production governance. Execute targeted audits, run `npm run check:cc100x`, and update decision evidence before shipping any behavior change."

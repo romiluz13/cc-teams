@@ -1,7 +1,7 @@
 # CC100x Production Readiness System
 
 ## Purpose
-Define exactly when CC100x is ready for production, and exactly when to stop pre-production innovation.
+Define exactly how CC100x remains production-safe, and exactly when to stop innovation that increases risk without measurable value.
 
 This document exists to prevent endless improvement loops and over-engineering drift.
 
@@ -42,7 +42,7 @@ Pass rule:
 
 ---
 
-## 2) Definition of "Best Version" (Pre-Prod)
+## 2) Definition of "Best Version" (Production)
 "Best version" does NOT mean "no future improvements." It means:
 1. No known critical orchestration flaws.
 2. No unresolved hard-fail conditions.
@@ -54,7 +54,7 @@ When these are true, ship.
 ---
 
 ## 3) Over-Engineering Stop Rule
-Stop adding pre-prod complexity when any 2 of these are true for two consecutive cycles:
+Stop adding complexity when any 2 of these are true for two consecutive cycles:
 1. New changes do not improve runbook/benchmark outcomes.
 2. New changes increase coordination friction (more stalls, more manual rescue).
 3. New rules duplicate existing authority or create conflicting behavior.
@@ -79,7 +79,7 @@ Reject if any check fails.
 
 ---
 
-## 5) Complexity Budget (Pre-Prod)
+## 5) Complexity Budget (Post-Launch)
 Per improvement phase:
 1. One core behavior change max.
 2. Maximum 6 files touched unless explicitly approved in decision log.
@@ -107,7 +107,7 @@ Use this matrix when deciding to ship:
 ---
 
 ## 7) Production Freeze Policy
-After production:
+In production:
 1. Core orchestration changes require benchmark + runbook evidence and a decision entry.
 2. No structural changes without rollback plan and staged rollout.
 3. Preference shifts to reliability, observability, and defect prevention.
@@ -115,5 +115,5 @@ After production:
 ---
 
 ## 8) Current Intent
-CC100x should continue bold improvements only until PR1-PR5 are achieved.
-After that point, the correct move is production shipment and controlled iteration.
+CC100x should continue improvements only when they are targeted, reversible, and evidence-backed.
+The default mode is controlled iteration, not architecture churn.

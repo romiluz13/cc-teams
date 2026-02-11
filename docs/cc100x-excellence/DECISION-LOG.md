@@ -116,13 +116,13 @@ No major orchestration change should be considered final without a decision entr
 - **Phase:** D
 - **Title:** Approve borrow strategy with harmony-first fit rules
 - **Owner:** @rom.iluz
-- **Scope:** `docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md`, `docs/cc100x-excellence/MASTER-PLAN.md`
+- **Scope:** `archive/2026-02-11-post-launch-docs/docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md`, `docs/cc100x-excellence/MASTER-PLAN.md`
 - **Context:** Need a single strategy for integrating external ideas (Gastown, Superpowers, GSD, BMAD, Agent-OS concepts) without introducing orchestration chaos.
 - **Decision:** Adopt a phased S1-S4 borrow strategy with strict fit filters, no mandatory hooks, no default role expansion, and a final completeness gate.
 - **Alternatives Considered:** Ad-hoc per-file borrowing; rejected due to high conflict/redundancy risk.
 - **Risk Assessment:** Medium
 - **Rollback Plan:** Remove strategy references from master plan and continue deterministic baseline only.
-- **Evidence:** `docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md`, `docs/cc100x-excellence/MASTER-PLAN.md`.
+- **Evidence:** `archive/2026-02-11-post-launch-docs/docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md`, `docs/cc100x-excellence/MASTER-PLAN.md`.
 - **Follow-ups:** Execute S1 first, validate with `npm run check:cc100x`, then progress sequentially.
 
 ## DEC-20260210-003
@@ -231,7 +231,7 @@ No major orchestration change should be considered final without a decision entr
 - **Follow-ups:** Validate S19 in final live matrix and include outcome in Phase E verdict.
 
 ## DEC-20260211-006
-- **Status:** HOLD
+- **Status:** SUPERSEDED
 - **Date:** 2026-02-11
 - **Phase:** E
 - **Title:** Open explicit production verdict tracker and block premature release decision
@@ -243,13 +243,27 @@ No major orchestration change should be considered final without a decision entr
 - **Risk Assessment:** Low
 - **Rollback Plan:** Remove verdict tracker file and revert to decision-log-only promotion notes.
 - **Evidence:** `docs/cc100x-excellence/PHASE-E-VERDICT.md`
-- **Follow-ups:** Run final live matrix (S07/S08/S09/S13/S18/S19), then update Phase E verdict and mark release decision as APPROVED.
+- **Follow-ups:** Superseded by DEC-20260211-007 (production launch decision with declared limits).
+
+## DEC-20260211-007
+- **Status:** APPROVED
+- **Date:** 2026-02-11
+- **Phase:** E
+- **Title:** Production launch decision finalized (`READY WITH DECLARED LIMITS`)
+- **Owner:** @rom.iluz
+- **Scope:** `docs/cc100x-excellence/PHASE-E-VERDICT.md`, `docs/cc100x-excellence/MASTER-PLAN.md`, `docs/cc100x-excellence/PRODUCTION-READINESS-SYSTEM.md`
+- **Context:** CC100x is live in production; governance docs must reflect launch state and post-launch change policy.
+- **Decision:** Mark production state as `READY WITH DECLARED LIMITS`: core gates pass, while remaining high-variance scenarios move to scheduled post-launch audit cadence.
+- **Alternatives Considered:** `READY NOW` with no declared limits; rejected to preserve explicit risk visibility for interruption/recovery edge scenarios.
+- **Risk Assessment:** Low
+- **Rollback Plan:** Revert verdict/governance docs to prior provisional state and reopen Phase E as HOLD if a critical orchestration regression emerges.
+- **Evidence:** Production publication event + passing protocol checks (`npm run check:cc100x`) + updated Phase E verdict file.
+- **Follow-ups:** Keep improvements targeted, reversible, and evidence-backed; no broad architecture churn.
 
 ## Pending Decisions
 1. DEC-Phase-B profile semantics finalization (`deterministic/adaptive/turbo-quality`).
 2. DEC-Phase-C Router Contract v2 field set and strictness strategy.
 3. DEC-Phase-D KPI threshold lock after first benchmark run execution.
-4. DEC-Phase-E production release decision.
 
 ## Decision Hygiene Checklist
 1. Link each decision to exact files touched.
