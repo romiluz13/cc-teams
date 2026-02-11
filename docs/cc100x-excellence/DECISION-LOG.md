@@ -155,6 +155,21 @@ No major orchestration change should be considered final without a decision entr
 - **Evidence:** S2 runtime + runbook + benchmark + lint updates and successful `npm run check:cc100x`.
 - **Follow-ups:** Execute S3 adaptive depth (quick vs full) with deterministic gate compatibility.
 
+## DEC-20260211-001
+- **Status:** APPROVED
+- **Date:** 2026-02-11
+- **Phase:** E
+- **Title:** Establish explicit production readiness finish line and anti-overengineering stop rule
+- **Owner:** @rom.iluz
+- **Scope:** `docs/cc100x-excellence/PRODUCTION-READINESS-SYSTEM.md`, `docs/cc100x-excellence/MASTER-PLAN.md`
+- **Context:** Pre-production improvements can become endless without objective release criteria, leading to complexity drift and delayed shipment.
+- **Decision:** Define hard production gates (PR1-PR5), a release decision matrix, and a stop-innovation rule to determine when to ship and when to freeze architecture.
+- **Alternatives Considered:** Keep release timing as subjective judgment; rejected due to repeated loop risk and over-engineering pressure.
+- **Risk Assessment:** Low
+- **Rollback Plan:** Remove production readiness system doc and revert master plan references; return to prior phase-only governance.
+- **Evidence:** New production readiness framework file + updated master plan action list.
+- **Follow-ups:** Execute S3/S4, run full live validation matrix, then record explicit `READY NOW` / `READY WITH DECLARED LIMITS` / `NOT READY` decision.
+
 ## Pending Decisions
 1. DEC-Phase-B profile semantics finalization (`deterministic/adaptive/turbo-quality`).
 2. DEC-Phase-C Router Contract v2 field set and strictness strategy.

@@ -66,6 +66,7 @@ This plan is **compaction-safe** and should be treated as the single source of t
 3. `docs/cc100x-excellence/BENCHMARK-CASES.md`
 4. `docs/cc100x-excellence/DECISION-LOG.md`
 5. `docs/cc100x-excellence/BORROW-STRATEGY-NEURAL-HARMONY.md`
+6. `docs/cc100x-excellence/PRODUCTION-READINESS-SYSTEM.md`
 5. Runtime hardening across:
    - `plugins/cc100x/skills/cc100x-lead/SKILL.md`
    - `plugins/cc100x/skills/router-contract/SKILL.md`
@@ -250,6 +251,7 @@ CC100x can be called best-in-class only if:
 2. Run `npm run check:cc100x` and verify no protocol regressions.
 3. Update decision log with S3 approval/rejection evidence.
 4. Continue S3-S4 sequentially with validation after each phase.
+5. Apply production decision matrix from `PRODUCTION-READINESS-SYSTEM.md` and explicitly mark release status (`READY NOW` / `READY WITH DECLARED LIMITS` / `NOT READY`).
 
 ---
 
