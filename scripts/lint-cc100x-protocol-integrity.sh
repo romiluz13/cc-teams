@@ -3,6 +3,7 @@ set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 lead="$repo/plugins/cc100x/skills/cc100x-lead/SKILL.md"
+runbook="$repo/docs/cc100x-excellence/EXPECTED-BEHAVIOR-RUNBOOK.md"
 
 failures=0
 
@@ -19,12 +20,22 @@ require_pattern() {
   fi
 }
 
+require_pattern_file() {
+  local pattern="$1"
+  local file="$2"
+  local message="$3"
+  if ! rg -q "$pattern" "$file"; then
+    fail "$message"
+  fi
+}
+
 line_of() {
   local pattern="$1"
   rg -n "$pattern" "$lead" | head -n1 | cut -d: -f1
 }
 
 [[ -f "$lead" ]] || { echo "FAIL: Missing lead skill file: $lead" >&2; exit 1; }
+[[ -f "$runbook" ]] || { echo "FAIL: Missing runbook file: $runbook" >&2; exit 1; }
 
 # Required protocol sections
 require_pattern "^## Remediation Re-Review Loop" "Lead must define Remediation Re-Review Loop section"
@@ -38,6 +49,7 @@ require_pattern "^## Operational State Vocabulary \(MANDATORY\)" "Lead must defi
 require_pattern "^#### Severity Escalation Model \(MANDATORY\)" "Lead must define severity escalation model"
 require_pattern "^## Session Handoff Payload \(MANDATORY\)" "Lead must define session handoff payload schema"
 require_pattern "^## Resume Checklist \(MANDATORY\)" "Lead must define resume checklist"
+require_pattern "^## Execution Depth Selector \(MANDATORY\)" "Lead must define deterministic execution depth selector"
 
 # Team shutdown requirements
 require_pattern "shutdown_request" "Lead must require shutdown_request messages"
@@ -67,13 +79,19 @@ require_pattern "stale_assumptions" "Handoff payload must require stale_assumpti
 require_pattern "resume_entrypoint" "Handoff payload must require resume_entrypoint field"
 require_pattern "RESUME_CONFIRMED" "Resume checklist must publish RESUME_CONFIRMED note"
 require_pattern "TaskList wins" "Resume conflict resolution must prefer TaskList truth"
+require_pattern "Quick path eligibility" "Lead must define quick path eligibility rules"
+require_pattern "quick path still requires Router Contracts, verifier evidence, and memory update" "Quick path must preserve core quality gates"
+require_pattern "if QUICK path emits blocking/remediation -> escalate to FULL immediately" "Quick path must auto-escalate to full on blocking findings"
 
 # Build structural blockers (no verifier shortcut)
 require_pattern "challenge blocked by all 3 reviewers" "Lead must enforce challenge blocked by all reviewers"
 require_pattern "verifier blocked by challenge" "Lead must enforce verifier blocked by challenge"
 require_pattern "memory update blocked by verifier" "Lead must enforce memory update blocked by verifier"
 require_pattern 'spawn `builder` \+ `live-reviewer` only' "BUILD must start with phased spawn (builder + live-reviewer only)"
-require_pattern 'defer `hunter` / triad reviewers / `verifier`' "BUILD must defer downstream teammate spawns"
+require_pattern 'defer `hunter` / triad / `verifier` until runnable' "BUILD must defer downstream teammate spawns"
+require_pattern_file "Depth is selected before task creation" "$runbook" "Runbook must define depth selection before BUILD task creation"
+require_pattern_file "S16 - BUILD quick-path bounded change" "$runbook" "Runbook must include quick-path validation scenario"
+require_pattern_file "S17 - BUILD quick-path forced escalation" "$runbook" "Runbook must include quick-path escalation scenario"
 
 # Required gates presence
 for gate in \

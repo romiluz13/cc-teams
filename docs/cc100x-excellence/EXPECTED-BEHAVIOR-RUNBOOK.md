@@ -62,6 +62,9 @@ It is intentionally behavior-first (not synthetic scoring-first).
 - [ ] Resume uses deterministic checklist (TaskList truth + team continuity + blocker revalidation), not stale assumptions.
 - [ ] Workflow is not considered complete before `CC100X Memory Update` completes.
 - [ ] Workflow is not considered complete before `TEAM_SHUTDOWN` succeeds.
+- [ ] BUILD depth selection is deterministic (`QUICK` vs `FULL`) and defaults to `FULL` unless all quick-safety conditions pass.
+- [ ] QUICK mode never bypasses Router Contract validation, verifier evidence, or memory update.
+- [ ] QUICK mode auto-escalates to FULL chain on any blocking/remediation signal.
 
 ### Router Contract enforcement
 - [ ] Every teammate output ends with `### Router Contract (MACHINE-READABLE)` YAML.
@@ -128,10 +131,14 @@ Never acceptable:
 
 Expected runtime behavior:
 - [ ] Plan-first gate triggers when no active plan context.
+- [ ] Depth is selected before task creation:
+  - `QUICK` only for bounded low-risk build scope
+  - `FULL` for all high-risk/cross-layer/ambiguous scope
 - [ ] Team kickoff spawns only builder + live-reviewer; downstream roles spawn when their tasks become runnable.
 - [ ] Builder and live-reviewer coordinate in real time using direct teammate messaging.
 - [ ] Builder owns all writes; other teammates are read-only.
-- [ ] Post-build sequence runs: hunter -> 3 reviewers (parallel) -> challenge -> verifier -> memory update.
+- [ ] FULL post-build sequence runs: hunter -> 3 reviewers (parallel) -> challenge -> verifier -> memory update.
+- [ ] QUICK post-build sequence runs: builder/live-reviewer -> verifier -> memory update.
 - [ ] No shortcut path from hunter/remediation directly to verifier.
 - [ ] Verifier reports evidence with commands and exit codes.
 
@@ -144,6 +151,8 @@ Never acceptable:
 - [ ] Non-builder teammate edits source files.
 - [ ] Verifier runs before challenge completion.
 - [ ] Memory update omitted.
+- [ ] QUICK mode used for high-risk or cross-layer changes.
+- [ ] QUICK mode closes workflow after blocking findings without escalating to FULL.
 
 ## REVIEW Workflow
 
@@ -286,6 +295,20 @@ Use one real task per scenario. Mark each check `V` or `X`.
   - [ ] Hunter runs before triad reviewers.
   - [ ] Triad reviewers run in parallel.
   - [ ] Challenge round occurs before verifier.
+
+## S16 - BUILD quick-path bounded change
+- Prompt example: "Small isolated refactor in one module, no API/schema/security changes."
+- Expected:
+  - [ ] Depth selector chooses QUICK.
+  - [ ] Workflow still enforces Router Contracts + verifier evidence + memory update.
+  - [ ] Team shutdown still required before completion.
+
+## S17 - BUILD quick-path forced escalation
+- Prompt example: "Quick change request that reveals blocking issue during verifier/remediation."
+- Expected:
+  - [ ] QUICK starts if eligible.
+  - [ ] Blocking/remediation signal forces escalation to FULL.
+  - [ ] FULL chain (hunter + triad + challenge + verifier) executes before completion.
 
 ## S06 - BUILD verifier evidence
 - Expected:

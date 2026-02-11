@@ -170,6 +170,21 @@ No major orchestration change should be considered final without a decision entr
 - **Evidence:** New production readiness framework file + updated master plan action list.
 - **Follow-ups:** Execute S3/S4, run full live validation matrix, then record explicit `READY NOW` / `READY WITH DECLARED LIMITS` / `NOT READY` decision.
 
+## DEC-20260211-002
+- **Status:** APPROVED
+- **Date:** 2026-02-11
+- **Phase:** B
+- **Title:** Execute S3 adaptive depth selector (quick vs full) with safety-first escalation
+- **Owner:** @rom.iluz
+- **Scope:** `plugins/cc100x/skills/cc100x-lead/SKILL.md`, `docs/cc100x-excellence/EXPECTED-BEHAVIOR-RUNBOOK.md`, `scripts/lint-cc100x-protocol-integrity.sh`, `docs/cc100x-excellence/MASTER-PLAN.md`
+- **Context:** Need higher throughput for bounded low-risk BUILD work while preventing over-engineering and preserving CC100x quality guarantees.
+- **Decision:** Introduce deterministic depth selector where QUICK is allowed only for bounded low-risk BUILD scope, FULL remains default, and QUICK auto-escalates to FULL on any blocking/remediation signal.
+- **Alternatives Considered:** Always FULL path only; rejected due to unnecessary orchestration overhead on small safe changes.
+- **Risk Assessment:** Medium
+- **Rollback Plan:** Remove execution-depth selector and QUICK path references from lead/runbook/lint; revert BUILD flow to FULL-only chain.
+- **Evidence:** S3 runtime + runbook + lint + plan updates and successful `npm run check:cc100x`.
+- **Follow-ups:** Execute S4 completeness validation and record final production verdict via production readiness matrix.
+
 ## Pending Decisions
 1. DEC-Phase-B profile semantics finalization (`deterministic/adaptive/turbo-quality`).
 2. DEC-Phase-C Router Contract v2 field set and strictness strategy.

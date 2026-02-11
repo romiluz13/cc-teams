@@ -331,6 +331,41 @@ Recovery rules:
 
 ---
 
+## Execution Depth Selector (MANDATORY)
+
+Purpose: choose **quick** vs **full** depth without changing architecture or introducing new roles.
+
+Default policy:
+1. `FULL` is default (safety-first).
+2. `QUICK` is allowed only for clearly bounded low-risk BUILD work.
+3. REVIEW and DEBUG remain `FULL` by default in this phase.
+
+### Quick path eligibility (BUILD only)
+Choose `QUICK` only if ALL are true:
+1. Scope is a single bounded implementation unit (one clear deliverable).
+2. No security/auth/payment/PII/secrets/migration/schema/public-API risk signals.
+3. No cross-layer coupling requirement (not frontend+backend+db together).
+4. No open remediation in current workflow (`CC100X REM-FIX` absent).
+5. Requirements are explicit enough to execute without additional research.
+
+If any condition is false -> choose `FULL`.
+
+### Depth semantics
+1. `FULL` (existing BUILD chain):
+   - builder + live-reviewer -> hunter -> triad reviewers -> challenge -> verifier -> memory update
+2. `QUICK` (reduced BUILD chain, still contract-gated):
+   - builder + live-reviewer -> verifier -> memory update
+
+### Quick-path safety rules
+1. quick path still requires Router Contracts, verifier evidence, and memory update.
+2. If any blocking/remediation signal appears in quick path:
+   - immediately escalate to FULL
+   - create missing FULL tasks (hunter, triad, challenge) and re-block verifier accordingly
+   - continue only after FULL gate chain resolves
+3. Never ship directly from quick path after unresolved blocking findings.
+
+---
+
 ## Task-Based Orchestration
 
 **Create workflow task hierarchy only AFTER TeamCreate for that workflow.**
@@ -372,6 +407,55 @@ This avoids lost/phantom tasks during team initialization.
 
 ### BUILD Workflow Tasks
 ```
+# BUILD depth decision:
+# DEPTH = QUICK | FULL (from Execution Depth Selector section)
+
+# QUICK path hierarchy (BUILD only, low risk)
+if DEPTH == QUICK:
+  # 1. Parent workflow task
+  TaskCreate({
+    subject: "CC100X BUILD: {feature_summary}",
+    description: "User request: {request}\n\nWorkflow: BUILD (QUICK)\nTeam: Builder + Live Reviewer -> Verifier\n\nPlan: {plan_file or 'N/A'}",
+    activeForm: "Building {feature} (quick)"
+  })
+  # Returns workflow_task_id
+
+  # 2. Builder task
+  TaskCreate({
+    subject: "CC100X builder: Implement {feature}",
+    description: "Build the feature using TDD (RED→GREEN→REFACTOR).\n\nPlan: {plan_file or 'N/A'}\nRequirements: {requirements}\n\nYou OWN all file writes. No other teammate edits files.\nAfter each module, message 'live-reviewer' with: 'Review {file_path}'.",
+    activeForm: "Building components"
+  })
+  # Returns builder_task_id
+
+  # 3. Live Reviewer task (parallel with builder)
+  TaskCreate({
+    subject: "CC100X live-reviewer: Real-time review",
+    description: "READ-ONLY. Wait for builder review requests.\nReply LGTM or STOP with concrete reasons.",
+    activeForm: "Reviewing in real-time"
+  })
+  # Returns live_reviewer_task_id
+
+  # 4. Verifier task (blocked by builder)
+  TaskCreate({
+    subject: "CC100X verifier: E2E verification",
+    description: "Run tests, verify E2E functionality.\nEvery scenario needs PASS/FAIL with command + exit code evidence.\nOutput Router Contract.",
+    activeForm: "Verifying integration"
+  })
+  # Returns verifier_task_id
+  TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [builder_task_id] })
+
+  # 5. Memory Update task (blocked by verifier)
+  TaskCreate({
+    subject: "CC100X Memory Update: Persist build learnings",
+    description: "Collect Memory Notes from all completed tasks and persist with Read-Edit-Read.",
+    activeForm: "Persisting workflow learnings"
+  })
+  # Returns memory_task_id
+  TaskUpdate({ taskId: memory_task_id, addBlockedBy: [verifier_task_id] })
+
+# FULL path hierarchy (default)
+if DEPTH == FULL:
 # 0. Check if following a plan (from activeContext.md)
 # Look in "## References" section for "- Plan:" entry (not "N/A"):
 #   → Extract plan_file path (e.g., `docs/plans/2024-01-27-auth-plan.md`)
@@ -635,17 +719,23 @@ TaskUpdate({ taskId: memory_task_id, addBlockedBy: [planner_task_id] })
    - Skip ONLY if: (plan in `## References` ≠ "N/A") AND (active `CC100X` task exists)
    - Otherwise → AskUserQuestion: "Plan first (Recommended) / Build directly"
 3. **Clarify requirements** (DO NOT SKIP) → Use AskUserQuestion
-4. **Create Agent Team (MANDATORY gate)**:
+4. **Select execution depth (MANDATORY)**:
+   - Run Execution Depth Selector
+   - choose `QUICK` only when all quick eligibility conditions pass
+   - otherwise choose `FULL` (default)
+5. **Create Agent Team (MANDATORY gate)**:
    - `TeamCreate(...)` with deterministic team name
-   - spawn `builder` + `live-reviewer` only
-   - defer `hunter` / triad reviewers / `verifier` until their tasks are runnable
+   - QUICK: spawn `builder` + `live-reviewer`; spawn `verifier` when runnable
+   - FULL: spawn `builder` + `live-reviewer` only; defer `hunter` / triad / `verifier` until runnable
    - verify teammate reachability via direct message
    - enter delegate mode (`Shift+Tab`)
    - run `TaskList()` to confirm team-scoped task context
    - if any of these fail: STOP (do not run task-only fallback)
-5. **Create task hierarchy in the team-scoped task list** (see Task-Based Orchestration above)
-6. **Start execution** (see Team Execution Loop below)
-7. Update memory, then execute TEAM_SHUTDOWN gate before final completion
+6. **Create task hierarchy in the team-scoped task list** (QUICK or FULL template)
+7. **Start execution** (see Team Execution Loop below)
+8. **Quick-path escalation rule**:
+   - if QUICK path emits blocking/remediation -> escalate to FULL immediately, create missing FULL tasks, and continue
+9. Update memory, then execute TEAM_SHUTDOWN gate before final completion
 
 ### DEBUG
 1. Load memory → Check patterns.md Common Gotchas
