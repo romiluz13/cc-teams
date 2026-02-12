@@ -47,7 +47,7 @@ Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:41`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:42`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:43`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:328`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1315`
+Source: `plugins/cc100x/skills/bug-court/SKILL.md:135`
 Source: `plugins/cc100x/skills/bug-court/SKILL.md:135`
 Source: `plugins/cc100x/skills/bug-court/SKILL.md:153`
 
@@ -106,7 +106,7 @@ Source: `plugins/cc100x/skills/router-contract/SKILL.md:20`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:671`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:688`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:710`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1329`
+Source: `plugins/cc100x/skills/router-contract/SKILL.md:20`
 
 ## 6) Remediation and Re-Review Loop Integrity
 

@@ -1,7 +1,7 @@
 # CC100x Protocol Manifest (Functional Canon)
 
 Status: canonical
-Last validated: 2026-02-11
+Last validated: 2026-02-12
 
 ## Source of Truth
 
@@ -35,7 +35,7 @@ Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:41`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:42`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:43`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:328`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1315`
+Source: `plugins/cc100x/skills/bug-court/SKILL.md:135`
 Source: `plugins/cc100x/skills/bug-court/SKILL.md:135`
 Source: `plugins/cc100x/skills/bug-court/SKILL.md:153`
 
@@ -97,7 +97,7 @@ Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1026`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:671`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:688`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1048`
-Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1329`
+Source: `plugins/cc100x/skills/router-contract/SKILL.md:20`
 Source: `plugins/cc100x/skills/router-contract/SKILL.md:93`
 Source: `plugins/cc100x/skills/router-contract/SKILL.md:95`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:702`

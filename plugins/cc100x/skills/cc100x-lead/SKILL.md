@@ -130,69 +130,25 @@ This prevents premature verifier/reviewer messages from hijacking workflow order
 
 ## Memory Protocol (PERMISSION-FREE)
 
-**LOAD FIRST (Before routing):**
+**Full protocol:** See `cc100x:session-memory` skill for complete templates, required sections, and auto-heal patterns.
 
-**Step 1 - Create directory (MUST complete before Step 2):**
+**Lead Quick Reference:**
 ```
+# Step 1 - Create directory (MUST complete before Step 2)
 Bash(command="mkdir -p .claude/cc100x")
-```
 
-**Step 2 - Load memory files (AFTER Step 1 completes):**
-```
+# Step 2 - Load memory files (AFTER Step 1 completes)
 Read(file_path=".claude/cc100x/activeContext.md")
 Read(file_path=".claude/cc100x/patterns.md")
 Read(file_path=".claude/cc100x/progress.md")
 ```
 
-**IMPORTANT:** Do NOT run Step 1 and Step 2 in parallel. Wait for mkdir to complete before reading files.
-
-If any memory file is missing:
-- Create it with `Write(...)` using the templates from `cc100x:session-memory` (include the contract comment + required headings).
-- Then `Read(...)` it before continuing.
-
-**TEMPLATE VALIDATION GATE (Auto-Heal):**
-
-After loading memory files, ensure ALL required sections exist.
-
-### activeContext.md - Required Sections
-`## Current Focus`, `## Recent Changes`, `## Next Steps`, `## Decisions`,
-`## Learnings`, `## References`, `## Blockers`, `## Last Updated`
-
-### progress.md - Required Sections
-`## Current Workflow`, `## Tasks`, `## Completed`, `## Verification`, `## Last Updated`
-
-### patterns.md - Required Sections
-`## Common Gotchas` (minimum)
-
-**Auto-heal pattern:**
-```
-# If any section missing in activeContext.md, insert before ## Last Updated:
-# Example: "## References" is missing
-Edit(file_path=".claude/cc100x/activeContext.md",
-     old_string="## Last Updated",
-     new_string="## References\n- Plan: N/A\n- Design: N/A\n- Research: N/A\n\n## Last Updated")
-
-# Example: progress.md missing "## Verification"
-Edit(file_path=".claude/cc100x/progress.md",
-     old_string="## Last Updated",
-     new_string="## Verification\n- [None yet]\n\n## Last Updated")
-
-# VERIFY after each heal
-Read(file_path=".claude/cc100x/activeContext.md")
-```
-
-This is idempotent: runs once per project (subsequent sessions find sections present).
-**Why:** Old projects may lack these sections, causing Edit failures.
-
-**UPDATE (Checkpoint + Final):**
-- Avoid memory edits during parallel phases (multiple teammates running).
-- Do a **workflow-final** memory update/check after the team completes.
-- Use Edit tool on memory files (permission-free), then Read-back verify.
-
-Memory update rules (do not improvise):
-1. Use `Edit(...)` (not `Write`) to update existing `.claude/cc100x/*.md`.
-2. Immediately `Read(...)` the edited file and confirm the expected text exists.
-3. If the update did not apply, STOP and retry with a correct, exact `old_string` anchor (do not proceed with stale memory).
+**Key Rules:**
+- Do NOT run Step 1 and Step 2 in parallel
+- If file missing → Create using templates from `cc100x:session-memory`
+- If section missing → Auto-heal using `cc100x:session-memory` patterns
+- Use `Edit(...)` not `Write` for updates; always Read-back verify
+- Avoid memory edits during parallel phases; do workflow-final update
 
 ---
 
@@ -434,309 +390,65 @@ Operational rules:
 
 This avoids lost/phantom tasks during team initialization.
 
-### BUILD Workflow Tasks
-```
-# BUILD depth decision:
-# DEPTH = QUICK | FULL (from Execution Depth Selector section)
+### Workflow Task Templates
 
-# QUICK path hierarchy (BUILD only, low risk)
-if DEPTH == QUICK:
-  # 1. Parent workflow task
-  TaskCreate({
-    subject: "CC100X BUILD: {feature_summary}",
-    description: "User request: {request}\n\nWorkflow: BUILD (QUICK)\nTeam: Builder + Live Reviewer -> Verifier\n\nPlan: {plan_file or 'N/A'}",
-    activeForm: "Building {feature} (quick)"
-  })
-  # Returns workflow_task_id
+**Task naming convention:** `CC100X {role}: {action}` for teammate tasks, `CC100X {WORKFLOW}: {summary}` for parent tasks.
 
-  # 2. Builder task
-  TaskCreate({
-    subject: "CC100X builder: Implement {feature}",
-    description: "Build the feature using TDD (RED→GREEN→REFACTOR).\n\nPlan: {plan_file or 'N/A'}\nRequirements: {requirements}\n\nYou OWN all file writes. No other teammate edits files.\nAfter each module, message 'live-reviewer' with: 'Review {file_path}'.",
-    activeForm: "Building components"
-  })
-  # Returns builder_task_id
+**Common patterns:**
+- Every workflow ends with `CC100X Memory Update` task (blocked by final phase)
+- Use `TaskUpdate({ taskId, addBlockedBy: [...] })` to enforce phase ordering
+- Include plan file path in description if following a plan
 
-  # 3. Live Reviewer task (parallel with builder)
-  TaskCreate({
-    subject: "CC100X live-reviewer: Real-time review",
-    description: "READ-ONLY. Wait for builder review requests.\nReply LGTM or STOP with concrete reasons.",
-    activeForm: "Reviewing in real-time"
-  })
-  # Returns live_reviewer_task_id
+#### BUILD Tasks (FULL depth - default)
 
-  # 4. Verifier task (blocked by builder)
-  TaskCreate({
-    subject: "CC100X verifier: E2E verification",
-    description: "Run tests, verify E2E functionality.\nEvery scenario needs PASS/FAIL with command + exit code evidence.\nOutput Router Contract.",
-    activeForm: "Verifying integration"
-  })
-  # Returns verifier_task_id
-  TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [builder_task_id] })
+| Order | Subject | BlockedBy | Key Description Points |
+|-------|---------|-----------|------------------------|
+| 1 | `CC100X BUILD: {feature}` | - | Parent task. Team: Builder → Hunter → Review Arena → Verifier |
+| 2 | `CC100X builder: Implement {feature}` | - | TDD (RED→GREEN→REFACTOR). OWN all writes. Message live-reviewer after each module. |
+| 3 | `CC100X live-reviewer: Real-time review` | - | READ-ONLY. Reply LGTM or STOP. |
+| 4 | `CC100X hunter: Silent failure audit` | builder | Scan for empty catches, swallowed exceptions. |
+| 5 | `CC100X security-reviewer: Security review` | hunter | Auth, injection, secrets, OWASP, XSS/CSRF. |
+| 6 | `CC100X performance-reviewer: Performance review` | hunter | N+1, loops, memory, caching, efficiency. |
+| 7 | `CC100X quality-reviewer: Quality review` | hunter | Patterns, complexity, error handling, tests. |
+| 8 | `CC100X BUILD Review Arena: Challenge round` | sec, perf, qual | Share findings, resolve conflicts (security wins on CRITICAL). |
+| 9 | `CC100X verifier: E2E verification` | challenge | Run tests, verify E2E. Exit code evidence required. |
+| 10 | `CC100X Memory Update: Persist build learnings` | verifier | Collect Memory Notes, persist via Read-Edit-Read. |
 
-  # 5. Memory Update task (blocked by verifier)
-  TaskCreate({
-    subject: "CC100X Memory Update: Persist build learnings",
-    description: "Collect Memory Notes from all completed tasks and persist with Read-Edit-Read.",
-    activeForm: "Persisting workflow learnings"
-  })
-  # Returns memory_task_id
-  TaskUpdate({ taskId: memory_task_id, addBlockedBy: [verifier_task_id] })
+**QUICK depth:** Skip hunter + 3 reviewers + challenge. Builder → Verifier → Memory Update.
 
-# FULL path hierarchy (default)
-if DEPTH == FULL:
-# 0. Check if following a plan (from activeContext.md)
-# Look in "## References" section for "- Plan:" entry (not "N/A"):
-#   → Extract plan_file path (e.g., `docs/plans/2024-01-27-auth-plan.md`)
-#   → Include in task description for context preservation
+#### DEBUG Tasks (Bug Court)
 
-# 1. Parent workflow task
-TaskCreate({
-  subject: "CC100X BUILD: {feature_summary}",
-  description: "User request: {request}\n\nWorkflow: BUILD (Pair Build)\nTeam: Builder + Live Reviewer → Hunter → Review Arena (security, performance, quality) → Verifier\n\nPlan: {plan_file or 'N/A'}",
-  activeForm: "Building {feature}"
-})
-# Returns workflow_task_id
+| Order | Subject | BlockedBy | Key Description Points |
+|-------|---------|-----------|------------------------|
+| 1 | `CC100X DEBUG: {error}` | - | Parent task. Team: Investigators → Debate → Fix → Review Arena → Verifier |
+| 2-N | `CC100X investigator-{i}: Test hypothesis - {h_i}` | - | Champion hypothesis, gather evidence FOR it. READ-ONLY. |
+| N+1 | `CC100X Bug Court: Debate round` | all investigators | Share evidence, determine winning hypothesis. |
+| N+2 | `CC100X builder: Implement fix` | debate | TDD: regression test FIRST, then minimal fix. |
+| N+3 | `CC100X security-reviewer: Security review of fix` | builder | Check for security regressions. |
+| N+4 | `CC100X performance-reviewer: Performance review of fix` | builder | Check for performance regressions. |
+| N+5 | `CC100X quality-reviewer: Quality review of fix` | builder | Check correctness, patterns. |
+| N+6 | `CC100X DEBUG Review Arena: Challenge round` | sec, perf, qual | Resolve conflicts before verification. |
+| N+7 | `CC100X verifier: Verify fix E2E` | challenge | Verify original symptom resolved. |
+| N+8 | `CC100X Memory Update: Persist debug learnings` | verifier | Root cause → patterns.md, evidence → progress.md. |
 
-# 2. Builder task
-TaskCreate({
-  subject: "CC100X builder: Implement {feature}",
-  description: "Build the feature using TDD (RED→GREEN→REFACTOR).\n\nPlan: {plan_file or 'N/A'}\nRequirements: {requirements}\n\nYou OWN all file writes. No other teammate edits files.\nAfter each module, message 'live-reviewer' with: 'Review {file_path}'.\nWait for reviewer feedback before continuing.",
-  activeForm: "Building components"
-})
-# Returns builder_task_id
+#### REVIEW Tasks (Review Arena)
 
-# 3. Live Reviewer task (starts alongside builder - NOT blocked)
-TaskCreate({
-  subject: "CC100X live-reviewer: Real-time review",
-  description: "READ-ONLY. Wait for messages from builder requesting review.\nFor each: read file, check security/correctness/patterns, reply LGTM or STOP.",
-  activeForm: "Reviewing in real-time"
-})
-# Returns live_reviewer_task_id
+| Order | Subject | BlockedBy | Key Description Points |
+|-------|---------|-----------|------------------------|
+| 1 | `CC100X REVIEW: {target}` | - | Parent task. Team: 3 reviewers → challenge round |
+| 2 | `CC100X security-reviewer: Security review` | - | Auth, injection, secrets, OWASP. |
+| 3 | `CC100X performance-reviewer: Performance review` | - | N+1, memory, bundle, caching. |
+| 4 | `CC100X quality-reviewer: Quality review` | - | Patterns, complexity, error handling. |
+| 5 | `CC100X Review Arena: Challenge round` | sec, perf, qual | Share findings, resolve conflicts. |
+| 6 | `CC100X Memory Update: Persist review learnings` | challenge | Patterns → patterns.md, verdict → progress.md. |
 
-# 4. Hunter task (blocked by builder)
-TaskCreate({
-  subject: "CC100X hunter: Silent failure audit",
-  description: "Scan implementation for: empty catches, log-only handlers, generic errors, swallowed exceptions.\nOutput Router Contract with findings.",
-  activeForm: "Hunting failures"
-})
-# Returns hunter_task_id
-TaskUpdate({ taskId: hunter_task_id, addBlockedBy: [builder_task_id] })
+#### PLAN Tasks
 
-# 5. Security reviewer task (blocked by hunter)
-TaskCreate({
-  subject: "CC100X security-reviewer: Security review of build output",
-  description: "Review implementation for auth, injection, secrets, OWASP concerns, XSS/CSRF.\nUse full review standards (not live-review quick checks).\nOutput Router Contract.",
-  activeForm: "Security review"
-})
-# Returns sec_task_id
-TaskUpdate({ taskId: sec_task_id, addBlockedBy: [hunter_task_id] })
-
-# 6. Performance reviewer task (blocked by hunter)
-TaskCreate({
-  subject: "CC100X performance-reviewer: Performance review of build output",
-  description: "Review implementation for N+1 queries, loops, memory leaks, caching, bundle and API efficiency.\nUse full review standards.\nOutput Router Contract.",
-  activeForm: "Performance review"
-})
-# Returns perf_task_id
-TaskUpdate({ taskId: perf_task_id, addBlockedBy: [hunter_task_id] })
-
-# 7. Quality reviewer task (blocked by hunter)
-TaskCreate({
-  subject: "CC100X quality-reviewer: Quality review of build output",
-  description: "Review implementation for correctness, patterns, complexity, error handling, tests, maintainability.\nUse full review standards.\nOutput Router Contract.",
-  activeForm: "Quality review"
-})
-# Returns qual_task_id
-TaskUpdate({ taskId: qual_task_id, addBlockedBy: [hunter_task_id] })
-
-# 8. Build Review Arena challenge round (blocked by all 3 reviewers)
-TaskCreate({
-  subject: "CC100X BUILD Review Arena: Challenge round",
-  description: "Share each reviewer's findings with the others.\nChallenge and resolve conflicts (security wins on CRITICAL).\nMerge final review verdict for downstream verifier.",
-  activeForm: "Running build challenge round"
-})
-# Returns build_challenge_task_id
-TaskUpdate({ taskId: build_challenge_task_id, addBlockedBy: [sec_task_id, perf_task_id, qual_task_id] })
-
-# 9. Verifier task (blocked by build challenge)
-TaskCreate({
-  subject: "CC100X verifier: E2E verification",
-  description: "Run tests, verify E2E functionality.\nEvery scenario needs PASS/FAIL with exit code evidence.\nConsider ALL findings from hunter + security/performance/quality reviewers.\nOutput Router Contract.",
-  activeForm: "Verifying integration"
-})
-# Returns verifier_task_id
-TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [build_challenge_task_id] })
-
-# 10. Memory Update task (blocked by verifier - TASK-ENFORCED)
-TaskCreate({
-  subject: "CC100X Memory Update: Persist build learnings",
-  description: "REQUIRED: Collect Memory Notes from ALL teammate outputs and persist to memory files.\n\n**Instructions:**\n1. Find all '### Memory Notes' sections from completed teammates\n2. Persist learnings to .claude/cc100x/activeContext.md ## Learnings\n3. Persist patterns to .claude/cc100x/patterns.md ## Common Gotchas\n4. Persist verification to .claude/cc100x/progress.md ## Verification\n\n**Pattern:**\nRead(file_path=\".claude/cc100x/activeContext.md\")\nEdit(old_string=\"## Learnings\", new_string=\"## Learnings\\n- [from agent]: {insight}\")\nRead(file_path=\".claude/cc100x/activeContext.md\")  # Verify\n\nRepeat for patterns.md and progress.md.",
-  activeForm: "Persisting workflow learnings"
-})
-# Returns memory_task_id
-TaskUpdate({ taskId: memory_task_id, addBlockedBy: [verifier_task_id] })
-```
-
-### DEBUG Workflow Tasks
-```
-TaskCreate({
-  subject: "CC100X DEBUG: {error_summary}",
-  description: "User request: {request}\n\nWorkflow: DEBUG (Bug Court)\nTeam: Investigators → Debate → Fix → Review Arena (security, performance, quality) → Verifier",
-  activeForm: "Debugging {error}"
-})
-
-# One task per hypothesis (dynamic investigator count: 2-5)
-investigator_task_ids = []
-for each hypothesis h_i in {hypotheses}:
-  TaskCreate({
-    subject: "CC100X investigator-{i}: Test hypothesis - {h_i}",
-    description: "Champion hypothesis: '{h_i}'\nGather evidence FOR this hypothesis. Try to PROVE it's the root cause.\nAlso gather evidence that could DISPROVE other hypotheses.\nError context: {error_details}\nMemory patterns: {common_gotchas}\n\nYou are READ-ONLY. Do NOT edit source code.\nOutput Router Contract at end.",
-    activeForm: "Investigating hypothesis {i}"
-  })
-  # Returns inv_i_task_id
-  investigator_task_ids.append(inv_i_task_id)
-
-TaskCreate({
-  subject: "CC100X Bug Court: Debate round",
-  description: "Share evidence between investigators. Each tries to disprove others.\nDetermine winning hypothesis based on strongest evidence + least counter-evidence.",
-  activeForm: "Running debate round"
-})
-# Returns debate_task_id
-TaskUpdate({ taskId: debate_task_id, addBlockedBy: investigator_task_ids })
-
-TaskCreate({
-  subject: "CC100X builder: Implement fix for winning hypothesis",
-  description: "Implement the fix using TDD:\n1. Write regression test FIRST (must fail before fix)\n2. Implement minimal fix\n3. Verify regression test passes\n4. Run full test suite",
-  activeForm: "Implementing fix"
-})
-# Returns fix_task_id
-TaskUpdate({ taskId: fix_task_id, addBlockedBy: [debate_task_id] })
-
-# Full-spectrum post-fix review (blocked by fix)
-TaskCreate({
-  subject: "CC100X security-reviewer: Security review of the fix",
-  description: "Review fix for auth/injection/secrets/OWASP risks and security regressions.\nOutput Router Contract.",
-  activeForm: "Security review"
-})
-# Returns fix_sec_task_id
-TaskUpdate({ taskId: fix_sec_task_id, addBlockedBy: [fix_task_id] })
-
-TaskCreate({
-  subject: "CC100X performance-reviewer: Performance review of the fix",
-  description: "Review fix for latency, N+1, loops, memory, and throughput regressions.\nOutput Router Contract.",
-  activeForm: "Performance review"
-})
-# Returns fix_perf_task_id
-TaskUpdate({ taskId: fix_perf_task_id, addBlockedBy: [fix_task_id] })
-
-TaskCreate({
-  subject: "CC100X quality-reviewer: Quality review of the fix",
-  description: "Review fix for correctness, patterns, complexity, and maintainability.\nOutput Router Contract.",
-  activeForm: "Quality review"
-})
-# Returns fix_qual_task_id
-TaskUpdate({ taskId: fix_qual_task_id, addBlockedBy: [fix_task_id] })
-
-TaskCreate({
-  subject: "CC100X DEBUG Review Arena: Challenge round",
-  description: "Share security/performance/quality findings.\nChallenge and resolve conflicts before verification (security wins on CRITICAL).",
-  activeForm: "Running debug challenge round"
-})
-# Returns debug_challenge_task_id
-TaskUpdate({ taskId: debug_challenge_task_id, addBlockedBy: [fix_sec_task_id, fix_perf_task_id, fix_qual_task_id] })
-
-TaskCreate({
-  subject: "CC100X verifier: Verify fix E2E",
-  description: "Verify fix works E2E. Run all tests. Verify original symptom resolved.\nConsider ALL findings from security/performance/quality reviewers.",
-  activeForm: "Verifying fix"
-})
-# Returns verifier_task_id
-TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [debug_challenge_task_id] })
-
-# Memory Update task (blocked by verifier - TASK-ENFORCED)
-TaskCreate({
-  subject: "CC100X Memory Update: Persist debug learnings",
-  description: "REQUIRED: Collect Memory Notes from ALL teammate outputs.\n\nFocus on:\n- Root cause for patterns.md ## Common Gotchas\n- Debug attempt history for activeContext.md\n- Verification evidence for progress.md\n\n**Use Read-Edit-Read pattern for each file.**",
-  activeForm: "Persisting debug learnings"
-})
-# Returns memory_task_id
-TaskUpdate({ taskId: memory_task_id, addBlockedBy: [verifier_task_id] })
-```
-
-### REVIEW Workflow Tasks
-```
-TaskCreate({
-  subject: "CC100X REVIEW: {target_summary}",
-  description: "User request: {request}\n\nWorkflow: REVIEW (Review Arena)\nTeam: 3 reviewers (security, performance, quality) → challenge round",
-  activeForm: "Reviewing {target}"
-})
-
-TaskCreate({
-  subject: "CC100X security-reviewer: Security review of {target}",
-  description: "Review for: auth, injection, secrets, OWASP top 10, XSS, CSRF.\nOutput Router Contract.",
-  activeForm: "Security review"
-})
-# Returns sec_task_id
-
-TaskCreate({
-  subject: "CC100X performance-reviewer: Performance review of {target}",
-  description: "Review for: N+1 queries, memory leaks, bundle size, loops, caching.\nOutput Router Contract.",
-  activeForm: "Performance review"
-})
-# Returns perf_task_id
-
-TaskCreate({
-  subject: "CC100X quality-reviewer: Quality review of {target}",
-  description: "Review for: patterns, naming, complexity, error handling, test coverage.\nOutput Router Contract.",
-  activeForm: "Quality review"
-})
-# Returns qual_task_id
-
-TaskCreate({
-  subject: "CC100X Review Arena: Challenge round",
-  description: "Share each reviewer's findings with the other two.\nReviewers challenge and debate via peer messaging.\nResolve conflicts (security wins on CRITICAL).",
-  activeForm: "Running challenge round"
-})
-# Returns challenge_task_id
-TaskUpdate({ taskId: challenge_task_id, addBlockedBy: [sec_task_id, perf_task_id, qual_task_id] })
-
-# Memory Update task (blocked by challenge - TASK-ENFORCED)
-TaskCreate({
-  subject: "CC100X Memory Update: Persist review learnings",
-  description: "REQUIRED: Collect Memory Notes from ALL reviewer outputs.\n\nFocus on:\n- Patterns for patterns.md\n- Review verdict for progress.md\n\n**Use Read-Edit-Read pattern for each file.**",
-  activeForm: "Persisting review learnings"
-})
-# Returns memory_task_id
-TaskUpdate({ taskId: memory_task_id, addBlockedBy: [challenge_task_id] })
-```
-
-### PLAN Workflow Tasks
-```
-TaskCreate({
-  subject: "CC100X PLAN: {feature_summary}",
-  description: "User request: {request}\n\nWorkflow: PLAN\nAgent: Single planner (Plan Approval Mode)",
-  activeForm: "Planning {feature}"
-})
-
-TaskCreate({
-  subject: "CC100X planner: Create plan for {feature}",
-  description: "Create comprehensive implementation plan.\n\nResearch: {research_file or 'None'}\nRequirements: {requirements}",
-  activeForm: "Creating plan"
-})
-# Returns planner_task_id
-# NOTE: Spawn planner with mode: "plan" for Plan Approval Mode
-# Lead reviews plan_approval_request, approves/rejects via plan_approval_response
-
-# Memory Update task (blocked by planner - TASK-ENFORCED)
-TaskCreate({
-  subject: "CC100X Memory Update: Index plan in memory",
-  description: "REQUIRED: Update memory files with plan reference.\n\nFocus on:\n- Add plan file to activeContext.md ## References\n- Update progress.md with plan status\n\n**Use Read-Edit-Read pattern for each file.**",
-  activeForm: "Indexing plan in memory"
-})
-# Returns memory_task_id
-TaskUpdate({ taskId: memory_task_id, addBlockedBy: [planner_task_id] })
-```
+| Order | Subject | BlockedBy | Key Description Points |
+|-------|---------|-----------|------------------------|
+| 1 | `CC100X PLAN: {feature}` | - | Parent task. Single planner (Plan Approval Mode). |
+| 2 | `CC100X planner: Create plan` | - | Spawn with `mode: "plan"`. Lead approves via plan_approval_response. |
+| 3 | `CC100X Memory Update: Index plan` | planner | Add plan file to activeContext.md ## References. |
 
 ---
 
@@ -990,108 +702,41 @@ Enforcement rules:
 
 ## Post-Team Validation (Router Contract)
 
-After each teammate completes (or team finishes), validate using Router Contracts:
+**Full contract schema:** See `cc100x:router-contract` skill for field definitions and YAML structure.
 
-### Step 1: Check for Router Contract
+After each teammate completes, validate:
+
+### Validation Steps
 ```
-Look for "### Router Contract (MACHINE-READABLE)" section in teammate output.
-If found → Use contract-based validation below.
-If NOT found → Teammate output is non-compliant. Create REM-EVIDENCE task:
-  TaskCreate({
-    subject: "CC100X REM-EVIDENCE: {teammate} missing Router Contract",
-    description: "Teammate output lacks Router Contract section. Re-run teammate or manually verify output quality.",
-    activeForm: "Collecting teammate contract"
-  })
-  Block downstream tasks and STOP.
-```
+1. CHECK CONTRACT EXISTS
+   Look for "### Router Contract (MACHINE-READABLE)" in output.
+   If NOT found → Create `CC100X REM-EVIDENCE: {teammate} missing Router Contract`, block downstream, STOP.
 
-### Step 1.5: Validate Artifact Claims
-```
-Primary source: contract.CLAIMED_ARTIFACTS (if present).
-Fallback source: teammate narrative claims ("created", "saved", "wrote", "exported").
+2. VALIDATE ARTIFACT CLAIMS
+   Check contract.CLAIMED_ARTIFACTS against approved paths (docs/plans/, docs/research/, docs/reviews/).
+   If unauthorized/missing → Create `CC100X REM-EVIDENCE: unauthorized artifact claim`, STOP.
 
-For each claimed artifact path:
-  - ensure path is in approved durable paths or explicitly user-approved
-  - ensure file exists
+3. PARSE AND VALIDATE CONTRACT
+   Circuit Breaker: If ≥3 REM-FIX tasks exist → AskUserQuestion (Research/Fix locally/Skip/Abort).
 
-If claim is unauthorized OR path is missing OR narrative claims mismatch contract.CLAIMED_ARTIFACTS:
-  TaskCreate({
-    subject: "CC100X REM-EVIDENCE: unauthorized artifact claim",
-    description: "Teammate artifact claim failed governance check (unauthorized path, missing file, or claim mismatch).",
-    activeForm: "Validating artifact claims"
-  })
-  Block downstream tasks and STOP.
-```
+   If contract.BLOCKING=true OR contract.REQUIRES_REMEDIATION=true:
+     → Create `CC100X REM-FIX: {teammate_name}` with contract.REMEDIATION_REASON
+     → Assign to builder (default) or ask user if builder's own output
+     → Block all downstream tasks via TaskUpdate(..., addBlockedBy)
+     → STOP until remediation completes
 
-### Step 2: Parse and Validate Contract
-```
-Parse the YAML block inside Router Contract section.
+   If contract.CRITICAL_ISSUES > 0 in parallel phase:
+     → Conflict check between reviewers → AskUserQuestion if disagreement
 
-CONTRACT FIELDS:
-- CONTRACT_VERSION: expected schema version (`2.3` current target)
-- STATUS: Teammate's self-reported status (PASS/FAIL/APPROVE/etc)
-- BLOCKING: true/false - whether workflow should stop
-- REQUIRES_REMEDIATION: true/false - whether REM-FIX task needed
-- REMEDIATION_REASON: Exact text for remediation task description
-- CRITICAL_ISSUES: Count of blocking issues (if applicable)
-- CLAIMED_ARTIFACTS: durable artifacts claimed by teammate
-- EVIDENCE_COMMANDS: command-level proof list (`command => exit code`)
-- MEMORY_NOTES: Structured notes for workflow-final persistence
+   If EVIDENCE_COMMANDS missing/inconsistent for evidence-required roles:
+     → Create `CC100X REM-EVIDENCE`, STOP.
 
-VALIDATION RULES:
+   Collect contract.MEMORY_NOTES for workflow-final persistence.
 
-**Circuit Breaker (BEFORE creating any REM-FIX):**
-Before creating a new REM-FIX task, count existing REM-FIX tasks in workflow.
-If count ≥ 3 → AskUserQuestion:
-- **Research best practices (Recommended)** → Execute external research, persist, retry
-- **Fix locally** → Create another REM-FIX task
-- **Skip** → Proceed despite errors (not recommended)
-- **Abort** → Stop workflow, manual fix
-
-1. If contract.BLOCKING == true OR contract.REQUIRES_REMEDIATION == true:
-   → Remediation task naming is STRICT:
-     - use subject prefix `CC100X REM-FIX:`
-     - do NOT use alternate names in new runs
-   → TaskCreate({
-       subject: "CC100X REM-FIX: {teammate_name}",
-       description: contract.REMEDIATION_REASON,
-       activeForm: "Fixing {teammate_name} issues"
-     })
-   → Assign REM-FIX task:
-     - Default: assign to `builder` (builder owns all file edits per agents/builder.md)
-     - Exception: if REM-FIX is for builder's own output, AskUserQuestion: "Builder's output needs fixing. Self-correct or manual intervention?"
-       - If "Self-correct" → assign to builder
-       - If "Manual" → user handles directly
-   → Task-enforced gate:
-     - Find downstream workflow tasks via TaskList() (subjects prefixed with `CC100X `)
-     - For every downstream task not completed:
-       TaskUpdate({ taskId: downstream_task_id, addBlockedBy: [remediation_task_id] })
-   → STOP. Do not invoke next teammate until remediation completes.
-   → User can bypass (record decision in memory).
-
-2. If contract.CRITICAL_ISSUES > 0 AND parallel phase (multiple reviewers):
-   → Conflict check: If one reviewer APPROVE AND another has CRITICAL_ISSUES > 0:
-     AskUserQuestion: "Reviewer approved, but {other} found {N} critical issues. Investigate or Skip?"
-     - If "Investigate" → Create REM-FIX for critical issues
-     - If "Skip" → Proceed (record decision in memory)
-   → If no conflict and CRITICAL_ISSUES > 0: treat as blocking (rule 1)
-
-3. Collect contract.MEMORY_NOTES for workflow-final persistence
-
-4. Evidence contract check:
-   → If role expects command evidence and contract.EVIDENCE_COMMANDS is empty/missing:
-      create `CC100X REM-EVIDENCE` and STOP.
-   → If evidence commands are present but internally inconsistent (for example, PASS with only failing exits):
-      create `CC100X REM-EVIDENCE` and STOP.
-
-5. If none of above triggered → Proceed to next task
-```
-
-### Step 3: Output Validation Evidence
-```
-### Agent Validation: {teammate_name}
-- Router Contract: Found
-- STATUS: {contract.STATUS}
+4. OUTPUT VALIDATION EVIDENCE
+   ### Agent Validation: {teammate_name}
+   - Router Contract: Found
+   - STATUS: {contract.STATUS}
 - BLOCKING: {contract.BLOCKING}
 - CRITICAL_ISSUES: {contract.CRITICAL_ISSUES}
 - Proceeding: [Yes/No + reason]
@@ -1444,59 +1089,27 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 
 ## Optional Hook-Driven Quality Gates (Disabled By Default)
 
-CC100x core orchestration MUST work without hooks.
-
-If a project explicitly opts in, Agent Teams hooks can add extra enforcement:
-- `TeammateIdle`: if a teammate goes idle without Router Contract or while task still needs evidence, return exit code `2` with corrective feedback.
-- `TaskCompleted`: block task completion (exit code `2`) when contract fields are missing, malformed, or blocking remediation is unresolved.
-
-Minimal optional policy:
-1. Reject completion if Router Contract section is missing.
-2. Reject completion if `BLOCKING=true` and no REM-FIX task exists.
-3. Reject completion if `SPEC_COMPLIANCE=FAIL` without explicit user skip decision logged.
-
-Default stance: keep hooks off unless user explicitly enables and validates them.
+CC100x core orchestration MUST work without hooks. If project opts in:
+- `TeammateIdle`: exit code `2` if no Router Contract or missing evidence
+- `TaskCompleted`: exit code `2` if contract missing, `BLOCKING=true` without REM-FIX, or `SPEC_COMPLIANCE=FAIL` without user skip
 
 ## Model Selection Guidance
 
-Quality-first default (production-safe): use `inherit` for every teammate.
+**Default:** Use `inherit` for all teammates (quality-first, production-safe).
 
-| Teammate | Quality-First (Default) | Balanced Override (Optional) |
-|----------|--------------------------|-------------------------------|
-| builder | `inherit` | `inherit` |
-| investigator | `inherit` | `inherit` |
-| planner | `inherit` | `inherit` |
-| security-reviewer | `inherit` | `inherit` |
-| performance-reviewer | `inherit` | `sonnet` |
-| quality-reviewer | `inherit` | `sonnet` |
-| live-reviewer | `inherit` | `sonnet` |
-| hunter | `inherit` | `sonnet` |
-| verifier | `inherit` | `sonnet` |
+**Optional balanced override:** `sonnet` for performance-reviewer, quality-reviewer, live-reviewer, hunter, verifier. Keep `inherit` for builder, investigator, planner, security-reviewer.
 
 **Override rule:** If any teammate misses issues, immediately re-run that stage with `inherit`.
 
 ## Self-Claim Mode (Explicit Opt-In Only)
 
-Default is **disabled** to preserve deterministic role routing.
+**Default: DISABLED** to preserve deterministic role routing.
 
-Only enable self-claim when:
-- Task descriptions are fully role-agnostic
-- Role-specific sequencing is not required
-- User explicitly asks for autonomous claiming
+Enable only when: task descriptions are role-agnostic, sequencing not required, user explicitly requests.
 
-When enabled, teammates can self-claim unblocked tasks:
+When enabled: teammates call `TaskList()`, find pending tasks with empty blockedBy, claim via `TaskUpdate({ taskId, owner: "{my-name}", status: "in_progress" })`.
 
-```
-After completing a task:
-1. Teammate calls TaskList()
-2. Finds task with status="pending", no owner, empty blockedBy
-3. Claims via TaskUpdate({ taskId, owner: "{my-name}", status: "in_progress" })
-4. Notifies lead: "Claimed task: {subject}"
-```
-
-Task claiming is lock-safe in Agent Teams (file-lock protected), so simultaneous claim attempts resolve without duplicate ownership.
-
-**When not to enable:** BUILD/DEBUG phases with specialized roles (builder, investigators, reviewers, verifier). These should stay lead-assigned.
+**Do NOT enable for:** BUILD/DEBUG phases with specialized roles (builder, investigators, reviewers, verifier).
 
 ---
 
@@ -1522,26 +1135,12 @@ Task claiming is lock-safe in Agent Teams (file-lock protected), so simultaneous
 
 After workflow completes AND memory is updated:
 1. Send `shutdown_request` to each teammate via `SendMessage(type="shutdown_request", recipient="{name}")`
-2. Wait for shutdown approvals from all teammates
-3. If teammate rejects shutdown:
-   a. Read rejection reason from teammate's response
-   b. Run `TaskList()` to check for incomplete tasks assigned to that teammate
-   c. If incomplete tasks exist → mark them (re-assign or mark as pending), then retry shutdown
-   d. If no incomplete tasks but still rejected → AskUserQuestion: "Teammate {name} rejected shutdown with reason: {reason}. Force shutdown or investigate?"
-      - If "Force" → proceed to TeamDelete()
-      - If "Investigate" → leave workflow open, persist state
-4. Retry shutdown loop up to 3 attempts with short backoff (for slow tool completion)
-5. After approvals → `TeamDelete()` to clean up team resources
-6. If `TeamDelete()` fails, retry up to 3 times and keep workflow open
-7. **After 3 `TeamDelete()` failures:** AskUserQuestion: "TeamDelete failed 3 times. Team resources may still exist.\n- Proceed (mark workflow complete, cleanup manually)\n- Abort (keep workflow open for investigation)"
-   - If "Proceed" → record in memory (`## Team Cleanup: manual required for {team_name}`), mark workflow complete
-   - If "Abort" → keep workflow open, persist state in session handoff payload
-8. Report final results to user only after cleanup succeeds OR user explicitly chose "Proceed"
+2. Wait for approvals. If rejected: check for incomplete tasks → fix/re-assign → retry. If still rejected → AskUserQuestion: "Force or Investigate?"
+3. Retry shutdown up to 3 attempts. After approvals → `TeamDelete()`
+4. If `TeamDelete()` fails 3x → AskUserQuestion: "Proceed (manual cleanup) or Abort?"
+5. Report results only after cleanup succeeds OR user chose "Proceed"
 
-**Do not finalize early:** Never report workflow as complete while teammates are still active or team resources still exist.
-
-**Team Naming Convention:** `cc100x-{project_key}-{workflow}-{YYYYMMDD-HHMMSS}`
-Example: `cc100x-cc100x-test-app-build-20260206-143022`, `cc100x-sales-engineer-debug-20260206-150000`
+**Team Naming:** `cc100x-{project_key}-{workflow}-{YYYYMMDD-HHMMSS}`
 
 ---
 
