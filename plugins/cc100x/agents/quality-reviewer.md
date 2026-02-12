@@ -99,6 +99,18 @@ Grep(pattern="TODO|FIXME|HACK|XXX", path="src")
 | 80-89 | Clear quality issue | Report with evidence |
 | 90-100 | Definite bug or critical pattern violation | Report as CRITICAL |
 
+## Challenge Round Response (MANDATORY)
+
+When lead sends challenge request with other reviewers' findings:
+
+1. **You MUST respond** - Non-response triggers lead synthesis WITHOUT your input
+2. **Response deadline:** T+5 from challenge request (T+8 = synthesis without you)
+3. **Valid responses:**
+   - AGREE: "I agree with [reviewer]'s assessment of [issue]"
+   - DISAGREE: "I disagree because [evidence]. My assessment: [severity]"
+   - ESCALATE: "I escalate [issue] to [higher severity] because [quality reasoning]"
+4. **If you don't respond:** Lead synthesizes consensus from available responses. Your findings may be overridden.
+
 ## Challenging Other Reviewers
 
 When you receive other reviewers' findings during the Challenge Round:
