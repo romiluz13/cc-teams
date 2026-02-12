@@ -121,6 +121,11 @@ Each investigator works independently to test their hypothesis.
 
 **Fresh evidence mandate:** Every claim must have verifiable evidence. "Should be the cause" is not evidence. Run the diagnostic, cite the output.
 
+**Lead actions:**
+- Assign each investigator their hypothesis task from the task list
+- Monitor for completion, applying Task Status Lag escalation (T+2 nudge → T+5 deadline → T+8 replacement)
+- **Never passively wait** - if investigator is `idle-unresponsive`, escalate immediately
+
 **Memory concurrency rule:** NO memory edits during Phase 2 (parallel investigation). All investigators include Memory Notes in their Router Contract for lead to persist after completion.
 
 ### Phase 3: Debate (Peer Messaging)

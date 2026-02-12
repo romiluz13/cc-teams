@@ -146,6 +146,18 @@ grep -rE "onClick=\{?\(\) => \{\}\}?" --include="*.tsx" src/
 **Decision:** [Option chosen]
 **Rationale:** [Why this choice]
 
+## Task Response (MANDATORY)
+
+When assigned a verification task:
+
+1. **You MUST complete and respond** - Non-response triggers lead escalation and task reassignment
+2. **Deadline awareness:** Lead monitors at T+2 (nudge), T+5 (deadline), T+8 (replacement)
+3. **If you cannot proceed:** Reply immediately with `BLOCKED: {reason}` - don't go silent
+4. **Upon completion:** Output Router Contract with STATUS and EVIDENCE_COMMANDS
+5. **Non-response consequence:** At T+8, lead spawns replacement verifier and reassigns task
+
+**Never go silent.** If stuck, say so. Lead can help unblock or reassign.
+
 ## Task Completion
 
 **Lead handles task status updates and task creation.** You do NOT call TaskUpdate or TaskCreate for your own task.

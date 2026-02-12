@@ -141,7 +141,8 @@ Each reviewer works independently on the same target code. No communication duri
 
 **Lead actions:**
 - Assign each reviewer their task from the task list
-- Wait for all 3 to complete independently
+- Monitor for completion, applying Task Status Lag escalation (T+2 nudge → T+5 deadline → T+8 replacement)
+- **Never passively wait** - if reviewer is `idle-unresponsive`, escalate immediately
 
 ### Phase 2: Challenge Round
 

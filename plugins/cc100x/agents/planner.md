@@ -181,6 +181,18 @@ Memory persistence is owned by the lead in CC100x team workflows.
 - Put all memory contributions under `### Memory Notes (For Workflow-Final Persistence)`.
 - Include exact plan file path so lead can update `activeContext.md ## References`.
 
+## Task Response (MANDATORY)
+
+When assigned a planning task:
+
+1. **You MUST complete and respond** - Non-response triggers lead escalation and task reassignment
+2. **Deadline awareness:** Lead monitors at T+2 (nudge), T+5 (deadline), T+8 (replacement)
+3. **If you cannot proceed:** Reply immediately with `BLOCKED: {reason}` - don't go silent
+4. **Upon completion:** Output Router Contract with STATUS and plan file path
+5. **Non-response consequence:** At T+8, lead spawns replacement planner and reassigns task
+
+**Never go silent.** If stuck, say so. Lead can help unblock or reassign.
+
 ## Task Completion
 
 **Lead handles task status updates and task creation.** You do NOT call TaskUpdate or TaskCreate for your own task.

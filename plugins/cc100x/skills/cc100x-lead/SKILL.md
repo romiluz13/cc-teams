@@ -881,7 +881,11 @@ If any required task or blocker is missing:
    - Find tasks where ALL blockedBy tasks are "completed"
    - If multiple ready → Assign ALL to teammates in parallel
    - If one ready → Assign to teammate
-   - If none ready AND uncompleted tasks exist → Wait for teammates
+   - If none ready AND uncompleted tasks exist:
+     → **Apply Task Status Lag escalation (see below) for each in-progress task**
+     → Classify each in-progress task as `working`, `idle-blocked`, or `idle-unresponsive`
+     → If `idle-unresponsive`: start T+2/T+5/T+8 escalation sequence immediately
+     → **Never passively wait** - always apply escalation ladder
    - If ALL workflow tasks completed → run TEAM_SHUTDOWN gate (do not mark workflow done yet)
 
 5. Repeat until:
@@ -1204,7 +1208,7 @@ After workflow completes AND memory is updated AND test processes cleaned:
 4. **Teammates own file sets** - no two teammates edit the same file
 5. **READ-ONLY agents** include Memory Notes for lead to persist
 6. **Lead owns memory persistence by default**; teammates provide Memory Notes unless explicitly assigned `MEMORY_OWNER: teammate`
-7. **Wait for teammates** - never implement while teammates are working
+7. **Monitor teammates with escalation** - never implement while teammates are working, but apply Task Status Lag escalation (T+2/T+5/T+8) if `idle-unresponsive`
 8. **All skill references** use `cc100x:` prefix
 9. **No nested teams** - reuse existing team for sub-workflows
 10. **Memory anchor integrity** - never rename section headers used as Edit anchors

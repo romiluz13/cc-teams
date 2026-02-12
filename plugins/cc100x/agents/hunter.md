@@ -91,6 +91,18 @@ Grep(pattern="Something went wrong|An error occurred|Unknown error", path="src")
 Grep(pattern="\\.catch\\(\\(\\) =>", path="src")
 ```
 
+## Task Response (MANDATORY)
+
+When assigned a hunt task:
+
+1. **You MUST complete and respond** - Non-response triggers lead escalation and task reassignment
+2. **Deadline awareness:** Lead monitors at T+2 (nudge), T+5 (deadline), T+8 (replacement)
+3. **If you cannot proceed:** Reply immediately with `BLOCKED: {reason}` - don't go silent
+4. **Upon completion:** Output Router Contract with STATUS and ISSUES_FOUND
+5. **Non-response consequence:** At T+8, lead spawns replacement hunter and reassigns task
+
+**Never go silent.** If stuck, say so. Lead can help unblock or reassign.
+
 ## Task Completion
 
 **GATE:** This agent can complete its task after reporting. CRITICAL issues remain a workflow blocker until fixed.

@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.1.14] - 2026-02-12
+
+### Fixed
+
+- **Verifier Hanging / Systemic Response Awareness Gap** (ALL agents + lead + skills)
+  - Root cause #1: Lead execution loop said "Wait for teammates" without connecting to escalation ladder
+  - Root cause #2: Most agents had "Task Completion" but not "Task Response (MANDATORY)" with deadline awareness
+  - Evidence: User session showed verifier (Task #9) started but lead passively waited with "Awaiting verifier evidence..."
+
+  **Comprehensive fix across 10 files:**
+
+  | File | Fix Applied |
+  |------|-------------|
+  | `verifier.md` | Added "Task Response (MANDATORY)" section |
+  | `hunter.md` | Added "Task Response (MANDATORY)" section |
+  | `builder.md` | Added "Task Response (MANDATORY)" section |
+  | `investigator.md` | Added "Task Response (MANDATORY)" section |
+  | `live-reviewer.md` | Added "Task Response (MANDATORY)" section |
+  | `planner.md` | Added "Task Response (MANDATORY)" section |
+  | `security-reviewer.md` | Added "Task Response (MANDATORY)" section (existing Challenge Round Response kept) |
+  | `performance-reviewer.md` | Added "Task Response (MANDATORY)" section (existing Challenge Round Response kept) |
+  | `quality-reviewer.md` | Added "Task Response (MANDATORY)" section (existing Challenge Round Response kept) |
+  | `cc100x-lead/SKILL.md` | Fixed execution loop step 4: explicit escalation when waiting |
+  | `review-arena/SKILL.md` | Fixed Phase 1 Lead actions: explicit escalation |
+  | `bug-court/SKILL.md` | Added Lead actions to Phase 2: explicit escalation |
+
+### Task Response (MANDATORY) Pattern
+
+All agents now include:
+```markdown
+## Task Response (MANDATORY)
+
+1. **You MUST complete and respond** - Non-response triggers lead escalation
+2. **Deadline awareness:** Lead monitors at T+2 (nudge), T+5 (deadline), T+8 (replacement)
+3. **If blocked:** Reply immediately with BLOCKED: {reason}
+4. **Upon completion:** Output Router Contract
+5. **Non-response consequence:** At T+8, lead spawns replacement and reassigns
+```
+
+### Notes
+
+- This fix ensures NO agent can silently hang the workflow
+- Every parallel phase (review-arena, bug-court) now has explicit escalation in Lead actions
+- Invariant #7 changed from "Wait for teammates" to "Monitor teammates with escalation"
+
 ## [0.1.13] - 2026-02-12
 
 ### Fixed
