@@ -270,7 +270,11 @@ Rules:
 1. Apply this stamp to EVERY CC100X task (parent + children + remediation tasks).
 2. Use this stamp for orphan sweep and cross-project isolation.
 3. Do not resume or mutate tasks with a different `Project Root`.
-4. If stamp is missing (legacy task), treat cautiously and prefer fresh stamped tasks for new runs.
+4. If stamp is missing (legacy task):
+   a. Do NOT resume or mutate the task
+   b. Log to Memory Notes: "Orphan legacy task ignored: {subject}"
+   c. Create fresh stamped tasks for current workflow
+   d. Do not delete legacy tasks (they may belong to a paused workflow)
 
 ---
 
@@ -294,6 +298,10 @@ task_snapshot:
 contracts:
   last_validated: ["builder: PASS", "live-reviewer: PASS"]
   unresolved_blocking: []
+memory_notes_collected:
+  builder: "TDD pattern used: RED-GREEN-REFACTOR for auth module"
+  hunter: ""  # empty until hunter completes
+  security-reviewer: ""
 remediation:
   open_rem_fix_ids: []
 next_owner: "hunter"
@@ -306,6 +314,10 @@ Rules:
 2. Never infer missing facts; use `unknown` when evidence is unavailable.
 3. `stale_assumptions` is required. Use an explicit empty list (`[]`) when none.
 4. Handoff payload is lead-owned and must be based on current TaskList + validated contracts.
+5. `memory_notes_collected` must be populated:
+   - After each teammate completes, extract `MEMORY_NOTES` from their Router Contract
+   - Append to handoff payload before context compaction risk
+   - Memory Update task uses collected notes, not raw teammate context
 
 Emit payload at minimum when:
 1. escalation reaches `CRITICAL` (`stalled`);
@@ -1045,6 +1057,11 @@ If count ≥ 3 → AskUserQuestion:
        description: contract.REMEDIATION_REASON,
        activeForm: "Fixing {teammate_name} issues"
      })
+   → Assign REM-FIX task:
+     - Default: assign to `builder` (builder owns all file edits per agents/builder.md)
+     - Exception: if REM-FIX is for builder's own output, AskUserQuestion: "Builder's output needs fixing. Self-correct or manual intervention?"
+       - If "Self-correct" → assign to builder
+       - If "Manual" → user handles directly
    → Task-enforced gate:
      - Find downstream workflow tasks via TaskList() (subjects prefixed with `CC100X `)
      - For every downstream task not completed:
@@ -1307,13 +1324,31 @@ When parallel teammates complete (e.g., 3 reviewers in Review Arena), their outp
      content="Here are findings from other reviewers: {REVIEWER_2_FINDINGS + REVIEWER_3_FINDINGS}. Challenge or agree?")
    # Repeat for other reviewers
 
+   Challenge completion criteria (per review-arena/SKILL.md):
+   - All 3 reviewers acknowledged peer findings (no silent reviewer)
+   - At least one cross-review response from each reviewer (agreement or challenge)
+   - Conflicts are resolved or explicitly escalated
+
+   Conflict resolution priority (per review-arena/SKILL.md):
+   - Security says CRITICAL, others disagree → Security wins (conservative principle)
+   - Performance vs Quality conflict → Present both to user with trade-off analysis
+   - No consensus → Present all 3 perspectives to user, let them decide
+
 4. For downstream teammates (e.g., verifier after hunt + review challenge):
    Include ALL findings in teammate prompt:
    "## Previous Findings\n### Hunter\n{HUNTER_FINDINGS}\n### Reviewer\n{REVIEWER_FINDINGS}"
 
 5. Before invoking verifier, run a contract-diff checkpoint:
    - Compare upstream contract claims vs downstream usage assumptions
-   - If mismatch exists, create `CC100X REM-FIX:` task and block verifier
+   - Comparison dimensions:
+     a. FILES_MODIFIED match (builder claims vs hunter/reviewer observations)
+     b. EVIDENCE_COMMANDS executed and passed (red/green exits present)
+     c. CLAIMED_ARTIFACTS match claimed vs actual files (if any)
+     d. SPEC_COMPLIANCE alignment (builder claims PASS, but reviewer finds gap?)
+   - If mismatch exists:
+     - Log: "Contract-diff mismatch: {dimension} - upstream={X}, downstream={Y}"
+     - Create `CC100X REM-FIX: Contract-diff` task with mismatch details
+     - Block verifier until mismatch resolved
    - Only invoke verifier when contract diff is clean
 ```
 
@@ -1488,11 +1523,20 @@ Task claiming is lock-safe in Agent Teams (file-lock protected), so simultaneous
 After workflow completes AND memory is updated:
 1. Send `shutdown_request` to each teammate via `SendMessage(type="shutdown_request", recipient="{name}")`
 2. Wait for shutdown approvals from all teammates
-3. If teammate rejects shutdown → check unfinished work, resolve, retry
+3. If teammate rejects shutdown:
+   a. Read rejection reason from teammate's response
+   b. Run `TaskList()` to check for incomplete tasks assigned to that teammate
+   c. If incomplete tasks exist → mark them (re-assign or mark as pending), then retry shutdown
+   d. If no incomplete tasks but still rejected → AskUserQuestion: "Teammate {name} rejected shutdown with reason: {reason}. Force shutdown or investigate?"
+      - If "Force" → proceed to TeamDelete()
+      - If "Investigate" → leave workflow open, persist state
 4. Retry shutdown loop up to 3 attempts with short backoff (for slow tool completion)
 5. After approvals → `TeamDelete()` to clean up team resources
 6. If `TeamDelete()` fails, retry up to 3 times and keep workflow open
-7. Report final results to user only after cleanup succeeds
+7. **After 3 `TeamDelete()` failures:** AskUserQuestion: "TeamDelete failed 3 times. Team resources may still exist.\n- Proceed (mark workflow complete, cleanup manually)\n- Abort (keep workflow open for investigation)"
+   - If "Proceed" → record in memory (`## Team Cleanup: manual required for {team_name}`), mark workflow complete
+   - If "Abort" → keep workflow open, persist state in session handoff payload
+8. Report final results to user only after cleanup succeeds OR user explicitly chose "Proceed"
 
 **Do not finalize early:** Never report workflow as complete while teammates are still active or team resources still exist.
 

@@ -132,6 +132,12 @@ Try to disprove the other hypotheses using your evidence."
 
 **Lead monitors debate and allows 2-3 rounds of messaging.**
 
+**Debate completion criteria (lead checks before moving to verdict):**
+1. All investigators have had opportunity to challenge (at least 1 response from each)
+2. No new evidence being presented (repeat arguments = done)
+3. Maximum 3 rounds OR unanimous stand-down
+4. If investigator goes silent after prompt → send nudge, then proceed without their input
+
 ### Phase 4: Verdict (Lead)
 
 Lead evaluates:
@@ -144,11 +150,19 @@ Lead evaluates:
 | Simplicity (Occam's razor) | Medium |
 | Counter-evidence against alternatives | Medium |
 
-**Decision:**
-- **Clear winner**: One hypothesis has strong evidence AND survived debate → Proceed to fix
-- **Tie**: Two hypotheses both strong → Present both to user for decision
-- **All disproved**: No hypothesis survived → Generate new hypotheses (max 2 rounds total)
+**Verdict decision rules:**
+- **Clear winner**: Hypothesis has reproducible test AND survived all challenges AND explains primary symptom → Proceed to fix
+- **Tie**: Two hypotheses both have reproducible tests; present both to user with evidence summaries
+- **All weak**: No hypothesis has reproducible test → require new investigation round (max 2 rounds total)
+- **Contested**: One has test, another has strong counter-evidence; present to user with evidence summary
 - **Investigator has diagnostic proof**: Winning investigator has reproduction script → Pass to builder
+
+**If user decision required, format as AskUserQuestion:**
+```
+Hypothesis A: [evidence summary] [reproduction command]
+Hypothesis B: [evidence summary] [reproduction command]
+Recommendation: [lead's assessment based on weight criteria]
+```
 
 ### Phase 5: Fix Implementation
 

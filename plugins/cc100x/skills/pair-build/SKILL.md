@@ -125,6 +125,12 @@ Builder messages live-reviewer: "Implementation complete"
 
 **Synchronization note (Agent Teams):** Agent Teams has no blocking wait primitive. Builder uses message-based polling — after sending review request, builder checks for reviewer response before starting next module. If no response within reasonable time, builder sends a nudge.
 
+**Timeout escalation (per cc100x-lead escalation ladder):**
+- T+2 min no response → builder sends nudge: "Review status? WORKING/BLOCKED/DONE"
+- T+5 min no response → lead sends direct status request with deadline
+- T+8 min no response → lead spawns replacement live-reviewer and reassigns
+- T+10 min no response after reassignment → lead marks path as `stalled` and asks user
+
 **Builder rules:**
 - Follow TDD: RED → GREEN → REFACTOR for each module
 - After each module, pause and request review

@@ -37,11 +37,19 @@ The lifecycle is integrated and task-enforced:
 - REVIEW: triad review + challenge round.
 - PLAN: planner in plan approval mode with lead handshake.
 
+**Phase completion criteria are explicit:**
+- Challenge round: all reviewers acknowledged peer findings, at least one response from each, conflicts resolved or escalated.
+- Debate (DEBUG): all investigators responded, no new evidence, max 3 rounds.
+- Verdict: clear winner requires reproducible test + survived challenges + explains primary symptom; ties/contested go to user.
+
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:40`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:41`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:42`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:43`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:328`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1315`
+Source: `plugins/cc100x/skills/bug-court/SKILL.md:135`
+Source: `plugins/cc100x/skills/bug-court/SKILL.md:153`
 
 ## 3) Agent Teams Preflight Is Mandatory
 
@@ -74,8 +82,10 @@ Workflow execution is DAG-first and closure-gated:
 - Verifier cannot bypass challenge (no hunter/remediation direct unlock).
 - Every workflow includes a `CC100X Memory Update` task.
 - Workflow cannot complete until Memory Update and TEAM_SHUTDOWN both succeed.
+- Legacy tasks (missing workflow stamp) are NOT resumed; fresh stamped tasks are created instead.
 
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:202`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:273`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:222`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:243`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:825`
@@ -90,10 +100,13 @@ Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:905`
 
 Every teammate must emit machine-readable Router Contract YAML. Lead validates contract before completion and routes remediation for blocking outcomes.
 
+Before verifier invocation, lead runs a contract-diff checkpoint comparing FILES_MODIFIED, EVIDENCE_COMMANDS, CLAIMED_ARTIFACTS, and SPEC_COMPLIANCE between upstream and downstream claims. Mismatch creates `CC100X REM-FIX: Contract-diff` and blocks verifier.
+
 Source: `plugins/cc100x/skills/router-contract/SKILL.md:20`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:671`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:688`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:710`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1329`
 
 ## 6) Remediation and Re-Review Loop Integrity
 
@@ -101,8 +114,13 @@ Blocking findings trigger remediation tasks, and remediation must pass re-review
 
 Canonical remediation naming is `CC100X REM-FIX:`; legacy `CC100X REMEDIATION:` is accepted only for backward compatibility.
 
+REM-FIX task assignment is explicit:
+- Default: assign to `builder` (builder owns all file edits)
+- Exception: if REM-FIX is for builder's own output, lead asks user for self-correct vs manual intervention
+
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:710`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:747`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1048`
 Source: `plugins/cc100x/skills/router-contract/SKILL.md:93`
 Source: `plugins/cc100x/skills/router-contract/SKILL.md:95`
 
@@ -139,9 +157,11 @@ Memory persistence is owner-scoped:
 - Lead owns memory persistence in team workflows by default.
 - Teammates emit Memory Notes for workflow-final persistence.
 - Teammate direct memory edits require explicit override (`MEMORY_OWNER: teammate`).
+- Session handoff payload includes `memory_notes_collected` to preserve notes across compaction boundaries.
 
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:607`
 Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:1053`
+Source: `plugins/cc100x/skills/cc100x-lead/SKILL.md:313`
 Source: `plugins/cc100x/skills/session-memory/SKILL.md:19`
 Source: `plugins/cc100x/skills/session-memory/SKILL.md:152`
 Source: `plugins/cc100x/skills/session-memory/SKILL.md:154`
@@ -158,7 +178,8 @@ Operational constraints are explicit:
 - Teammate permissions inherit from lead at spawn.
 - Broadcast is limited in favor of targeted messaging.
 - Shutdown requires approval flow and team deletion.
-- Failed `TeamDelete()` is retried; workflow is not finalized until cleanup succeeds.
+- Shutdown rejection handling is explicit: read reason, check tasks, retry or escalate to user (Force vs Investigate).
+- Failed `TeamDelete()` is retried up to 3 times; after 3 failures, user chooses Proceed (manual cleanup) or Abort (keep workflow open).
 - Idle/task-lag handling is deterministic (nudge -> status request -> reassignment ladder).
 - Lead communication is state-change-driven (avoid repeated idle narration without new action).
 
