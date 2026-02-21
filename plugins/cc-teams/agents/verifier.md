@@ -4,7 +4,7 @@ description: "E2E integration verifier - validates all scenarios with exit code 
 model: inherit
 color: yellow
 context: fork
-tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch
+tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage
 skills: cc-teams:router-contract, cc-teams:verification
 ---
 
@@ -92,10 +92,13 @@ pgrep -f "vitest|jest" && pkill -f "vitest|jest" || echo "No hanging test proces
 
 # Dependency vulnerability audit (run if package.json exists)
 if [ -f "package.json" ]; then
-  npm audit --json 2>/dev/null | jq -r '
-    .metadata.vulnerabilities |
-    "critical=\(.critical) high=\(.high) moderate=\(.moderate)"
-  ' 2>/dev/null || npm audit 2>&1 | tail -3
+  if command -v jq >/dev/null 2>&1; then
+    npm audit --json 2>/dev/null | jq -r '.metadata.vulnerabilities | "critical=\(.critical) high=\(.high) moderate=\(.moderate)"' 2>/dev/null \
+      || npm audit 2>&1 | grep -E "found [0-9]+ vulnerabilit" | head -3
+  else
+    # jq not available — fall back to text output
+    npm audit 2>&1 | grep -E "(critical|high|moderate|low)|found [0-9]+" | head -5
+  fi
 fi
 # DEPENDENCY_AUDIT=FAIL if high/critical > 0 → BLOCKING=true
 # DEPENDENCY_AUDIT=WARN if moderate > 0 → non-blocking, document
@@ -164,11 +167,16 @@ When assigned a verification task:
 
 1. **You MUST complete and respond** - Non-response triggers lead escalation and task reassignment
 2. **Deadline awareness:** Lead monitors at T+2 (nudge), T+5 (deadline), T+8 (replacement)
-3. **If you cannot proceed:** Reply immediately with `BLOCKED: {reason}` - don't go silent
+3. **If you cannot proceed:** Message lead immediately and go idle:
+   ```
+   SendMessage({ type: "message", recipient: "{lead name from task context}",
+     content: "BLOCKED: {reason}. Cannot complete E2E verification.",
+     summary: "BLOCKED: verifier cannot proceed" })
+   ```
 4. **Upon completion:** Output Router Contract with STATUS and EVIDENCE_COMMANDS
 5. **Non-response consequence:** At T+8, lead spawns replacement verifier and reassigns task
 
-**Never go silent.** If stuck, say so. Lead can help unblock or reassign.
+**Never go silent.** Use SendMessage to signal BLOCKED before going idle.
 
 ## Task Completion
 

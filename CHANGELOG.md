@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.1.17] - 2026-02-22
+
+### Fixed
+- **Planner plan-mode escalation** — removed invalid `SendMessage(recipient: "lead")` (not a valid
+  Agent Teams name); planner now outputs BLOCKED as plain text and goes idle (idle notification
+  carries it to lead automatically per Agent Teams spec)
+- **Planner probe race condition** — `.probe` file now uses PID-unique temp name `$$` to prevent
+  false plan-mode detection when two planners run in the same repo simultaneously
+- **Memory Update blocked forever** — added MEMORY UPDATE ESCAPE HATCH to escalation ladder:
+  when verifier is declared CRITICAL/stalled, lead manually unblocks Memory Update and persists
+  partial learnings rather than silently losing the entire workflow's learnings
+- **Hunter no SendMessage** — added `SendMessage` to hunter tools (lint-compatible); hunter can
+  now proactively signal BLOCKED to lead mid-task
+- **Verifier no SendMessage** — added `SendMessage` to verifier tools; same fix as hunter
+- **Orphan sweep silent deletion** — replaced auto-delete of sibling workflow trees with
+  `AskUserQuestion` (mark as pending/archived, not deleted); only delete on explicit user confirmation
+- **All-investigators-BLOCKED deadlock** — added All-Investigators-BLOCKED Exit Path to Bug Court
+  Phase 3: AskUserQuestion with three options (new hypotheses / user-provided fix / abort spike)
+- **TEAM_SHUTDOWN retry loop unbound** — capped at one rejection attempt per teammate;
+  non-task rejections ask user immediately instead of retrying forever
+- **Pre-compaction "30+ tool calls" unenforced** — replaced with reference to PreCompact hook
+  (CC-TEAMS COMPACT_CHECKPOINT marker in progress.md is the actual trigger, not a call count)
+- **Synthesized contract BLOCKING undefined** — added conservative merge rules table to
+  router-contract/SKILL.md: BLOCKING=true if ANY contract is blocking; CONFIDENCE=min of all
+- **Debate round limit unenforced** — added explicit round counter + broadcast close signal
+  at round 3 in Bug Court Phase 3 lead actions
+- **Confidence weighting undefined** — replaced "weighted by severity" with "minimum of 3 scores
+  (weakest-link principle)" in Review Arena unified contract
+- **npm audit silent fail on missing jq** — added `command -v jq` check before piping in verifier;
+  falls back to text grep when jq unavailable
+- **Investigator premature challenge messages** — added "WAIT FOR LEAD SIGNAL" gate before
+  Challenging section in investigator.md; challengers must wait for lead's debate-open message
+- **Builder Router Handoff inconsistency** — added PHASE_GATE_RESULT and PHASE_GATE_CMD to
+  Router Handoff (Stable Extraction) section to match the YAML contract block
+- **Reviewer unlimited challenge messages** — added one-response discipline to all 3 reviewer
+  agents: one AGREE/DISAGREE/ESCALATE response per challenge round, no unilateral extensions
+- **Teammate-idle hook stale version** — updated CONTRACT_VERSION 2.3 → 2.4 in error message
+- **Handoff payload missing teammate_roster** — added teammate_roster field (spawned,
+  pending_spawn, completed) to canonical handoff payload template for reliable session resume
+
 ## [0.1.16] - 2026-02-22
 
 ### Added

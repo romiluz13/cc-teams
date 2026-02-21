@@ -300,6 +300,24 @@ Rules:
 
 ---
 
+## Synthesized Contract Merge Rules (Conservative Defaults)
+
+When the lead synthesizes a unified contract from multiple reviewer contracts (Review Arena challenge round):
+
+| Field | Merge Rule |
+|-------|-----------|
+| `BLOCKING` | `true` if ANY individual contract has `BLOCKING=true` |
+| `CRITICAL_ISSUES` | Sum of all (deduplicate by file:line — same finding counts once) |
+| `HIGH_ISSUES` | Sum of all (deduplicated) |
+| `CONFIDENCE` | Minimum of all individual scores (weakest-link principle) |
+| `STATUS` | `CHANGES_REQUESTED` if ANY reviewer has `CHANGES_REQUESTED` |
+| `REQUIRES_REMEDIATION` | `true` if ANY contract has it `true` |
+| `REMEDIATION_REASON` | Concatenate all non-null REMEDIATION_REASONs (semicolon-separated) |
+
+**Why conservative defaults:** A missed CRITICAL is worse than a false positive. When in doubt, block.
+
+---
+
 ## Abort Behavior (Circuit Breaker)
 
 When user selects "Abort" in the circuit breaker:

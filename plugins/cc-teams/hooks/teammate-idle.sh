@@ -23,11 +23,22 @@ if [[ "$ENFORCE" -eq 0 ]] || [[ -z "$LAST_MSG" ]]; then
   exit 0
 fi
 
+# Guard against very large messages (>500KB) that could OOM jq — grep directly
+MSG_SIZE=${#LAST_MSG}
+if [[ "$MSG_SIZE" -gt 524288 ]]; then
+  if echo "$LAST_MSG" | grep -q "Router Contract (MACHINE-READABLE)"; then
+    exit 0
+  else
+    echo "[CC-Teams] $TEAMMATE is missing Router Contract YAML block (large message detected)." >&2
+    exit 2
+  fi
+fi
+
 # Check for Router Contract YAML block
 if ! echo "$LAST_MSG" | grep -q "Router Contract (MACHINE-READABLE)"; then
   echo "[CC-Teams] $TEAMMATE is missing Router Contract YAML block." >&2
   echo "Include '### Router Contract (MACHINE-READABLE)' with complete YAML before going idle." >&2
-  echo "See cc-teams:router-contract skill for the required CONTRACT_VERSION 2.3 schema." >&2
+  echo "See cc-teams:router-contract skill for the required CONTRACT_VERSION 2.4 schema." >&2
   exit 2
 fi
 

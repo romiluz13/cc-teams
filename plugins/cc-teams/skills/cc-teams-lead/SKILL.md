@@ -171,9 +171,14 @@ Do not leave orphan tasks in `in_progress`. Resolve deterministically before rou
    - if owning teammate is missing/not running/not reachable: `TaskUpdate({ taskId, status: "pending" })`
    - if task belongs to a non-active workflow instance: `TaskUpdate({ taskId, status: "deleted" })`
 4. If multiple workflow parent tasks are active in this project, keep only one canonical instance:
-   - prefer the one matching current team name in memory
-   - otherwise prefer the newest task id
-   - mark other pending/in-progress sibling workflow trees as `deleted`
+   - If current team name in memory matches a workflow tree → that instance is canonical (safe to archive others)
+   - Otherwise → DO NOT auto-delete. Use AskUserQuestion:
+     "Multiple active CC-TEAMS workflows found for this project. Which should I resume?
+      A: {subject_A} (from team: {team_A})
+      B: {subject_B} (from team: {team_B})
+      The non-resumed workflow will be archived (marked pending, not deleted)."
+   - Mark non-canonical instances as `pending` (archived, resumable later)
+   - **ONLY mark as `deleted` if user explicitly confirms** — silent deletion is irreversible
 5. Re-run `TaskList()` and continue only when:
    - no scoped orphan `in_progress` tasks remain without an active reachable teammate
    - exactly one active workflow instance exists for this project
@@ -245,6 +250,10 @@ workflow_instance: "cc-teams-build-20260210-150000"
 workflow_kind: "BUILD"
 project_root: "/absolute/path"
 team_name: "cc-teams-build-20260210-150000"
+teammate_roster:
+  spawned: ["builder", "live-reviewer"]      # currently active in team
+  pending_spawn: ["hunter"]                  # needed for next phase, not yet spawned
+  completed: ["builder", "live-reviewer"]    # finished their tasks
 gate: "CONTRACTS_VALIDATED"
 timestamp_utc: "2026-02-10T23:05:00Z"
 task_snapshot:
@@ -278,7 +287,8 @@ Rules:
 Emit payload at minimum when:
 1. escalation reaches `CRITICAL` (`stalled`);
 2. user asks to pause/continue later;
-3. long-running workflow crosses pre-compaction checkpoint (every 30+ tool calls);
+3. `CC-TEAMS COMPACT_CHECKPOINT` marker appears in `.claude/cc-teams/progress.md`
+   (written automatically by the PreCompact hook before every context compaction);
 4. session is about to end while workflow tasks remain incomplete.
 
 ## Session Interruption Recovery (Agent Teams)
@@ -312,7 +322,10 @@ Recovery rules:
 2. Do not mark tasks completed based only on teammate claims from a prior session.
 3. If handoff payload conflicts with current TaskList, TaskList wins and conflict is logged in Memory Notes.
 
-**Prevention:** For long-running workflows (Bug Court multi-round, Pair Build multi-module), trigger pre-compaction memory checkpoint every 30+ tool calls.
+**Prevention:** The PreCompact hook (`plugins/cc-teams/hooks/pre-compact.sh`) writes a
+`CC-TEAMS COMPACT_CHECKPOINT: {timestamp}` marker to progress.md before every compaction.
+At session start, check for this marker in progress.md — if present, emit handoff payload immediately
+before doing any other work. This replaces the unmeasurable "30+ tool calls" heuristic.
 
 ---
 
@@ -1030,6 +1043,15 @@ Record MEDIUM/HIGH/CRITICAL decisions in workflow-final Memory Notes.
    - If reassigned path is still not progressing, classify as CRITICAL (`stalled`), freeze downstream starts, and ask user for explicit decision.
    - Otherwise keep original task blocked/stale and continue with reassigned path.
 
+**MEMORY UPDATE ESCAPE HATCH** — applies when `verifier` is the stalled agent:
+If verifier is declared CRITICAL/stalled and user chose "continue with fallback" or "abort":
+1. Collect whatever verification evidence exists from the handoff payload or last known contract
+2. Manually unblock Memory Update: `TaskUpdate({ taskId: memory_update_id, addBlockedBy: [] })`
+3. Run Memory Update with partial evidence — note "Verifier stalled: persisting partial learnings"
+4. Record the stall in progress.md `## Verification`
+_Rationale: Workflow learnings must be persisted even when verifier fails. Never let a stalled
+verifier permanently block Memory Update._
+
 Notes:
 - Idle is normal when a task is blocked by dependencies; do not escalate if blockedBy is unresolved.
 - Idle from non-spawned or not-yet-needed roles is expected; do not treat as failure.
@@ -1281,8 +1303,13 @@ pgrep -f "vitest|jest|mocha" || echo "All test processes cleaned"
 
 After workflow completes AND memory is updated AND test processes cleaned:
 1. Send `shutdown_request` to each teammate via `SendMessage(type="shutdown_request", recipient="{name}")`
-2. Wait for approvals. If rejected: check for incomplete tasks → fix/re-assign → retry. If still rejected → AskUserQuestion: "Force or Investigate?"
-3. Retry shutdown up to 3 attempts. After approvals → `TeamDelete()`
+2. Wait for approvals.
+   - **If approved:** proceed to `TeamDelete()`
+   - **If rejected with task reason:** fix/re-assign the incomplete task, then retry ONCE
+     - If still rejected after one fix → AskUserQuestion: "Force shutdown / Investigate?"
+   - **If rejected with non-task reason** (error, bug, other): AskUserQuestion IMMEDIATELY
+   - **Never retry more than once per rejection** — infinite retry loops cause workflow hang
+3. After approvals → `TeamDelete()`
 4. If `TeamDelete()` fails 3x → AskUserQuestion: "Proceed (manual cleanup) or Abort?"
 5. Report results only after cleanup succeeds OR user chose "Proceed"
 

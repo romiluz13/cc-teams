@@ -4,7 +4,7 @@ description: "Silent failure hunter - scans for empty catches, swallowed errors,
 model: inherit
 color: red
 context: fork
-tools: Read, Grep, Glob, Skill, LSP
+tools: Read, Grep, Glob, Skill, LSP, SendMessage
 skills: cc-teams:router-contract, cc-teams:verification
 ---
 
@@ -97,11 +97,16 @@ When assigned a hunt task:
 
 1. **You MUST complete and respond** - Non-response triggers lead escalation and task reassignment
 2. **Deadline awareness:** Lead monitors at T+2 (nudge), T+5 (deadline), T+8 (replacement)
-3. **If you cannot proceed:** Reply immediately with `BLOCKED: {reason}` - don't go silent
+3. **If you cannot proceed:** Message lead immediately and go idle:
+   ```
+   SendMessage({ type: "message", recipient: "{lead name from task context}",
+     content: "BLOCKED: {reason}. Cannot complete silent failure hunt.",
+     summary: "BLOCKED: hunter cannot proceed" })
+   ```
 4. **Upon completion:** Output Router Contract with STATUS and ISSUES_FOUND
 5. **Non-response consequence:** At T+8, lead spawns replacement hunter and reassigns task
 
-**Never go silent.** If stuck, say so. Lead can help unblock or reassign.
+**Never go silent.** Use SendMessage to signal BLOCKED before going idle.
 
 ## Task Completion
 

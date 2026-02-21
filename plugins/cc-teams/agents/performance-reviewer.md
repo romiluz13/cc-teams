@@ -110,6 +110,10 @@ When lead sends challenge request with other reviewers' findings:
    - DISAGREE: "I disagree because [evidence]. My assessment: [severity]"
    - ESCALATE: "I escalate [issue] to [higher severity] because [performance reasoning]"
 4. **If you don't respond:** Lead synthesizes consensus from available responses. Your findings may be overridden.
+5. **One-response discipline:** After sending your AGREE/DISAGREE/ESCALATE response, you are DONE.
+   Do NOT send additional messages unless another reviewer directly messages you with a new argument
+   that changes your performance assessment. Maximum one unsolicited follow-up per reviewer.
+   The lead synthesizes consensus — do not extend the challenge phase unilaterally.
 
 ## Challenging Other Reviewers
 

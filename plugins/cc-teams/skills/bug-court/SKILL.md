@@ -149,13 +149,32 @@ Try to disprove the other hypotheses using your evidence."
 - "Investigator 1: I can disprove your hypothesis. Look at the logs from test X - the timing doesn't match."
 - "Investigator 3: Both of you are wrong. The stack trace clearly shows the error originates from..."
 
-**Lead monitors debate and allows 2-3 rounds of messaging.**
+**Lead monitors debate and enforces 3-round hard cap:**
+
+Track rounds as lead: increment `debate_round` counter after each full exchange (all active
+investigators have messaged once). When `debate_round >= 3`, close debate immediately:
+```
+SendMessage(type="broadcast",
+  content="Debate round 3 complete. No further challenge messages.
+  Submit your FINAL Router Contract now with your definitive ROOT_CAUSE verdict.",
+  summary="Debate closed — submit final Router Contract")
+```
 
 **Debate completion criteria (lead checks before moving to verdict):**
 1. All investigators have had opportunity to challenge (at least 1 response from each)
 2. No new evidence being presented (repeat arguments = done)
-3. Maximum 3 rounds OR unanimous stand-down
+3. **Maximum 3 rounds hard cap** — close debate at round 3 regardless of consensus
 4. If investigator goes silent after prompt → send nudge, then proceed without their input
+
+**All-Investigators-BLOCKED Exit Path:**
+If ALL active investigators report BLOCKED simultaneously (or replacements also block within T+10):
+→ AskUserQuestion: "All investigators are blocked. Choose next step:
+   A) Spawn new investigators with revised hypotheses
+   B) Declare root cause unknown — provide fix direction yourself
+   C) Abort Bug Court and treat as exploratory spike"
+- If A: generate 2-3 new hypotheses from accumulated evidence, restart Phase 2
+- If B: skip to Phase 5 with user-provided fix description instead of winning hypothesis
+- If C: shut down team, persist accumulated evidence to patterns.md ## Common Gotchas
 
 ### Phase 4: Verdict (Lead)
 

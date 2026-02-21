@@ -224,6 +224,8 @@ TDD_GREEN_EXIT: [0 or null]
 FILES_MODIFIED: [list]
 CLAIMED_ARTIFACTS: []
 EVIDENCE_COMMANDS: ["<red command> => exit 1", "<green command> => exit 0"]
+PHASE_GATE_RESULT: [PASS/FAIL/N/A]
+PHASE_GATE_CMD: [gate command from plan or N/A]
 
 ### Memory Notes (For Workflow-Final Persistence)
 - **Learnings:** [What was built and key patterns used]

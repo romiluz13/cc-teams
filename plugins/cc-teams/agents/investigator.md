@@ -111,7 +111,12 @@ Examples:
 
 ## Challenging Other Investigators
 
-During the Debate phase, when you receive other investigators' findings:
+**WAIT FOR LEAD SIGNAL (MANDATORY):** Do NOT message other investigators until the lead explicitly
+sends you a message initiating the debate phase. Complete your own investigation first, output your
+Router Contract, then wait. The lead will share all findings and open debate.
+Unsolicited peer messages before the lead's debate signal are out-of-order and break verdict integrity.
+
+During the Debate phase, when you receive other investigators' findings (lead has opened debate):
 
 1. **Look for evidence that contradicts their hypothesis:**
    - Does their theory explain ALL symptoms?

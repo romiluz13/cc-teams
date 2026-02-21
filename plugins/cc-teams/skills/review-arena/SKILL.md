@@ -247,7 +247,7 @@ After consensus, lead produces a merged Router Contract:
 
 ```yaml
 STATUS: APPROVE | CHANGES_REQUESTED
-CONFIDENCE: [average of 3 reviewers, weighted by finding severity]
+CONFIDENCE: [minimum of 3 reviewer confidence scores — weakest-link principle]
 CRITICAL_ISSUES: [sum across all reviewers, deduplicated]
 HIGH_ISSUES: [sum across all reviewers, deduplicated]
 BLOCKING: [true if any CRITICAL_ISSUES > 0]

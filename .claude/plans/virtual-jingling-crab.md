@@ -1,408 +1,467 @@
-# CC-Teams v0.1.16 — Spawn Context, Dependency Security, Phase Gates
+# CC-Teams v0.1.17 — Systematic Flaw Fixes
 
 ## Context
 
-Three real gaps were identified from a deep audit and validated against functional files. This is NOT
-assumption-based: every gap is proven with file:line evidence.
+Deep adversarial audit + reference doc validation produced a prioritized list of real bugs.
+One false alarm removed: Challenge Round vs Delegate Mode — reference docs confirm delegate mode
+ALLOWS messaging, so the challenge round (done entirely via SendMessage) is valid. No fix needed.
 
 ---
 
-## GAP 1 — Spawn Prompt Is Undefined Per Agent (cc-teams-lead/SKILL.md:609-613)
+## CRITICAL FIXES
 
-**Evidence:** The Agent Invocation Template contains two undefined placeholders:
-- `{brief summary from activeContext.md}` — "brief" is never defined
-- `{key patterns from patterns.md}` — "key" is never defined
-- No per-agent spec exists anywhere for what builder, investigator, security-reviewer, or verifier needs
+### Fix 1 — Planner sends to invalid recipient `"lead"` (`planner.md:32`)
 
-**Impact:** Lead writes whatever feels right. Builder may not know the test command. Security reviewer
-may not know the auth method. Verifier may not receive hunter/reviewer findings in a structured way.
+**Problem:** `SendMessage(recipient: "lead")` fails silently. No agent is named "lead" in Agent Teams.
+Config.json has a `members` array — the lead's actual name is unknown to the planner at plan-mode-detection time.
 
-**Fix:** Add a `## Per-Agent Spawn Context Requirements` section to cc-teams-lead/SKILL.md immediately
-after the existing Agent Invocation Template. Each agent gets a canonical block of REQUIRED fields.
+**Fix:** Drop SendMessage entirely. Output plain BLOCKED text and stop.
+Idle notifications deliver the planner's output to the lead automatically (confirmed in reference docs).
+No recipient discovery needed.
 
----
+**File:** `plugins/cc-teams/agents/planner.md`
+Replace the SendMessage block (lines 29-36) with:
+```markdown
+2. Output this message and stop:
 
-## GAP 2 — Dependency Security Is Documentation-Only (security-reviewer.md:62)
+   ```
+   BLOCKED: I am in plan mode. Claude Code auto-enabled plan mode because my role
+   involves planning work. I CANNOT write plan files in plan mode.
 
-**Evidence:**
-- security-reviewer.md line 62: `| **Vulnerable Components** | Known CVEs in dependencies |`
-- No `npm audit`, `pip audit`, or any executable check exists in any agent
-- Hunter scans for silent failures only, not supply chain
-- security-reviewer has NO Bash access (lint-enforced) — cannot run `npm audit`
-- verifier.md already has Bash + runs test/build commands — correct place for executable audit
+   Lead: Re-spawn me with "DO NOT ENTER PLAN MODE" at the top of my prompt,
+   or use mode: dontAsk when spawning. See PLAN workflow step 7.
+   ```
 
-**Fix (split):**
-1. `security-reviewer.md` — Add `## Dependency Security (Read-Only Scan)` using grep/glob: check
-   package.json for unmaintained/known-risk patterns, flag if no lock file present, note that
-   executable audit runs in verifier. Grep-only, no Bash needed.
-2. `verifier.md` — Add `npm audit --json` to verification commands. Parse output for high/critical.
-   Add `DEPENDENCY_AUDIT` field to Router Contract. CRITICAL if high+ vulnerabilities found.
+3. Go idle. The idle notification will carry this message to the lead.
+   Do NOT attempt any further work.
+```
 
 ---
 
-## GAP 3 — Phase Exit Criteria Are Prose, Not Executable (planner.md:108, builder.md:84-94)
+### Fix 2 — Memory Update blocked forever when verifier stalls (`cc-teams-lead/SKILL.md:416`)
 
-**Evidence:**
-- planner.md line 108: `> **Exit Criteria:** [What must be true when complete]` — prose only
-- builder.md lines 84-94: Module-level TDD cycles, no phase-level milestone check
-- planning-patterns/SKILL.md lines 427-440: Phase tasks created with exit criteria description
-  but NO executable validation subtask or command field
-- After Phase 1 tasks complete, Phase 2 unblocks automatically with no gate command run
+**Problem:** `CC-TEAMS Memory Update` is blocked by verifier. If verifier enters `in_progress`
+and its agent crashes, the task never completes. Memory Update stays blocked forever.
+Workflow learnings are silently lost with no documented escape path.
 
-**Fix:**
-1. `planner.md` — Add `**Gate Command:**` field (optional) to Plan Format task section
-2. `planning-patterns/SKILL.md` — Update phase task template with gate_command field + guidance
-3. `builder.md` — In Verify step (step 5): if plan has gate_command for this phase, run it
-   and add `PHASE_GATE_RESULT` + `PHASE_GATE_CMD` to Router Contract output
-4. `cc-teams-lead/SKILL.md` — In contract validation: check `PHASE_GATE_RESULT` —
-   FAIL → create `CC-TEAMS REM-FIX: phase-gate failed` and block downstream
-
----
-
-## Critical Files
-
-| File | Change |
-|------|--------|
-| `plugins/cc-teams/skills/cc-teams-lead/SKILL.md` | Add Per-Agent Spawn Context Requirements; add PHASE_GATE_RESULT to contract validation |
-| `plugins/cc-teams/agents/security-reviewer.md` | Add Dependency Security read-only scan section + Router Contract DEPENDENCY_AUDIT field |
-| `plugins/cc-teams/agents/verifier.md` | Add npm audit command + DEPENDENCY_AUDIT to Router Contract |
-| `plugins/cc-teams/agents/builder.md` | Add gate_command check to Verify step + PHASE_GATE_RESULT to Router Contract |
-| `plugins/cc-teams/agents/planner.md` | Add Gate Command field to Plan Format |
-| `plugins/cc-teams/skills/planning-patterns/SKILL.md` | Update phase task template with gate_command |
-| `CHANGELOG.md` | Add v0.1.16 |
-| `package.json` + `plugin.json` | Bump to 0.1.16 |
-
----
-
-## Detailed Changes
-
-### Fix 1: Per-Agent Spawn Context Requirements
+**Fix:** Add an escape hatch rule to the execution loop and to the Memory Update task description.
 
 **File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
 
-Add immediately after the closing of the existing Agent Invocation Template block
-(after the line `Execute the task and include 'Task {TASK_ID}: COMPLETED' in your output when done.`):
+1. In the execution loop step 4 (after escalation ladder), add after "CRITICAL stalled" action:
+   ```
+   MEMORY UPDATE ESCAPE HATCH (if verifier is stalled):
+   - If verifier is declared stalled/aborted (T+10 CRITICAL path exhausted):
+     - Collect whatever verification evidence exists (from handoff payload or last known contract)
+     - Manually unblock Memory Update: TaskUpdate({ taskId: memory_update_id, addBlockedBy: [] })
+     - Run Memory Update with note: "Verifier stalled — persisting partial learnings"
+     - Document stall in progress.md ## Verification
+   ```
 
+2. In BUILD Task template row 10, update Key Description Points:
+   ```
+   Collect Memory Notes, persist via Read-Edit-Read.
+   ESCAPE: If verifier stalls at CRITICAL, Memory Update runs with partial evidence.
+   ```
+
+---
+
+### Fix 3 — Hunter cannot proactively signal BLOCKED (`hunter.md:7`)
+
+**Problem:** Hunter tools: `Read, Grep, Glob, Skill, LSP` — no SendMessage.
+If hunter is stuck (skill load failure, LSP unavailable), it can only output text and go idle.
+The idle notification delivers the message, but hunter cannot proactively message the lead
+mid-task if it discovers it's going to be blocked before finishing.
+
+**Fix:** Add `SendMessage` to hunter tools. The lint script does NOT forbid SendMessage
+for hunter (`assert_not_has` only covers Write, Edit, Bash, AskUserQuestion, WebFetch).
+
+**File:** `plugins/cc-teams/agents/hunter.md`
+Change: `tools: Read, Grep, Glob, Skill, LSP`
+To: `tools: Read, Grep, Glob, Skill, LSP, SendMessage`
+
+Also add to hunter's Task Response section after "If you cannot proceed":
 ```markdown
-## Per-Agent Spawn Context Requirements (MANDATORY)
-
-The generic template above applies to all agents. Below are **required additions per agent type**.
-The lead MUST include every field listed. Use `N/A` only if genuinely unavailable — never omit silently.
-
-### builder
 ```
-TECH_STACK: {language} / {framework} / {test-runner}
-TEST_CMD: {exact command, e.g., "CI=true npm test" or "npx vitest run"}
-BUILD_CMD: {exact command, e.g., "npm run build" or "N/A if no build step"}
-SCOPE: {files/modules this implementation touches}
-REQUIREMENTS: {all AskUserQuestion responses from requirements clarification}
-```
-
-### investigator-{N}
-```
-ASSIGNED_HYPOTHESIS: H{N}: {title}
-CONFIDENCE: {score}/100 — {rationale}
-NEXT_TEST: {smallest discriminating command to prove/disprove}
-ERROR_CONTEXT: {full error message / stack trace / observed symptom}
-REPRODUCTION: {steps or exact command to reproduce}
-GIT_CONTEXT: {output of git log --oneline -5 -- <affected-files>}
-ALL_HYPOTHESES: {list of all HN titles, so investigator can challenge others}
-```
-
-### security-reviewer / performance-reviewer / quality-reviewer
-```
-SCOPE: {specific files list OR "full codebase" — from user's AskUserQuestion response}
-FOCUS: {security|performance|quality|all — from user's AskUserQuestion response}
-BLOCKING_ONLY: {yes|no — from user's AskUserQuestion response}
-AUTH_METHOD: {JWT|session|OAuth|API-key|N/A — from activeContext.md or codebase}
-SENSITIVE_FILES: {files containing auth/secrets/payments — from patterns.md or grep}
-```
-_(Only `AUTH_METHOD` and `SENSITIVE_FILES` are required for security-reviewer. Others apply to all 3.)_
-
-### verifier
-```
-TEST_CMD: {exact test command}
-BUILD_CMD: {exact build command or N/A}
-HUNTER_FINDINGS: {STATUS + CRITICAL_ISSUES count from hunter Router Contract}
-REVIEWER_FINDINGS: {STATUS + CRITICAL_ISSUES from each of 3 reviewer contracts}
-PLAN_EXIT_CRITERIA: {prose from plan phase, or N/A}
-PHASE_GATE_CMD: {gate_command from plan phase, or N/A}
-```
-
-### planner
-```
-RESEARCH_SUMMARY: {if research was executed — key findings + path to research file}
-EXISTING_PATTERNS: {top 3 relevant entries from patterns.md for this feature}
-PRIOR_DECISIONS: {decisions from activeContext.md ## Decisions relevant to this feature}
-REQUIREMENTS: {all AskUserQuestion responses}
+SendMessage({
+  type: "message",
+  recipient: "{lead_name_from_task_context}",
+  content: "BLOCKED: {reason}. Cannot complete silent failure hunt.",
+  summary: "BLOCKED: hunter cannot proceed"
+})
 ```
 ```
 
 ---
 
-### Fix 2a: Security Reviewer — Read-Only Dependency Scan
+### Fix 4 — Verifier cannot proactively signal BLOCKED (`verifier.md:7`)
 
-**File:** `plugins/cc-teams/agents/security-reviewer.md`
+**Same problem as hunter.** Verifier is the final gate — a silent block here loses the entire
+verification result. Verifier has `AskUserQuestion` for user-facing questions but no peer messaging.
 
-Add new section `## Dependency Security (Read-Only Scan)` after the OWASP Top 10 table:
-
-```markdown
-## Dependency Security (Read-Only Scan)
-
-This is a static analysis of dependency configuration. Executable audit (`npm audit`) runs in the verifier.
-
-### Lock File Check
-```
-Glob(pattern="package-lock.json", path=".")
-Glob(pattern="yarn.lock", path=".")
-Glob(pattern="Pipfile.lock", path=".")
-Glob(pattern="poetry.lock", path=".")
-```
-**If no lock file found:** Report HIGH — reproducible builds not enforced, supply chain unpredictable.
-
-### Package Configuration Check
-```
-Read(file_path="package.json")
-Grep(pattern="\"scripts\"", path="package.json")
-Grep(pattern="postinstall|preinstall", path="package.json")
-```
-**Flag as CRITICAL** if `postinstall` script executes arbitrary code (e.g., `postinstall: "bash ..."`).
-**Flag as HIGH** if dependencies include packages with known risk keywords:
-```
-Grep(pattern="\"(node-serialize|serialize-to-js|cryo|funcster)\"", path="package.json")
-```
-
-### Dependency Hygiene Notes
-- Cannot run `npm audit` (no Bash access) — this is enforced by design to preserve read-only status
-- Verifier runs `npm audit --json` as part of E2E verification and reports DEPENDENCY_AUDIT result
-- Document any dependency concerns as MAJOR/HIGH findings for verifier to cross-reference
-
-### Router Contract Update
-Add `DEPENDENCY_AUDIT` to the security-reviewer contract:
-```yaml
-DEPENDENCY_AUDIT: LOCK_FILE_PRESENT | LOCK_FILE_MISSING | SUSPICIOUS_SCRIPT | SKIPPED
-```
-```
-
-**Also update the Router Contract YAML template in security-reviewer.md** to add:
-```yaml
-DEPENDENCY_AUDIT: [LOCK_FILE_PRESENT|LOCK_FILE_MISSING|SUSPICIOUS_SCRIPT|SKIPPED]
-```
-
----
-
-### Fix 2b: Verifier — Executable Dependency Audit
+**Fix:** Add `SendMessage` to verifier tools. Lint allows it.
 
 **File:** `plugins/cc-teams/agents/verifier.md`
+Change: `tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch`
+To: `tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage`
 
-**Change 1 — Add to `## Verification Commands` section:**
-```bash
-# Dependency vulnerability audit (after npm install / if package.json exists)
-if [ -f "package.json" ]; then
-  npm audit --json 2>/dev/null | jq '.metadata.vulnerabilities' || \
-  npm audit 2>&1 | tail -5
-fi
-```
-Report CRITICAL finding in Router Contract if `high` or `critical` vulnerabilities found.
-Report WARN if `moderate` vulnerabilities found.
-
-**Change 2 — Add to `## Scenarios` table example:**
-```
-| Dependency audit | PASS/FAIL/WARN | npm audit → exit 0 (0 high/critical) |
-```
-
-**Change 3 — Add `DEPENDENCY_AUDIT` to verifier Router Contract YAML:**
-```yaml
-DEPENDENCY_AUDIT: PASS | WARN | FAIL | SKIPPED
-DEPENDENCY_AUDIT_DETAIL: "0 high, 0 critical" | "2 high vulns in lodash@4.x" | "N/A"
-```
-
-**CONTRACT RULE addition:** DEPENDENCY_AUDIT=FAIL (high/critical vulns found) → BLOCKING=true.
+Also update verifier's BLOCKED response section to include SendMessage example
+(same pattern as hunter fix above).
 
 ---
 
-### Fix 3a: Planner — Gate Command Field
+### Fix 5 — Orphan sweep silently deletes valid workflow trees (`cc-teams-lead/SKILL.md:172-176`)
+
+**Problem:** If two CC-TEAMS workflows exist for the same project, the sweep picks the newest
+and marks siblings as `deleted` — silently, permanently, with no confirmation.
+A user who paused workflow A and started workflow B loses A's entire task tree.
+
+**Fix:** Change "mark as deleted" to "ask user first" for sibling workflow deletion.
+
+**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
+
+Replace step 4 of Orphan Task Recovery:
+```markdown
+4. If multiple workflow parent tasks are active in this project, keep only one canonical instance:
+   - If current team name matches a workflow in memory → that instance is canonical (delete others)
+   - Otherwise → DO NOT auto-delete. Use AskUserQuestion:
+     "Multiple active workflows found for this project:
+      A: {subject_A} (started {timestamp_A})
+      B: {subject_B} (started {timestamp_B})
+      Which should I resume? The other will be archived (marked pending, not deleted)."
+   - Mark non-canonical instances as `pending` (NOT deleted) — archived, resumable later
+   - ONLY mark as `deleted` if user explicitly confirms deletion
+```
+
+---
+
+### Fix 6 — All-investigators-BLOCKED has no exit path (`bug-court/SKILL.md`)
+
+**Problem:** Bug Court handles individual investigator timeouts but defines no behavior
+when ALL investigators simultaneously reach BLOCKED status. Workflow deadlocks with no exit.
+
+**Fix:** Add explicit all-blocked exit path to Bug Court Phase 3 (Debate) lead actions.
+
+**File:** `plugins/cc-teams/skills/bug-court/SKILL.md`
+
+In Phase 3 (Debate) or Phase 4 (Verdict) lead actions, add after the T+8 replacement rule:
+```markdown
+**All-Investigators-BLOCKED Exit Path:**
+If ALL active investigators simultaneously report BLOCKED (or are replaced and their replacements
+also block within T+10):
+1. AskUserQuestion:
+   "All investigators are blocked. Choose next step:
+    A) Spawn new investigators with revised hypotheses (lead generates 2-3 new Hn)
+    B) Declare root cause unknown — user provides fix direction
+    C) Abort Bug Court and treat as exploratory spike"
+2. If A: generate new hypotheses from accumulated evidence, spawn fresh investigators
+3. If B: skip to Phase 5 with user-provided fix description instead of winning hypothesis
+4. If C: shut down team, persist accumulated evidence to patterns.md ## Common Gotchas
+```
+
+---
+
+## HIGH-PRIORITY FIXES
+
+### Fix 7 — Handoff payload missing `teammate_roster` (`cc-teams-lead/SKILL.md:237-280`)
+
+**Problem:** On session resume, the lead tries to message teammates by name but the payload
+has no record of which teammates were spawned and which need re-spawning.
+
+**Fix:** Add `teammate_roster` field to canonical handoff payload template.
+
+**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
+
+In the canonical payload YAML, add after `team_name`:
+```yaml
+teammate_roster:
+  spawned: ["builder", "live-reviewer"]   # currently active teammates
+  pending_spawn: ["hunter"]               # not yet spawned but needed for next phase
+  completed: ["builder", "live-reviewer"] # finished their tasks
+```
+
+---
+
+### Fix 8 — TEAM_SHUTDOWN rejection retry unbound (`cc-teams-lead/SKILL.md:1282-1287`)
+
+**Problem:** "If rejected: check for incomplete tasks → fix/re-assign → retry" has no bound.
+If a teammate rejects for non-task reasons (bug, network glitch), the loop runs forever.
+
+**Fix:** Change retry logic to: max 1 rejection → ask user immediately.
+
+**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
+
+Replace step 2 of Team Shutdown:
+```markdown
+2. Wait for approvals.
+   - If approved: proceed to TeamDelete()
+   - If rejected: check rejection reason
+     - If reason is "incomplete tasks": fix/re-assign the task, retry ONCE
+     - If still rejected after one fix attempt → AskUserQuestion: "Force shutdown / Investigate?"
+     - If reason is NOT task-related (error, bug, other): AskUserQuestion IMMEDIATELY
+   - Do NOT retry more than once per rejection. Infinite retry loops cause workflow hang.
+```
+
+---
+
+### Fix 9 — Pre-compaction "30+ tool calls" is unenforced (`cc-teams-lead/SKILL.md:281, 315`)
+
+**Problem:** "Every 30+ tool calls" has no counter, no gate, no enforcement.
+We added a PreCompact hook in v0.1.15 that writes a checkpoint marker to progress.md.
+The lead skill doesn't reference this hook as the trigger mechanism.
+
+**Fix:** Replace the vague 30-call rule with a reference to the PreCompact hook.
+
+**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
+
+Replace:
+```
+3. long-running workflow crosses pre-compaction checkpoint (every 30+ tool calls);
+```
+With:
+```
+3. `CC-TEAMS COMPACT_CHECKPOINT` marker appears in `.claude/cc-teams/progress.md`
+   (written automatically by the PreCompact hook before every context compaction);
+```
+
+Also update the Prevention note:
+Replace:
+```
+**Prevention:** For long-running workflows (Bug Court multi-round, Pair Build multi-module),
+trigger pre-compaction memory checkpoint every 30+ tool calls.
+```
+With:
+```
+**Prevention:** The PreCompact hook (`plugins/cc-teams/hooks/pre-compact.sh`) writes a
+`CC-TEAMS COMPACT_CHECKPOINT: {timestamp}` marker to progress.md before every compaction.
+When your next turn starts and you see this marker in progress.md → emit handoff payload immediately.
+```
+
+---
+
+### Fix 10 — Synthesized contract has no BLOCKING merge algorithm (`router-contract/SKILL.md`)
+
+**Problem:** When the lead synthesizes a merged contract from 3 reviewers, the spec says
+"weighted average" but provides no algorithm. BLOCKING resolution is undefined.
+
+**Fix:** Add explicit conservative merge rules to the Unified Router Contract section.
+
+**File:** `plugins/cc-teams/skills/router-contract/SKILL.md` and `review-arena/SKILL.md`
+
+In the lead validation logic section, add:
+```markdown
+### Synthesized Contract Merge Rules (Conservative Defaults)
+
+When lead synthesizes a unified contract from multiple reviewer contracts:
+
+| Field | Merge Rule |
+|-------|-----------|
+| `BLOCKING` | `true` if ANY individual contract has `BLOCKING=true` |
+| `CRITICAL_ISSUES` | Sum of all individual CRITICAL_ISSUES (deduplicated by file:line) |
+| `HIGH_ISSUES` | Sum of all individual HIGH_ISSUES (deduplicated) |
+| `CONFIDENCE` | Minimum of all individual confidence scores (weakest link) |
+| `STATUS` | `CHANGES_REQUESTED` if ANY reviewer has CHANGES_REQUESTED |
+| `REQUIRES_REMEDIATION` | `true` if ANY individual contract has it `true` |
+| `REMEDIATION_REASON` | Concatenation of all non-null REMEDIATION_REASONs |
+```
+
+---
+
+### Fix 11 — Debate round limit is advisory, not enforced (`bug-court/SKILL.md:152-158`)
+
+**Problem:** "Max 3 rounds" is stated but no lead action is specified to enforce it.
+Debate can stall indefinitely while lead subjectively decides "done."
+
+**Fix:** Add explicit round-tracking action to lead's Phase 3 execution.
+
+**File:** `plugins/cc-teams/skills/bug-court/SKILL.md`
+
+In Phase 3 (Debate) lead actions, add:
+```markdown
+**Round Tracking (MANDATORY):**
+After initiating debate, track each "round" as: one message sent by each active investigator.
+```
+round_count = 0
+After each investigator message exchange: round_count += 1
+When round_count >= 3 → close debate phase:
+  SendMessage(broadcast, "Debate round 3 complete. Submit your final verdict now.
+  Include your final Router Contract. No further challenge messages.")
+```
+Do not wait for "consensus" — 3 rounds is the hard cap.
+```
+
+---
+
+## MEDIUM-PRIORITY FIXES
+
+### Fix 12 — Confidence weighting formula undefined (`review-arena/SKILL.md:250`)
+
+**Fix:** Replace vague "weighted by finding severity" with exact formula.
+Use minimum (weakest-link principle — if any reviewer is uncertain, overall is uncertain).
+
+**File:** `plugins/cc-teams/skills/review-arena/SKILL.md`
+
+Change: `CONFIDENCE: [average of 3 reviewers, weighted by finding severity]`
+To: `CONFIDENCE: [minimum of 3 reviewer confidence scores — weakest-link principle]`
+
+---
+
+### Fix 13 — npm audit silent fail when `jq` not installed (`hooks/teammate-idle.sh`, `verifier.md`, `security-reviewer.md`)
+
+**Problem:** `npm audit --json 2>/dev/null | jq -r ...` silently produces empty output if jq missing.
+DEPENDENCY_AUDIT gets set incorrectly.
+
+**Fix:** Add jq availability check before piping.
+
+**Files:** `plugins/cc-teams/agents/verifier.md`, `plugins/cc-teams/hooks/teammate-idle.sh`
+
+In verifier.md, replace the npm audit command with:
+```bash
+# Dependency vulnerability audit
+if [ -f "package.json" ]; then
+  if command -v jq >/dev/null 2>&1; then
+    npm audit --json 2>/dev/null | jq -r '.metadata.vulnerabilities | "critical=\(.critical) high=\(.high) moderate=\(.moderate)"' 2>/dev/null
+  else
+    # jq not available — fall back to text parsing
+    npm audit 2>&1 | grep -E "^[0-9]+ (critical|high|moderate|low)" | head -5
+  fi
+fi
+```
+
+In teammate-idle.sh, add size guard before jq:
+```bash
+# Guard against very large messages (>500KB) that could OOM jq
+MSG_SIZE=${#LAST_MSG}
+if [[ "$MSG_SIZE" -gt 524288 ]]; then
+  # Large message — grep directly without jq parse
+  if echo "$LAST_MSG" | grep -q "Router Contract (MACHINE-READABLE)"; then exit 0; else exit 2; fi
+fi
+```
+
+---
+
+### Fix 14 — Planner probe race condition on `.probe` file (`planner.md:18-20`)
+
+**Problem:** Two planners writing to `docs/plans/.probe` simultaneously can cause false
+plan-mode detection when the second planner's `rm` fails on an already-deleted file.
+
+**Fix:** Use PID-based temp file to avoid collision.
 
 **File:** `plugins/cc-teams/agents/planner.md`
 
-**Change — In `## Plan Format`, update the task template** from:
-```markdown
-### Task 1: [Component Name]
+Change probe command:
+```bash
+# BEFORE (race condition)
+Bash(command="mkdir -p docs/plans && echo 'probe' > docs/plans/.probe && rm docs/plans/.probe && echo OK")
 
-**Files:**
-- Create: `exact/path/to/file.ts`
-- Test: `tests/exact/path/to/test.ts`
-
-**Step 1:** Write failing test
-**Step 2:** Run test, verify fails
-**Step 3:** Implement
-**Step 4:** Run test, verify passes
-**Step 5:** Commit
-```
-
-To:
-```markdown
-### Task 1: [Component Name]
-
-**Files:**
-- Create: `exact/path/to/file.ts`
-- Test: `tests/exact/path/to/test.ts`
-
-**Gate Command:** `CI=true npm test -- --testPathPattern=auth` ← exact command proving this phase complete
-_(Omit if phase has no isolated test suite; leave blank if full test suite covers it)_
-
-**Step 1:** Write failing test
-**Step 2:** Run test, verify fails
-**Step 3:** Implement
-**Step 4:** Run test, verify passes
-**Step 5:** Commit
+# AFTER (PID-unique, no collision)
+Bash(command="mkdir -p docs/plans && F=\"docs/plans/.probe-$$\" && echo 'probe' > \"$F\" && rm \"$F\" && echo OK")
 ```
 
 ---
 
-### Fix 3b: Planning Patterns — Phase Task Template
+### Fix 15 — Investigator sends challenge messages before lead opens debate (`investigator.md:112-131`)
 
-**File:** `plugins/cc-teams/skills/planning-patterns/SKILL.md`
+**Problem:** Investigators have SendMessage and instructions to "challenge peers." No gate
+says "wait for lead's debate-start signal." An early investigator can message peers before
+all others have submitted their findings, breaking sequencing.
 
-**Change — In the phase task template (where `TaskCreate` calls are shown):**
+**Fix:** Add explicit wait instruction at the top of the Challenging section.
 
-Update description template to explicitly include gate_command:
-```javascript
-TaskCreate({
-  subject: "CC-TEAMS Phase 1: {phase_title}",
-  description: `Workflow Instance: {team_name}
-Workflow Kind: BUILD
-Project Root: {cwd}
+**File:** `plugins/cc-teams/agents/investigator.md`
 
-**Plan:** docs/plans/YYYY-MM-DD-{feature}-plan.md
-**Section:** Phase 1
-**Exit Criteria:** {demonstrable_milestone}
-**Gate Command:** {gate_command or "N/A"}
-
-{phase_details}`,
-  activeForm: "Working on {phase_title}"
-})
-```
-
-Add guidance bullet:
+Prefix the "## Challenging Other Investigators" section with:
 ```markdown
-- **Gate Command** is the SINGLE EXECUTABLE COMMAND that proves phase completion.
-  Examples: `CI=true npm test -- --testPathPattern=auth`, `npm run build && npm run lint`
-  If phase has no isolated command, use `CI=true npm test` (full suite) or `N/A`.
+**WAIT FOR LEAD SIGNAL:** Do NOT message other investigators until the lead explicitly
+sends you a message initiating the debate phase. Complete your own investigation first,
+output your Router Contract, then wait. The lead will share all findings and open debate.
+Unsolicited peer messages before lead's debate signal are out-of-order and break the verdict.
 ```
 
 ---
 
-### Fix 3c: Builder — Phase Gate Check in Verify Step
+### Fix 16 — Builder output section inconsistent with v2.4 contract (`builder.md:219-227`)
+
+**Problem:** `## Router Handoff (Stable Extraction)` (plain text section) doesn't include
+`PHASE_GATE_RESULT` or `PHASE_GATE_CMD`, but the YAML block below does.
+Two output sections now disagree.
+
+**Fix:** Add PHASE_GATE_RESULT to the Router Handoff stable extraction section.
 
 **File:** `plugins/cc-teams/agents/builder.md`
 
-**Change — Step 5 in `## Process`** from:
+In `### Router Handoff (Stable Extraction)`, add after `EVIDENCE_COMMANDS`:
 ```
-5. **Verify** - All tests pass, functionality works
-```
-
-To:
-```
-5. **Verify** - All tests pass, functionality works. If plan specifies a **Gate Command** for
-   this phase, run it and capture exit code for Router Contract `PHASE_GATE_RESULT`.
-   ```bash
-   # Run phase gate command from plan (if specified)
-   {gate_command}  # e.g., CI=true npm test -- --testPathPattern=auth
-   # Expected: exit 0. Capture actual exit code.
-   ```
-   PHASE_GATE_RESULT=FAIL → do NOT proceed. Fix until gate passes, then re-run.
-```
-
-**Change — Add to `## Output` Router Handoff section and Router Contract YAML:**
-```yaml
-PHASE_GATE_RESULT: PASS | FAIL | N/A
-PHASE_GATE_CMD: "{gate_command from plan or N/A}"
-```
-
-**CONTRACT RULE addition:** If `PHASE_GATE_RESULT=FAIL` → `BLOCKING=true`, `REQUIRES_REMEDIATION=true`.
-
----
-
-### Fix 3d: Lead — Phase Gate Contract Validation
-
-**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
-
-**Change — In `### Validation Steps` (Post-Team Validation / Router Contract section):**
-
-Add to Step 3 (PARSE AND VALIDATE CONTRACT):
-```
-If contract.PHASE_GATE_RESULT == "FAIL":
-  → Create `CC-TEAMS REM-FIX: phase-gate failed — {PHASE_GATE_CMD}`
-  → Block downstream tasks via TaskUpdate
-  → STOP until builder re-runs gate and reports PASS
+PHASE_GATE_RESULT: [PASS/FAIL/N/A]
+PHASE_GATE_CMD: [gate command from plan or N/A]
 ```
 
 ---
 
-## Router Contract Version
+### Fix 17 — Reviewers send unlimited messages after challenge complete (`security/performance/quality-reviewer.md`)
 
-Bump `CONTRACT_VERSION` from `"2.3"` to `"2.4"` in:
-- `plugins/cc-teams/skills/router-contract/SKILL.md` (definition)
-- `plugins/cc-teams/agents/builder.md` (template)
-- `plugins/cc-teams/agents/verifier.md` (template)
-- `plugins/cc-teams/agents/security-reviewer.md` (template)
-- `plugins/cc-teams/agents/performance-reviewer.md` (template)
-- `plugins/cc-teams/agents/quality-reviewer.md` (template)
-- `plugins/cc-teams/agents/hunter.md` (template)
-- `plugins/cc-teams/agents/investigator.md` (template)
-- `plugins/cc-teams/agents/planner.md` (template)
-- `plugins/cc-teams/agents/live-reviewer.md` (template)
+**Problem:** After responding to the challenge round, reviewers continue messaging peers
+indefinitely. No close signal exists. Challenge phase can overshoot its deadline.
 
----
+**Fix:** Add one-response discipline to all 3 reviewer agents.
 
-## CHANGELOG Entry
+**Files:** `plugins/cc-teams/agents/security-reviewer.md`, `performance-reviewer.md`, `quality-reviewer.md`
 
+Add to each reviewer's "## Challenge Round Response (MANDATORY)" section:
 ```markdown
-## [0.1.16] - 2026-02-22
-
-### Added
-- **Per-Agent Spawn Context Requirements** (cc-teams-lead/SKILL.md)
-  - Each agent type now has a canonical list of REQUIRED fields the lead must pass at spawn
-  - builder: TECH_STACK, TEST_CMD, BUILD_CMD, SCOPE, REQUIREMENTS
-  - investigator: ASSIGNED_HYPOTHESIS, ERROR_CONTEXT, REPRODUCTION, GIT_CONTEXT, ALL_HYPOTHESES
-  - reviewer triad: SCOPE, FOCUS, BLOCKING_ONLY, AUTH_METHOD, SENSITIVE_FILES
-  - verifier: TEST_CMD, BUILD_CMD, HUNTER_FINDINGS, REVIEWER_FINDINGS, PHASE_GATE_CMD
-  - planner: RESEARCH_SUMMARY, EXISTING_PATTERNS, PRIOR_DECISIONS, REQUIREMENTS
-- **Dependency Security audit** (security-reviewer.md, verifier.md)
-  - security-reviewer: read-only lock file + package.json scan, DEPENDENCY_AUDIT contract field
-  - verifier: `npm audit --json` added to verification suite, DEPENDENCY_AUDIT + detail in contract
-  - DEPENDENCY_AUDIT=FAIL (high/critical vulns) → BLOCKING=true in verifier contract
-- **Phase Gate Commands** (planner.md, planning-patterns, builder.md, cc-teams-lead)
-  - Planner Plan Format adds optional `**Gate Command:**` field per phase
-  - Builder Verify step now runs gate_command if present, captures PHASE_GATE_RESULT
-  - Lead contract validation blocks on PHASE_GATE_RESULT=FAIL
-  - Phase exit criteria become executable and verified, not just prose
-- **Router Contract v2.4** — new fields: PHASE_GATE_RESULT, PHASE_GATE_CMD (builder);
-  DEPENDENCY_AUDIT, DEPENDENCY_AUDIT_DETAIL (verifier + security-reviewer)
+**One-response discipline:** After you send your challenge response (AGREE/DISAGREE/ESCALATE),
+you are DONE with the challenge round. Do NOT send additional messages unless another reviewer
+directly messages you with a new argument that changes your assessment.
+Maximum one unsolicited challenge message per reviewer. The lead will synthesize consensus.
 ```
 
 ---
 
-## Verification Steps
+### Fix 18 — teammate-idle.sh has stale CONTRACT_VERSION check (`hooks/teammate-idle.sh:34`)
 
-1. `npm run check:agent-tools` — must pass (no Bash added to security-reviewer)
-2. `npm run check:functional-bible` — must pass
-3. `npm run check:artifact-policy` — must pass
-4. Manual: spawn prompt templates — verify builder section contains all 5 required fields
-5. Manual: planner output for a test plan — verify `Gate Command:` field is present
-6. Manual: verifier contract — verify `DEPENDENCY_AUDIT` field is present and `npm audit` runs
-7. Manual: builder contract — verify `PHASE_GATE_RESULT` field is present
-8. Smoke test: `echo '{"task_subject":"CC-TEAMS Memory Update"}' | bash plugins/cc-teams/hooks/task-completed.sh` — still exits 2 (hooks unchanged)
+**Problem:** The hook's error message says "CONTRACT_VERSION 2.3 schema" but we're now on 2.4.
+
+**Fix:** Update the version reference.
+
+**File:** `plugins/cc-teams/hooks/teammate-idle.sh`
+Change: `"See cc-teams:router-contract skill for the required CONTRACT_VERSION 2.3 schema."`
+To: `"See cc-teams:router-contract skill for the required CONTRACT_VERSION 2.4 schema."`
 
 ---
 
-## No-Conflict Guarantee
+## Critical Files Modified
 
-| Risk | Resolution |
-|------|-----------|
-| security-reviewer adding Bash for npm audit | NOT done — read-only scan only, npm audit goes to verifier |
-| CONTRACT_VERSION bump breaks existing contracts | Agents check for `2.3` OR `2.4` during transition; lead synthesizes from narrative if needed |
-| gate_command is optional — planner may not write one | Builder skips gate check and sets PHASE_GATE_RESULT=N/A (no block) |
-| Per-agent context requirements add overhead | Lead uses N/A for unavailable fields — never silently omits |
-| npm audit fails if no package.json | Verifier wraps in `if [ -f "package.json" ]` check → SKIPPED if absent |
+| File | Changes |
+|------|---------|
+| `plugins/cc-teams/agents/planner.md` | Fix SendMessage recipient (plain text output), fix probe race condition |
+| `plugins/cc-teams/agents/hunter.md` | Add SendMessage to tools |
+| `plugins/cc-teams/agents/verifier.md` | Add SendMessage to tools; fix npm audit jq check |
+| `plugins/cc-teams/agents/builder.md` | Add PHASE_GATE fields to Router Handoff section |
+| `plugins/cc-teams/agents/investigator.md` | Add debate phase gate (wait for lead signal) |
+| `plugins/cc-teams/agents/security-reviewer.md` | Add one-response discipline |
+| `plugins/cc-teams/agents/performance-reviewer.md` | Add one-response discipline |
+| `plugins/cc-teams/agents/quality-reviewer.md` | Add one-response discipline |
+| `plugins/cc-teams/skills/cc-teams-lead/SKILL.md` | Memory Update escape; orphan sweep confirmation; handoff payload roster; shutdown retry bound; pre-compaction hook reference |
+| `plugins/cc-teams/skills/bug-court/SKILL.md` | All-BLOCKED exit path; debate round counter |
+| `plugins/cc-teams/skills/review-arena/SKILL.md` | Confidence formula; reviewer message discipline |
+| `plugins/cc-teams/skills/router-contract/SKILL.md` | Synthesized contract merge rules |
+| `plugins/cc-teams/hooks/teammate-idle.sh` | Size guard; version string update |
+| `CHANGELOG.md` | Add v0.1.17 |
+| `package.json` + `plugin.json` | Bump to 0.1.17 |
+
+## Verification
+
+1. `npm run check:functional-bible` — pass
+2. `npm run check:agent-tools` — pass (SendMessage added to hunter/verifier, allowed by lint)
+3. `npm run check:artifact-policy` — pass
+4. Smoke test: planner probe with PID file — no race condition on concurrent spawn
+5. Smoke test: teammate-idle hook with large message — size guard prevents OOM
+6. Manual review: orphan sweep no longer silently deletes — asks user for multi-workflow case
+
+## False Alarms (No Fix Needed)
+
+| Flaw # | Why No Fix |
+|--------|-----------|
+| Challenge Round vs Delegate Mode | Reference docs: delegate mode allows messaging. Challenge round is SendMessage-only. Valid as-is. |
+| "Advisory pre-check" boundary | Already defined precisely: destructive commands and secret exposure are the examples. Sufficient for now. |
+| QUICK path condition 4 vacuously true | Acceptable: fresh workflow has no open REM-FIX by definition. QUICK escalates to FULL if blocker discovered. |

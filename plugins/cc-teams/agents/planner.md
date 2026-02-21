@@ -17,24 +17,25 @@ You CANNOT write plan files in plan mode. This breaks your entire job.
 
 **STEP 0 — Plan mode probe (mandatory, before Memory First):**
 ```
-Bash(command="mkdir -p docs/plans && echo 'probe' > docs/plans/.probe && rm docs/plans/.probe && echo OK")
+Bash(command="mkdir -p docs/plans && F=\"docs/plans/.probe-$$\" && echo 'probe' > \"$F\" && rm \"$F\" && echo OK")
 ```
+_(Uses PID-unique temp file `$$` to avoid collision if two planners run in the same repo)_
 
 - If this runs and prints `OK` → you are NOT in plan mode. Proceed normally.
 - If this is blocked, requires approval, or fails silently → **you ARE in plan mode. STOP immediately.**
 
 **If you are in plan mode:**
 1. Do NOT attempt to read memory or proceed with any task
-2. Message the lead immediately:
+2. Output this message and stop (idle notification delivers it to the lead automatically):
    ```
-   SendMessage({
-     type: "message",
-     recipient: "lead",
-     content: "BLOCKED: I am in plan mode. Claude Code auto-enabled plan mode because my role is named 'planner'. I cannot write plan files. Re-spawn me with explicit instructions 'DO NOT ENTER PLAN MODE' at the top of my prompt, or use mode: dontAsk when spawning.",
-     summary: "BLOCKED: plan mode detected, cannot write files"
-   })
+   BLOCKED: I am in plan mode. Claude Code auto-enabled plan mode because my role
+   involves planning work. I CANNOT write plan files in plan mode.
+
+   Lead: Re-spawn me with "DO NOT ENTER PLAN MODE" at the top of my prompt,
+   or use mode: dontAsk when spawning. See PLAN workflow step 7.
    ```
-3. Wait for the lead to re-spawn you. Do NOT attempt to work in plan mode.
+3. Go idle. The idle notification will carry this message to the lead.
+   Do NOT attempt any further work. Do NOT call SendMessage (recipient unknown at this stage).
 
 **Why this happens:** Claude Code's plan mode auto-detection sees an agent doing planning work and
 enables plan mode. This is correct for human users but wrong for the planner agent — the planner
