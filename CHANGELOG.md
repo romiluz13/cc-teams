@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.1.18] - 2026-02-22
+
+### Added
+
+**Specialist Reviewer Agents (conditional)**
+- `accessibility-reviewer`: WCAG 2.1 AA audit agent — 10-point checklist (keyboard nav, ARIA, color contrast, semantic HTML, focus management, touch targets, screen reader). Spawned when UI files detected in FILES_MODIFIED. A11y wins on CRITICAL (regulatory compliance).
+- `api-contract-reviewer`: API breaking-change detector — 9-point checklist (removed endpoints, schema diffs, type incompatibility, auth/status code changes). Spawned when API route files detected. API contract wins on CRITICAL (client-facing impact).
+
+**Cross-Layer BUILD Workflow**
+- `frontend-builder` agent: TDD builder owning frontend scope (components/pages/hooks/styles), with isolation: worktree and frontend-patterns skill hints. Implements against verified API contract.
+- `backend-builder` agent: TDD builder owning backend scope (api/services/models/db), with isolation: worktree and architecture-patterns skill hints. Publishes API_CONTRACT_SPEC in Memory Notes.
+- `cross-layer-build` skill: Full protocol for parallel frontend+backend implementation — contract-first relay (backend defines API, lead validates, frontend implements), async live-review (both builders complete before review), file conflict gate.
+- Async live-reviewer mode in cross-layer: reviews ALL changes from BOTH builders post-completion (eliminates per-module blocking that would serialize parallel builders)
+- accessibility-reviewer and api-contract-reviewer ALWAYS spawn in cross-layer BUILD (both frontend and API are guaranteed)
+
+**Pre-Spawn Optimization**
+- Downstream agents now pre-spawned with blocked tasks when their predecessor STARTS (not finishes)
+- hunter pre-spawned when builder task starts → executes immediately when builder finishes
+- review triad + conditional reviewers pre-spawned when hunter starts → execute immediately
+- verifier pre-spawned when review tasks start → executes immediately when challenge completes
+- Eliminates 1-2 turn spawn latency between phases with zero quality trade-off (blocked agents are idle: no output, no token cost)
+
+**Persistent Agent Memory**
+- `investigator`: `memory: project` — accumulates codebase-specific bug patterns and root cause knowledge across sessions (additive to .claude/cc-teams/ workflow memory)
+- `security-reviewer`: `memory: user` — accumulates vulnerability patterns across ALL codebases reviewed (cross-project security intelligence)
+
+**Planner Worktree Isolation**
+- `planner`: `isolation: worktree` — plan file writes are now branch-isolated (WorktreeCreate hook syncs .claude/cc-teams/ memory to new worktree)
+
+**Cross-Layer Detection in BUILD**
+- Lead auto-detects cross-layer when requirements mention both frontend (UI/components) and backend (API/services)
+- Routes to BUILD-CROSSLAYER task template and cross-layer-build skill automatically
+
 ## [0.1.17] - 2026-02-22
 
 ### Fixed

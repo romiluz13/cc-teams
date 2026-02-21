@@ -55,7 +55,7 @@ check_agent() {
   echo "$agent => $tools"
 
   case "$agent" in
-    builder)
+    builder|frontend-builder|backend-builder)
       assert_has "$agent" "$tools" "Write"
       assert_has "$agent" "$tools" "Edit"
       assert_has "$agent" "$tools" "Bash"
@@ -70,7 +70,7 @@ check_agent() {
       assert_not_has "$agent" "$tools" "Write"
       assert_not_has "$agent" "$tools" "Edit"
       ;;
-    live-reviewer|hunter|security-reviewer|performance-reviewer|quality-reviewer)
+    live-reviewer|hunter|security-reviewer|performance-reviewer|quality-reviewer|accessibility-reviewer|api-contract-reviewer)
       assert_not_has "$agent" "$tools" "Write"
       assert_not_has "$agent" "$tools" "Edit"
       assert_not_has "$agent" "$tools" "Bash"
@@ -81,7 +81,7 @@ check_agent() {
 }
 
 for agent in \
-  builder \
+  builder frontend-builder backend-builder \
   planner \
   investigator \
   verifier \
@@ -89,7 +89,9 @@ for agent in \
   hunter \
   security-reviewer \
   performance-reviewer \
-  quality-reviewer; do
+  quality-reviewer \
+  accessibility-reviewer \
+  api-contract-reviewer; do
   check_agent "$agent"
 done
 

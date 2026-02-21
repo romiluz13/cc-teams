@@ -2,6 +2,7 @@
 name: security-reviewer
 description: "Security-focused code reviewer for Review Arena"
 model: inherit
+memory: user
 color: red
 context: fork
 tools: Read, Grep, Glob, Skill, LSP, SendMessage

@@ -15,13 +15,19 @@ Review Arena uses 3 specialized reviewer teammates who first review independentl
 
 ## Team Composition
 
-| Teammate | Role | Focus Areas | Mode |
-|----------|------|-------------|------|
-| **security-reviewer** | Security specialist | Auth, injection, secrets, OWASP top 10, XSS, CSRF | READ-ONLY |
-| **performance-reviewer** | Performance specialist | N+1 queries, memory leaks, bundle size, caching, loops | READ-ONLY |
-| **quality-reviewer** | Quality specialist | Patterns, naming, complexity, error handling, tests, duplication | READ-ONLY |
+| Teammate | Role | Focus Areas | Mode | When Active |
+|----------|------|-------------|------|-------------|
+| **security-reviewer** | Security specialist | Auth, injection, secrets, OWASP top 10, XSS, CSRF | READ-ONLY | Always |
+| **performance-reviewer** | Performance specialist | N+1 queries, memory leaks, bundle size, caching, loops | READ-ONLY | Always |
+| **quality-reviewer** | Quality specialist | Patterns, naming, complexity, error handling, tests, duplication | READ-ONLY | Always |
+| **accessibility-reviewer** | A11y specialist (conditional) | WCAG 2.1 AA, keyboard nav, ARIA, semantic HTML, contrast | READ-ONLY | When UI files detected |
+| **api-contract-reviewer** | Contract validator (conditional) | Breaking changes, route/schema diffs, type compatibility | READ-ONLY | When API files detected |
 
 All reviewers are READ-ONLY. They cannot edit files. They output Router Contracts with Memory Notes.
+
+**Conditional spawning:** Lead checks builder's `FILES_MODIFIED` field after hunter completes:
+- Contains `.tsx|.jsx|.html|.css|.vue` → spawn `accessibility-reviewer`
+- Contains `routes/|api/|endpoints/|handlers/|controllers/` → spawn `api-contract-reviewer`
 
 ---
 
@@ -186,16 +192,18 @@ Lead collects final verdicts from all reviewers after challenge round.
 
 | Scenario | Resolution |
 |----------|------------|
-| All 3 agree | Unified verdict (strongest case) |
-| 2/3 agree | Majority rules, document dissent with reasoning |
+| All active reviewers agree | Unified verdict (strongest case) |
+| Majority agree | Majority rules, document dissent with reasoning |
 | Security says CRITICAL, others disagree | **Security wins** (conservative principle) |
+| A11y says CRITICAL, others disagree | **A11y wins** (WCAG is regulatory in many sectors; accessibility violations can block enterprise/government use) |
+| API contract says CRITICAL, others disagree | **API contract wins** (breaking changes affect external clients; cannot be "fixed later") |
 | Performance vs Quality conflict | Present both to user with trade-off analysis |
-| No consensus | Present all 3 perspectives to user, let them decide |
+| No consensus among all active reviewers | Present all perspectives to user, let them decide |
 
 **Severity Precedence:**
 - CRITICAL always overrides MAJOR/MINOR
-- If ANY reviewer flags CRITICAL → overall verdict = CHANGES_REQUESTED
-- BLOCKING=true if any reviewer's CRITICAL_ISSUES > 0
+- If ANY active reviewer flags CRITICAL → overall verdict = CHANGES_REQUESTED
+- BLOCKING=true if any active reviewer's CRITICAL_ISSUES > 0
 
 ---
 

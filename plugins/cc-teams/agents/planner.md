@@ -4,6 +4,7 @@ description: "Creates comprehensive implementation plans. Saves to docs/plans/ a
 model: inherit
 color: cyan
 context: fork
+isolation: worktree
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch
 skills: cc-teams:session-memory, cc-teams:router-contract, cc-teams:verification
 ---

@@ -92,27 +92,38 @@ Project-scope stale-team rule:
 
 ## Phase-Scoped Teammate Activation (MANDATORY)
 
-To reduce idle confusion, token waste, and premature findings, teammates are spawned by phase:
+To reduce idle confusion, token waste, and premature findings, teammates are spawned by phase.
+**Pre-spawn optimization:** Spawn downstream agents when their predecessor STARTS (not finishes),
+using blocked tasks. Agent is in the team and context-loaded; tasks unblock automatically when
+dependencies complete. Eliminates 1-2 turn spawn latency between phases.
 
 - **BUILD**
   - Team create: `builder`, `live-reviewer`
-  - When hunter task becomes runnable: spawn `hunter`
-  - When review tasks become runnable: spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer`
-  - When verifier task becomes runnable: spawn `verifier`
+  - When builder task **starts**: also pre-spawn `hunter` (queued/blocked by builder — executes immediately when builder finishes)
+  - When hunter task **starts**: also pre-spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer`
+    + **Conditionally** `accessibility-reviewer` if builder's FILES_MODIFIED contains `.tsx|.jsx|.html|.css|.vue`
+    + **Conditionally** `api-contract-reviewer` if builder's FILES_MODIFIED contains `routes/|api/|endpoints/|handlers/|controllers/`
+    (all queued/blocked by hunter — execute immediately when hunter finishes)
+  - When review tasks **start**: also pre-spawn `verifier` (queued/blocked by challenge round)
 - **DEBUG**
   - Team create: only required `investigator-*`
-  - After winning hypothesis / fix task runnable: spawn `builder`
-  - After fix-review tasks runnable: spawn 3 reviewers
-  - When verifier task becomes runnable: spawn `verifier`
+  - When investigators **start**: pre-spawn `builder` (queued/blocked by debate verdict)
+  - When builder-fix task **starts**: pre-spawn standard 3 reviewers + conditional reviewers (queued/blocked by builder)
+  - When review tasks **start**: pre-spawn `verifier` (queued/blocked by challenge)
+- **BUILD-CROSSLAYER** (see `cc-teams:cross-layer-build` skill)
+  - Team create: `backend-builder`
+  - When backend-builder completes: extract API contract, spawn `frontend-builder` with contract
+  - When both builders complete: spawn `live-reviewer` (async review mode)
+  - Pre-spawn optimization applies same as BUILD from live-reviewer onward
 - **REVIEW**
-  - Team create: spawn 3 reviewers (phase-1 workers)
+  - Team create: spawn 3 reviewers + conditional reviewers (phase-1 workers)
 - **PLAN**
   - Team create: spawn `planner`
 
 Non-negotiable rules:
-1. Do NOT spawn downstream teammates early "just in case".
-2. Do NOT treat idle from not-yet-needed teammates as a stall.
-3. Spawn teammate only when at least one task for that role is runnable.
+1. Pre-spawn uses BLOCKED tasks — agent is idle until task unblocks (no output, no cost).
+2. Do NOT treat idle from blocked/pre-spawned teammates as a stall.
+3. Spawn teammate only when at least one task for that role is created (blocked is fine).
 
 ### Runnable Evidence Gate (MANDATORY)
 
@@ -424,11 +435,13 @@ This avoids lost/phantom tasks during team initialization.
 | 5 | `CC-TEAMS security-reviewer: Security review` | hunter | Auth, injection, secrets, OWASP, XSS/CSRF. |
 | 6 | `CC-TEAMS performance-reviewer: Performance review` | hunter | N+1, loops, memory, caching, efficiency. |
 | 7 | `CC-TEAMS quality-reviewer: Quality review` | hunter | Patterns, complexity, error handling, tests. |
-| 8 | `CC-TEAMS BUILD Review Arena: Challenge round` | sec, perf, qual | Share findings, resolve conflicts (security wins on CRITICAL). |
-| 9 | `CC-TEAMS verifier: E2E verification` | challenge | Run tests, verify E2E. Exit code evidence required. |
-| 10 | `CC-TEAMS Memory Update: Persist build learnings` | verifier | Collect Memory Notes, persist via Read-Edit-Read. |
+| 8a | `CC-TEAMS accessibility-reviewer: Accessibility review` | hunter | **CONDITIONAL** (UI files detected). WCAG 2.1 AA audit. |
+| 8b | `CC-TEAMS api-contract-reviewer: API contract review` | hunter | **CONDITIONAL** (API files detected). Breaking change detection. |
+| 9 | `CC-TEAMS BUILD Review Arena: Challenge round` | sec, perf, qual [+a11y if present] [+api-contract if present] | Share findings, resolve conflicts. Security and a11y/api-contract win on CRITICAL. |
+| 10 | `CC-TEAMS verifier: E2E verification` | challenge | Run tests, verify E2E. Exit code evidence required. |
+| 11 | `CC-TEAMS Memory Update: Persist build learnings` | verifier | Collect Memory Notes, persist via Read-Edit-Read. ESCAPE: If verifier stalls at CRITICAL, Memory Update runs with partial evidence. |
 
-**QUICK depth:** Skip hunter + 3 reviewers + challenge. Builder → Verifier → Memory Update.
+**QUICK depth:** Skip hunter + reviewers + challenge. Builder → Verifier → Memory Update.
 
 #### DEBUG Tasks (Bug Court)
 
@@ -441,7 +454,9 @@ This avoids lost/phantom tasks during team initialization.
 | N+3 | `CC-TEAMS security-reviewer: Security review of fix` | builder | Check for security regressions. |
 | N+4 | `CC-TEAMS performance-reviewer: Performance review of fix` | builder | Check for performance regressions. |
 | N+5 | `CC-TEAMS quality-reviewer: Quality review of fix` | builder | Check correctness, patterns. |
-| N+6 | `CC-TEAMS DEBUG Review Arena: Challenge round` | sec, perf, qual | Resolve conflicts before verification. |
+| N+5a | `CC-TEAMS accessibility-reviewer: A11y review of fix` | builder | CONDITIONAL (UI files). WCAG audit of fix. |
+| N+5b | `CC-TEAMS api-contract-reviewer: API contract review of fix` | builder | CONDITIONAL (API files). Breaking change check. |
+| N+6 | `CC-TEAMS DEBUG Review Arena: Challenge round` | sec, perf, qual [+a11y if present] [+api-contract if present] | Resolve conflicts before verification. |
 | N+7 | `CC-TEAMS verifier: Verify fix E2E` | challenge | Verify original symptom resolved. |
 | N+8 | `CC-TEAMS Memory Update: Persist debug learnings` | verifier | Root cause → patterns.md, evidence → progress.md. |
 
@@ -449,12 +464,36 @@ This avoids lost/phantom tasks during team initialization.
 
 | Order | Subject | BlockedBy | Key Description Points |
 |-------|---------|-----------|------------------------|
-| 1 | `CC-TEAMS REVIEW: {target}` | - | Parent task. Team: 3 reviewers → challenge round |
+| 1 | `CC-TEAMS REVIEW: {target}` | - | Parent task. Team: 3–5 reviewers → challenge round |
 | 2 | `CC-TEAMS security-reviewer: Security review` | - | Auth, injection, secrets, OWASP. |
 | 3 | `CC-TEAMS performance-reviewer: Performance review` | - | N+1, memory, bundle, caching. |
 | 4 | `CC-TEAMS quality-reviewer: Quality review` | - | Patterns, complexity, error handling. |
-| 5 | `CC-TEAMS Review Arena: Challenge round` | sec, perf, qual | Share findings, resolve conflicts. |
-| 6 | `CC-TEAMS Memory Update: Persist review learnings` | challenge | Patterns → patterns.md, verdict → progress.md. |
+| 5a | `CC-TEAMS accessibility-reviewer: Accessibility review` | - | CONDITIONAL (UI files detected). WCAG 2.1 AA. |
+| 5b | `CC-TEAMS api-contract-reviewer: API contract review` | - | CONDITIONAL (API files detected). Breaking changes. |
+| 6 | `CC-TEAMS Review Arena: Challenge round` | sec, perf, qual [+a11y if present] [+api-contract if present] | Share findings, resolve conflicts. |
+| 7 | `CC-TEAMS Memory Update: Persist review learnings` | challenge | Patterns → patterns.md, verdict → progress.md. |
+
+#### BUILD-CROSSLAYER Tasks (Cross-Layer BUILD — use when frontend + backend changes needed)
+
+See `cc-teams:cross-layer-build` skill for full protocol. Task structure:
+
+| Order | Subject | BlockedBy | Key Description Points |
+|-------|---------|-----------|------------------------|
+| 1 | `CC-TEAMS BUILD-CROSSLAYER: {feature}` | - | Parent task. Backend-builder first (contract) → Frontend-builder → Async live-review → Hunt → Review → Verify |
+| 2 | `CC-TEAMS backend-builder: Implement backend` | - | TDD. Publishes API_CONTRACT_SPEC in Memory Notes before completing. |
+| 3 | `CC-TEAMS frontend-builder: Implement frontend` | backend-builder | Implements against API_CONTRACT_SPEC relayed by lead. |
+| 4 | `CC-TEAMS live-reviewer: Async post-build review` | backend-builder + frontend-builder | Reviews ALL changes from BOTH builders at once. |
+| 5 | `CC-TEAMS hunter: Cross-layer silent failure audit` | live-reviewer | Scans all modified files (frontend + backend). |
+| 6 | `CC-TEAMS security-reviewer: Security review` | hunter | Auth, injection, secrets, OWASP. |
+| 7 | `CC-TEAMS performance-reviewer: Performance review` | hunter | N+1, loops, memory, caching. |
+| 8 | `CC-TEAMS quality-reviewer: Quality review` | hunter | Patterns, complexity, error handling. |
+| 9a | `CC-TEAMS accessibility-reviewer: A11y review` | hunter | ALWAYS in cross-layer (frontend guaranteed). WCAG 2.1 AA. |
+| 9b | `CC-TEAMS api-contract-reviewer: API contract validation` | hunter | ALWAYS in cross-layer (API guaranteed). Breaking changes. |
+| 10 | `CC-TEAMS BUILD-CROSSLAYER Review Arena: Challenge round` | sec, perf, qual, a11y, api-contract | Share findings, resolve conflicts. |
+| 11 | `CC-TEAMS verifier: Integrated E2E verification` | challenge | Tests full stack integration. |
+| 12 | `CC-TEAMS Memory Update: Persist cross-layer learnings` | verifier | API contract + integration learnings. |
+
+**File Conflict Gate (MANDATORY before Phase 4):** Lead validates FILES_MODIFIED across both builders — no overlap allowed.
 
 #### PLAN Tasks
 
@@ -474,14 +513,20 @@ This avoids lost/phantom tasks during team initialization.
    - Skip ONLY if: (plan in `## References` ≠ "N/A") AND (active `CC-TEAMS` task exists)
    - Otherwise → AskUserQuestion: "Plan first (Recommended) / Build directly"
 3. **Clarify requirements** (DO NOT SKIP) → Use AskUserQuestion
+3a. **Cross-Layer Detection (after requirements clarified):**
+   - Check if requirements mention BOTH frontend (UI/components/pages) AND backend (API/services/DB)
+   - If cross-layer signals → use BUILD-CROSSLAYER path (see `cc-teams:cross-layer-build` skill)
+   - Otherwise → continue with standard BUILD (single builder)
 4. **Select execution depth (MANDATORY)**:
    - Run Execution Depth Selector
+   - Cross-layer work auto-selects FULL (cross-layer disqualifies QUICK by condition 3)
    - choose `QUICK` only when all quick eligibility conditions pass
    - otherwise choose `FULL` (default)
 5. **Create Agent Team (MANDATORY gate)**:
    - `TeamCreate(...)` with deterministic team name
-   - QUICK: spawn `builder` + `live-reviewer`; spawn `verifier` when runnable
-   - FULL: spawn `builder` + `live-reviewer` only; defer `hunter` / triad / `verifier` until runnable
+   - QUICK: spawn `builder` + `live-reviewer`; pre-spawn `verifier` (blocked)
+   - FULL: spawn `builder` + `live-reviewer`; pre-spawn `hunter` (blocked by builder)
+   - CROSSLAYER: spawn `backend-builder` only; frontend-builder spawns after contract relay
    - verify teammate reachability via direct message
    - enter delegate mode (`Shift+Tab`)
    - run `TaskList()` to confirm team-scoped task context
@@ -908,14 +953,30 @@ Run this guard before starting execution and again before starting verifier task
 - `CC-TEAMS security-reviewer:`
 - `CC-TEAMS performance-reviewer:`
 - `CC-TEAMS quality-reviewer:`
+- `CC-TEAMS accessibility-reviewer:` (if UI signals detected — conditional)
+- `CC-TEAMS api-contract-reviewer:` (if API signals detected — conditional)
 - `CC-TEAMS BUILD Review Arena: Challenge round`
+- `CC-TEAMS verifier:`
+- `CC-TEAMS Memory Update:`
+
+### BUILD-CROSSLAYER required task subjects
+- `CC-TEAMS backend-builder:`
+- `CC-TEAMS frontend-builder:`
+- `CC-TEAMS live-reviewer:`
+- `CC-TEAMS hunter:`
+- `CC-TEAMS security-reviewer:`
+- `CC-TEAMS performance-reviewer:`
+- `CC-TEAMS quality-reviewer:`
+- `CC-TEAMS accessibility-reviewer:` (always in cross-layer)
+- `CC-TEAMS api-contract-reviewer:` (always in cross-layer)
+- `CC-TEAMS BUILD-CROSSLAYER Review Arena: Challenge round`
 - `CC-TEAMS verifier:`
 - `CC-TEAMS Memory Update:`
 
 ### Required BUILD blockers
 - hunter blocked by builder
-- each reviewer blocked by hunter
-- challenge blocked by all 3 reviewers
+- each active reviewer blocked by hunter
+- challenge blocked by all active reviewers (3–5 depending on signals)
 - verifier blocked by challenge
 - memory update blocked by verifier
 

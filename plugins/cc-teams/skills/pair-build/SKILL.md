@@ -198,8 +198,11 @@ Hunter scans the entire implementation for:
 Run a full review gate (not live-review quick checks):
 
 1. Spawn security-reviewer, performance-reviewer, and quality-reviewer in parallel
+   + **Conditionally** spawn `accessibility-reviewer` if builder's FILES_MODIFIED contains UI files (`.tsx|.jsx|.html|.css|.vue`)
+   + **Conditionally** spawn `api-contract-reviewer` if builder's FILES_MODIFIED contains API route files (`routes/|api/|endpoints/|handlers/`)
+   Lead detects signal from builder Router Contract `FILES_MODIFIED` field before spawning
 2. Each reviewer performs full-stage review with Router Contract output
-3. Lead runs challenge round and merges a unified verdict
+3. Lead runs challenge round and merges a unified verdict (3–5 reviewers depending on signals)
 4. If any CRITICAL issues remain, route remediation before verification
 
 **Why this gate exists:** Live-reviewer is intentionally focused and fast. This phase restores full multi-dimensional depth before ship decisions.

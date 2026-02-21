@@ -2,6 +2,7 @@
 name: investigator
 description: "Bug investigator for Bug Court - champions and tests a single hypothesis"
 model: inherit
+memory: project
 color: red
 context: fork
 tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage

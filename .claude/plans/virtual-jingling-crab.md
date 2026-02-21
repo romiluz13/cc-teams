@@ -1,467 +1,468 @@
-# CC-Teams v0.1.17 — Systematic Flaw Fixes
+# CC-Teams v0.1.18 — The Complete Upgrade: Parallel Architecture, Specialist Reviewers, Cross-Layer BUILD
 
 ## Context
 
-Deep adversarial audit + reference doc validation produced a prioritized list of real bugs.
-One false alarm removed: Challenge Round vs Delegate Mode — reference docs confirm delegate mode
-ALLOWS messaging, so the challenge round (done entirely via SendMessage) is valid. No fix needed.
+Three categories of improvements to make CC-Teams the most capable AI coding harness on Claude Code:
+
+1. **Missing specialist reviewers** — accessibility and API contract gaps that every production codebase needs
+2. **Underutilized parallelism** — pre-spawn optimization + cross-layer BUILD variant that runs frontend/backend builders in true parallel
+3. **Underutilized Claude Code features** — `memory` frontmatter for persistent agent intelligence, `isolation: worktree` on planner
+
+All changes follow existing patterns (clone from security-reviewer template for reviewers, builder template for new builders), are lint-compatible, and maintain backward compatibility — existing BUILD/DEBUG/REVIEW/PLAN workflows are unchanged.
 
 ---
 
-## CRITICAL FIXES
+## Batch 1: New Specialist Reviewer Agents
 
-### Fix 1 — Planner sends to invalid recipient `"lead"` (`planner.md:32`)
+### 1a. `plugins/cc-teams/agents/accessibility-reviewer.md` (CREATE)
 
-**Problem:** `SendMessage(recipient: "lead")` fails silently. No agent is named "lead" in Agent Teams.
-Config.json has a `members` array — the lead's actual name is unknown to the planner at plan-mode-detection time.
+**Trigger:** Spawned conditionally when builder's FILES_MODIFIED contains UI files (`.tsx`, `.jsx`, `.html`, `.css`, `.vue`) or requirements mention accessibility/WCAG/a11y.
 
-**Fix:** Drop SendMessage entirely. Output plain BLOCKED text and stop.
-Idle notifications deliver the planner's output to the lead automatically (confirmed in reference docs).
-No recipient discovery needed.
-
-**File:** `plugins/cc-teams/agents/planner.md`
-Replace the SendMessage block (lines 29-36) with:
-```markdown
-2. Output this message and stop:
-
-   ```
-   BLOCKED: I am in plan mode. Claude Code auto-enabled plan mode because my role
-   involves planning work. I CANNOT write plan files in plan mode.
-
-   Lead: Re-spawn me with "DO NOT ENTER PLAN MODE" at the top of my prompt,
-   or use mode: dontAsk when spawning. See PLAN workflow step 7.
-   ```
-
-3. Go idle. The idle notification will carry this message to the lead.
-   Do NOT attempt any further work.
-```
-
----
-
-### Fix 2 — Memory Update blocked forever when verifier stalls (`cc-teams-lead/SKILL.md:416`)
-
-**Problem:** `CC-TEAMS Memory Update` is blocked by verifier. If verifier enters `in_progress`
-and its agent crashes, the task never completes. Memory Update stays blocked forever.
-Workflow learnings are silently lost with no documented escape path.
-
-**Fix:** Add an escape hatch rule to the execution loop and to the Memory Update task description.
-
-**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
-
-1. In the execution loop step 4 (after escalation ladder), add after "CRITICAL stalled" action:
-   ```
-   MEMORY UPDATE ESCAPE HATCH (if verifier is stalled):
-   - If verifier is declared stalled/aborted (T+10 CRITICAL path exhausted):
-     - Collect whatever verification evidence exists (from handoff payload or last known contract)
-     - Manually unblock Memory Update: TaskUpdate({ taskId: memory_update_id, addBlockedBy: [] })
-     - Run Memory Update with note: "Verifier stalled — persisting partial learnings"
-     - Document stall in progress.md ## Verification
-   ```
-
-2. In BUILD Task template row 10, update Key Description Points:
-   ```
-   Collect Memory Notes, persist via Read-Edit-Read.
-   ESCAPE: If verifier stalls at CRITICAL, Memory Update runs with partial evidence.
-   ```
-
----
-
-### Fix 3 — Hunter cannot proactively signal BLOCKED (`hunter.md:7`)
-
-**Problem:** Hunter tools: `Read, Grep, Glob, Skill, LSP` — no SendMessage.
-If hunter is stuck (skill load failure, LSP unavailable), it can only output text and go idle.
-The idle notification delivers the message, but hunter cannot proactively message the lead
-mid-task if it discovers it's going to be blocked before finishing.
-
-**Fix:** Add `SendMessage` to hunter tools. The lint script does NOT forbid SendMessage
-for hunter (`assert_not_has` only covers Write, Edit, Bash, AskUserQuestion, WebFetch).
-
-**File:** `plugins/cc-teams/agents/hunter.md`
-Change: `tools: Read, Grep, Glob, Skill, LSP`
-To: `tools: Read, Grep, Glob, Skill, LSP, SendMessage`
-
-Also add to hunter's Task Response section after "If you cannot proceed":
-```markdown
-```
-SendMessage({
-  type: "message",
-  recipient: "{lead_name_from_task_context}",
-  content: "BLOCKED: {reason}. Cannot complete silent failure hunt.",
-  summary: "BLOCKED: hunter cannot proceed"
-})
-```
-```
-
----
-
-### Fix 4 — Verifier cannot proactively signal BLOCKED (`verifier.md:7`)
-
-**Same problem as hunter.** Verifier is the final gate — a silent block here loses the entire
-verification result. Verifier has `AskUserQuestion` for user-facing questions but no peer messaging.
-
-**Fix:** Add `SendMessage` to verifier tools. Lint allows it.
-
-**File:** `plugins/cc-teams/agents/verifier.md`
-Change: `tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch`
-To: `tools: Read, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage`
-
-Also update verifier's BLOCKED response section to include SendMessage example
-(same pattern as hunter fix above).
-
----
-
-### Fix 5 — Orphan sweep silently deletes valid workflow trees (`cc-teams-lead/SKILL.md:172-176`)
-
-**Problem:** If two CC-TEAMS workflows exist for the same project, the sweep picks the newest
-and marks siblings as `deleted` — silently, permanently, with no confirmation.
-A user who paused workflow A and started workflow B loses A's entire task tree.
-
-**Fix:** Change "mark as deleted" to "ask user first" for sibling workflow deletion.
-
-**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
-
-Replace step 4 of Orphan Task Recovery:
-```markdown
-4. If multiple workflow parent tasks are active in this project, keep only one canonical instance:
-   - If current team name matches a workflow in memory → that instance is canonical (delete others)
-   - Otherwise → DO NOT auto-delete. Use AskUserQuestion:
-     "Multiple active workflows found for this project:
-      A: {subject_A} (started {timestamp_A})
-      B: {subject_B} (started {timestamp_B})
-      Which should I resume? The other will be archived (marked pending, not deleted)."
-   - Mark non-canonical instances as `pending` (NOT deleted) — archived, resumable later
-   - ONLY mark as `deleted` if user explicitly confirms deletion
-```
-
----
-
-### Fix 6 — All-investigators-BLOCKED has no exit path (`bug-court/SKILL.md`)
-
-**Problem:** Bug Court handles individual investigator timeouts but defines no behavior
-when ALL investigators simultaneously reach BLOCKED status. Workflow deadlocks with no exit.
-
-**Fix:** Add explicit all-blocked exit path to Bug Court Phase 3 (Debate) lead actions.
-
-**File:** `plugins/cc-teams/skills/bug-court/SKILL.md`
-
-In Phase 3 (Debate) or Phase 4 (Verdict) lead actions, add after the T+8 replacement rule:
-```markdown
-**All-Investigators-BLOCKED Exit Path:**
-If ALL active investigators simultaneously report BLOCKED (or are replaced and their replacements
-also block within T+10):
-1. AskUserQuestion:
-   "All investigators are blocked. Choose next step:
-    A) Spawn new investigators with revised hypotheses (lead generates 2-3 new Hn)
-    B) Declare root cause unknown — user provides fix direction
-    C) Abort Bug Court and treat as exploratory spike"
-2. If A: generate new hypotheses from accumulated evidence, spawn fresh investigators
-3. If B: skip to Phase 5 with user-provided fix description instead of winning hypothesis
-4. If C: shut down team, persist accumulated evidence to patterns.md ## Common Gotchas
-```
-
----
-
-## HIGH-PRIORITY FIXES
-
-### Fix 7 — Handoff payload missing `teammate_roster` (`cc-teams-lead/SKILL.md:237-280`)
-
-**Problem:** On session resume, the lead tries to message teammates by name but the payload
-has no record of which teammates were spawned and which need re-spawning.
-
-**Fix:** Add `teammate_roster` field to canonical handoff payload template.
-
-**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
-
-In the canonical payload YAML, add after `team_name`:
 ```yaml
-teammate_roster:
-  spawned: ["builder", "live-reviewer"]   # currently active teammates
-  pending_spawn: ["hunter"]               # not yet spawned but needed for next phase
-  completed: ["builder", "live-reviewer"] # finished their tasks
+---
+name: accessibility-reviewer
+description: "Accessibility (WCAG 2.1 AA) specialist reviewer for Review Arena — spawned when UI changes are detected"
+model: inherit
+color: purple
+context: fork
+tools: Read, Grep, Glob, Skill, LSP, SendMessage
+skills: cc-teams:router-contract, cc-teams:verification
+---
 ```
+
+**Body follows security-reviewer structure with these domain sections:**
+
+- **WCAG 2.1 AA Checklist:** Perceivable (alt text, captions, color contrast ≥4.5:1), Operable (keyboard nav, focus management, skip links), Understandable (labels, error messages), Robust (ARIA, semantic HTML)
+- **Quick Scan Patterns:**
+  ```
+  Grep(pattern="onClick=|onKeyDown=|tabIndex=", path="src")
+  Grep(pattern="aria-label|role=|alt=", path="src")
+  Grep(pattern="dangerouslySetInnerHTML", path="src")
+  ```
+- **Accessibility Checklist (10-point):**
+  - [ ] All interactive elements keyboard-reachable
+  - [ ] Focus order logical and visible
+  - [ ] Images have descriptive alt text (not `alt=""` for informational images)
+  - [ ] Form inputs have associated `<label>` elements
+  - [ ] Error messages reference the field by name
+  - [ ] Color alone not used to convey information
+  - [ ] ARIA roles match element semantics (no `role="button"` on `<div>` without keyboard handler)
+  - [ ] Headings are hierarchical (`h1`→`h2`→`h3`, no skips)
+  - [ ] Screen reader announcements for dynamic content (`aria-live`, `aria-atomic`)
+  - [ ] Touch targets ≥44×44px (WCAG 2.5.5)
+- **Challenge Round Response** (same mandatory pattern as other reviewers)
+- **One-response discipline** (from v0.1.17)
+- **Router Contract** with `DEPENDENCY_AUDIT: SKIPPED` (no npm audit for a11y) and standard fields
+- `CONTRACT_VERSION: "2.4"`
 
 ---
 
-### Fix 8 — TEAM_SHUTDOWN rejection retry unbound (`cc-teams-lead/SKILL.md:1282-1287`)
+### 1b. `plugins/cc-teams/agents/api-contract-reviewer.md` (CREATE)
 
-**Problem:** "If rejected: check for incomplete tasks → fix/re-assign → retry" has no bound.
-If a teammate rejects for non-task reasons (bug, network glitch), the loop runs forever.
+**Trigger:** Spawned conditionally when builder's FILES_MODIFIED contains API route files (`routes/`, `api/`, `endpoints/`, `handlers/`, `controllers/`) or TypeScript interface files that define request/response shapes.
 
-**Fix:** Change retry logic to: max 1 rejection → ask user immediately.
+```yaml
+---
+name: api-contract-reviewer
+description: "API contract validator — detects breaking changes in routes, request/response schemas, and type exports"
+model: inherit
+color: orange
+context: fork
+tools: Read, Grep, Glob, Skill, LSP, SendMessage
+skills: cc-teams:router-contract, cc-teams:verification
+---
+```
+
+**Body follows security-reviewer structure with these domain sections:**
+
+- **API Contract Checklist (9-point):**
+  - [ ] No endpoints removed (existing routes still exist)
+  - [ ] No required request fields removed or renamed
+  - [ ] No response fields removed that clients may depend on
+  - [ ] No response field types widened to null/undefined without versioning
+  - [ ] HTTP method unchanged for existing routes
+  - [ ] Status codes unchanged for success/error responses
+  - [ ] Pagination/cursor shape unchanged
+  - [ ] Authentication requirements unchanged (no route suddenly requires new scopes)
+  - [ ] Rate limit headers unchanged (if present)
+- **Quick Scan Patterns:**
+  ```
+  Glob(pattern="**/{routes,api,endpoints,handlers}/**/*.{ts,js}", path=".")
+  Grep(pattern="export (type|interface).*(Request|Response|Schema|Params|Body)", path="src")
+  Grep(pattern="router\.(get|post|put|delete|patch)\(", path="src")
+  ```
+- **Breaking Change Classification:**
+  - CRITICAL (BLOCKING): Removed endpoint, removed required field, changed type to incompatible type
+  - HIGH: Changed optional to required, removed response field, changed status code
+  - MEDIUM: Added new optional response field (non-breaking but document), changed error message wording
+- **Router Contract** with standard fields, `CONTRACT_VERSION: "2.4"`
+
+---
+
+### 1c. Update Routing for Conditional Reviewers
 
 **File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
 
-Replace step 2 of Team Shutdown:
+**Change 1 — Phase-Scoped Teammate Activation (MANDATORY), BUILD section:**
+
+Add conditional spawn rules after standard reviewer spawn:
 ```markdown
-2. Wait for approvals.
-   - If approved: proceed to TeamDelete()
-   - If rejected: check rejection reason
-     - If reason is "incomplete tasks": fix/re-assign the task, retry ONCE
-     - If still rejected after one fix attempt → AskUserQuestion: "Force shutdown / Investigate?"
-     - If reason is NOT task-related (error, bug, other): AskUserQuestion IMMEDIATELY
-   - Do NOT retry more than once per rejection. Infinite retry loops cause workflow hang.
+- When review tasks become runnable: spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer`
+  - **Conditionally also spawn:**
+    - `accessibility-reviewer` if FILES_MODIFIED (from builder contract) contains `.tsx|.jsx|.html|.css|.vue` files
+    - `api-contract-reviewer` if FILES_MODIFIED contains files in `routes/|api/|endpoints/|handlers/|controllers/` paths
+  - Lead detects signal from builder Router Contract `FILES_MODIFIED` field before spawning
 ```
 
----
+**Change 2 — Workflow Structural Integrity Guard, BUILD required task subjects:**
 
-### Fix 9 — Pre-compaction "30+ tool calls" is unenforced (`cc-teams-lead/SKILL.md:281, 315`)
-
-**Problem:** "Every 30+ tool calls" has no counter, no gate, no enforcement.
-We added a PreCompact hook in v0.1.15 that writes a checkpoint marker to progress.md.
-The lead skill doesn't reference this hook as the trigger mechanism.
-
-**Fix:** Replace the vague 30-call rule with a reference to the PreCompact hook.
-
-**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
-
-Replace:
-```
-3. long-running workflow crosses pre-compaction checkpoint (every 30+ tool calls);
-```
-With:
-```
-3. `CC-TEAMS COMPACT_CHECKPOINT` marker appears in `.claude/cc-teams/progress.md`
-   (written automatically by the PreCompact hook before every context compaction);
-```
-
-Also update the Prevention note:
-Replace:
-```
-**Prevention:** For long-running workflows (Bug Court multi-round, Pair Build multi-module),
-trigger pre-compaction memory checkpoint every 30+ tool calls.
-```
-With:
-```
-**Prevention:** The PreCompact hook (`plugins/cc-teams/hooks/pre-compact.sh`) writes a
-`CC-TEAMS COMPACT_CHECKPOINT: {timestamp}` marker to progress.md before every compaction.
-When your next turn starts and you see this marker in progress.md → emit handoff payload immediately.
-```
-
----
-
-### Fix 10 — Synthesized contract has no BLOCKING merge algorithm (`router-contract/SKILL.md`)
-
-**Problem:** When the lead synthesizes a merged contract from 3 reviewers, the spec says
-"weighted average" but provides no algorithm. BLOCKING resolution is undefined.
-
-**Fix:** Add explicit conservative merge rules to the Unified Router Contract section.
-
-**File:** `plugins/cc-teams/skills/router-contract/SKILL.md` and `review-arena/SKILL.md`
-
-In the lead validation logic section, add:
+Add (conditional):
 ```markdown
-### Synthesized Contract Merge Rules (Conservative Defaults)
-
-When lead synthesizes a unified contract from multiple reviewer contracts:
-
-| Field | Merge Rule |
-|-------|-----------|
-| `BLOCKING` | `true` if ANY individual contract has `BLOCKING=true` |
-| `CRITICAL_ISSUES` | Sum of all individual CRITICAL_ISSUES (deduplicated by file:line) |
-| `HIGH_ISSUES` | Sum of all individual HIGH_ISSUES (deduplicated) |
-| `CONFIDENCE` | Minimum of all individual confidence scores (weakest link) |
-| `STATUS` | `CHANGES_REQUESTED` if ANY reviewer has CHANGES_REQUESTED |
-| `REQUIRES_REMEDIATION` | `true` if ANY individual contract has it `true` |
-| `REMEDIATION_REASON` | Concatenation of all non-null REMEDIATION_REASONs |
+- `CC-TEAMS accessibility-reviewer:` (if UI signals detected)
+- `CC-TEAMS api-contract-reviewer:` (if API signals detected)
 ```
 
----
+**Change 3 — BUILD Task Templates table:**
 
-### Fix 11 — Debate round limit is advisory, not enforced (`bug-court/SKILL.md:152-158`)
-
-**Problem:** "Max 3 rounds" is stated but no lead action is specified to enforce it.
-Debate can stall indefinitely while lead subjectively decides "done."
-
-**Fix:** Add explicit round-tracking action to lead's Phase 3 execution.
-
-**File:** `plugins/cc-teams/skills/bug-court/SKILL.md`
-
-In Phase 3 (Debate) lead actions, add:
-```markdown
-**Round Tracking (MANDATORY):**
-After initiating debate, track each "round" as: one message sent by each active investigator.
+Add rows (conditional, with note):
 ```
-round_count = 0
-After each investigator message exchange: round_count += 1
-When round_count >= 3 → close debate phase:
-  SendMessage(broadcast, "Debate round 3 complete. Submit your final verdict now.
-  Include your final Router Contract. No further challenge messages.")
-```
-Do not wait for "consensus" — 3 rounds is the hard cap.
+| 8a | `CC-TEAMS accessibility-reviewer: Accessibility review` | hunter | CONDITIONAL (UI files). WCAG 2.1 AA audit. |
+| 8b | `CC-TEAMS api-contract-reviewer: API contract review` | hunter | CONDITIONAL (API files). Breaking change detection. |
+| 9  | `CC-TEAMS BUILD Review Arena: Challenge round` | sec, perf, qual [+a11y if present] [+api-contract if present] | Share findings, resolve conflicts. |
 ```
 
----
+**Change 4 — Review Arena and Debug workflows:**
 
-## MEDIUM-PRIORITY FIXES
+Add same conditional reviewers to REVIEW task template (rows 5a, 5b) and DEBUG Review Arena.
 
-### Fix 12 — Confidence weighting formula undefined (`review-arena/SKILL.md:250`)
+**Change 5 — Per-Agent Spawn Context section:**
 
-**Fix:** Replace vague "weighted by finding severity" with exact formula.
-Use minimum (weakest-link principle — if any reviewer is uncertain, overall is uncertain).
+Add `accessibility-reviewer` and `api-contract-reviewer` to the reviewer triad section (they share the same spawn context fields).
+
+**Change 6 — Challenge completion criteria in Results Collection:**
+
+Change "All 3 reviewers acknowledged" to "All active reviewers acknowledged (3–5 depending on signals detected)."
 
 **File:** `plugins/cc-teams/skills/review-arena/SKILL.md`
 
-Change: `CONFIDENCE: [average of 3 reviewers, weighted by finding severity]`
-To: `CONFIDENCE: [minimum of 3 reviewer confidence scores — weakest-link principle]`
-
----
-
-### Fix 13 — npm audit silent fail when `jq` not installed (`hooks/teammate-idle.sh`, `verifier.md`, `security-reviewer.md`)
-
-**Problem:** `npm audit --json 2>/dev/null | jq -r ...` silently produces empty output if jq missing.
-DEPENDENCY_AUDIT gets set incorrectly.
-
-**Fix:** Add jq availability check before piping.
-
-**Files:** `plugins/cc-teams/agents/verifier.md`, `plugins/cc-teams/hooks/teammate-idle.sh`
-
-In verifier.md, replace the npm audit command with:
-```bash
-# Dependency vulnerability audit
-if [ -f "package.json" ]; then
-  if command -v jq >/dev/null 2>&1; then
-    npm audit --json 2>/dev/null | jq -r '.metadata.vulnerabilities | "critical=\(.critical) high=\(.high) moderate=\(.moderate)"' 2>/dev/null
-  else
-    # jq not available — fall back to text parsing
-    npm audit 2>&1 | grep -E "^[0-9]+ (critical|high|moderate|low)" | head -5
-  fi
-fi
+Update Team Composition table to note conditional reviewers:
+```markdown
+| **accessibility-reviewer** | A11y specialist (conditional) | WCAG 2.1 AA, keyboard nav, ARIA, semantic HTML | READ-ONLY |
+| **api-contract-reviewer** | Contract validator (conditional) | Breaking changes, route/schema diffs, type compatibility | READ-ONLY |
 ```
 
-In teammate-idle.sh, add size guard before jq:
-```bash
-# Guard against very large messages (>500KB) that could OOM jq
-MSG_SIZE=${#LAST_MSG}
-if [[ "$MSG_SIZE" -gt 524288 ]]; then
-  # Large message — grep directly without jq parse
-  if echo "$LAST_MSG" | grep -q "Router Contract (MACHINE-READABLE)"; then exit 0; else exit 2; fi
-fi
+Add to Conflict Resolution Rules:
+```markdown
+| A11y says CRITICAL, others disagree | **A11y wins for compliance-critical projects** (WCAG is regulatory in many sectors) |
+| API contract says CRITICAL, others disagree | **API contract wins** (breaking changes affect external clients) |
+```
+
+**File:** `plugins/cc-teams/skills/pair-build/SKILL.md`
+
+Update Phase 3 section:
+```markdown
+3. Spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer` in parallel
+   + `accessibility-reviewer` if UI files detected in builder's FILES_MODIFIED
+   + `api-contract-reviewer` if API route files detected in builder's FILES_MODIFIED
 ```
 
 ---
 
-### Fix 14 — Planner probe race condition on `.probe` file (`planner.md:18-20`)
+## Batch 2: Pre-Spawn Optimization
 
-**Problem:** Two planners writing to `docs/plans/.probe` simultaneously can cause false
-plan-mode detection when the second planner's `rm` fails on an already-deleted file.
+**The fix:** Spawn downstream agents when their PREDECESSOR starts (not when their predecessor finishes), using blocked tasks. Agent is in the team and context-loaded but has no task to run until its blocker clears. Eliminates 1-2 turn spawn overhead per phase.
 
-**Fix:** Use PID-based temp file to avoid collision.
+**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
+
+**Change — Phase-Scoped Teammate Activation, BUILD section:**
+
+Replace:
+```markdown
+- Team create: `builder`, `live-reviewer`
+- When hunter task becomes runnable: spawn `hunter`
+- When review tasks become runnable: spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer`
+- When verifier task becomes runnable: spawn `verifier`
+```
+
+With:
+```markdown
+- Team create: `builder`, `live-reviewer`
+- When builder task starts: **also pre-spawn `hunter`** (queued blocked by builder task — ready to execute the instant builder finishes)
+- When hunter task starts: **also pre-spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer`** (+ conditional reviewers if signals detected) queued blocked by hunter — ready immediately when hunter completes
+- When review tasks start: **also pre-spawn `verifier`** queued blocked by challenge round — ready immediately when challenge completes
+- Rationale: eliminates spawn latency between phases; blocked agents are idle (no output, no cost) until unblocked
+```
+
+**Same change for DEBUG workflow:**
+- Pre-spawn builder when investigator tasks start
+- Pre-spawn reviewers when builder-fix task starts
+- Pre-spawn verifier when review tasks start
+
+---
+
+## Batch 3: Cross-Layer BUILD Variant
+
+### 3a. New Agents
+
+**`plugins/cc-teams/agents/frontend-builder.md` (CREATE)**
+
+Same structure as `builder.md` with these differences:
+- `name: frontend-builder`
+- `description: "Implements frontend features using TDD — owns UI components, pages, and styles"`
+- `color: cyan`
+- `isolation: worktree` (same as builder)
+- SCOPE guidance: "owns `src/components/`, `src/pages/`, `src/styles/`, `src/hooks/` — no API route edits"
+- SKILL_HINTS: always includes `cc-teams:frontend-patterns`
+- Cross-layer coordination: after completing, outputs API contract requirements to lead if backend integration needed
+- Everything else identical to builder.md
+
+**`plugins/cc-teams/agents/backend-builder.md` (CREATE)**
+
+Same structure as `builder.md` with these differences:
+- `name: backend-builder`
+- `description: "Implements backend features using TDD — owns API routes, services, and data models"`
+- `color: green` (different shade)
+- `isolation: worktree` (same as builder)
+- SCOPE guidance: "owns `src/api/`, `src/services/`, `src/models/`, `src/db/` — no UI component edits"
+- SKILL_HINTS: always includes `cc-teams:architecture-patterns`
+- Cross-layer coordination: after completing API routes, outputs contract spec for frontend-builder
+- Everything else identical to builder.md
+
+### 3b. New Skill: `plugins/cc-teams/skills/cross-layer-build/SKILL.md` (CREATE)
+
+Protocol for running two builders in parallel with contract relay.
+
+**Key sections:**
+- **Overview:** When feature spans frontend + backend. Two builders own distinct file sets. One shared post-build review chain.
+- **Detection Signals:** Requirements mention "frontend AND backend", plan covers both UI and API files, user explicitly requests cross-layer
+- **Team Composition:**
+
+| Teammate | Phase | File Scope | Mode |
+|---------|-------|------------|------|
+| `backend-builder` | Phase 1a | `src/api/`, `src/services/`, `src/models/` | READ+WRITE |
+| `frontend-builder` | Phase 1b (starts after contract relay) | `src/components/`, `src/pages/`, `src/hooks/` | READ+WRITE |
+| `live-reviewer` | Phase 1 (reviews BOTH builders' output post-completion) | all modified files | READ-ONLY |
+| `hunter` | Phase 2 | all modified files | READ-ONLY |
+| reviewers (3–5) | Phase 3 | all modified files | READ-ONLY |
+| `verifier` | Phase 4 | integration E2E | READ-ONLY |
+
+- **Contract-First Relay Phase (MANDATORY for cross-layer):**
+  1. backend-builder completes its implementation first (owns API contract definition)
+  2. backend-builder outputs `API_CONTRACT_SPEC` in its Memory Notes: endpoint paths, request/response shapes, auth requirements
+  3. Lead extracts and validates the contract
+  4. Lead passes validated contract to frontend-builder spawn prompt
+  5. frontend-builder implements against verified contract
+
+- **Live Reviewer (Async mode):** Unlike standard pair-build (per-module review), cross-layer uses async review — live-reviewer reviews ALL changes from BOTH builders AFTER both complete (before hunter). Eliminates per-module blocking that would serialize the parallel builders.
+
+- **File Conflict Gate (MANDATORY):**
+  Lead validates builder Router Contracts have no overlapping `FILES_MODIFIED`. If overlap detected → immediate `CC-TEAMS REM-FIX: file scope conflict`.
+
+- **Task Structure:**
+
+| Order | Subject | BlockedBy |
+|-------|---------|-----------|
+| 1 | `CC-TEAMS BUILD-CROSSLAYER: {feature}` | — |
+| 2 | `CC-TEAMS backend-builder: Implement backend` | — |
+| 3 | `CC-TEAMS frontend-builder: Implement frontend` | backend-builder (contract relay) |
+| 4 | `CC-TEAMS live-reviewer: Async post-build review` | backend-builder + frontend-builder |
+| 5 | `CC-TEAMS hunter: Cross-layer silent failure audit` | live-reviewer |
+| 6-8 | Reviewer triad + conditional reviewers | hunter |
+| 9 | `CC-TEAMS BUILD-CROSSLAYER Review Arena: Challenge round` | all reviewers |
+| 10 | `CC-TEAMS verifier: Integrated E2E verification` | challenge |
+| 11 | `CC-TEAMS Memory Update: Persist cross-layer learnings` | verifier |
+
+### 3c. Lead Skill Updates for Cross-Layer
+
+**File:** `plugins/cc-teams/skills/cc-teams-lead/SKILL.md`
+
+**Change 1 — Decision Tree:** Add `BUILD-CROSSLAYER` as a BUILD sub-variant detection:
+
+```markdown
+### Cross-Layer Detection (within BUILD routing)
+After selecting BUILD, check for cross-layer signals before spawning:
+- User requirements explicitly mention BOTH frontend (UI/components) AND backend (API/services/DB)
+- Plan covers files in BOTH `src/components/` (or pages/) AND `src/api/` (or services/)
+- If cross-layer detected → use BUILD-CROSSLAYER task template and cross-layer skill
+- Otherwise → use standard BUILD FULL or QUICK
+```
+
+**Change 2 — Add BUILD-CROSSLAYER task template** to Workflow Task Templates section.
+
+**Change 3 — Structural Integrity Guard:** Add BUILD-CROSSLAYER required subjects list.
+
+**Change 4 — Workflow Execution, BUILD section:** Add cross-layer decision branch.
+
+---
+
+## Batch 4: Feature Flags
+
+### 4a. `isolation: worktree` on Planner
 
 **File:** `plugins/cc-teams/agents/planner.md`
 
-Change probe command:
-```bash
-# BEFORE (race condition)
-Bash(command="mkdir -p docs/plans && echo 'probe' > docs/plans/.probe && rm docs/plans/.probe && echo OK")
-
-# AFTER (PID-unique, no collision)
-Bash(command="mkdir -p docs/plans && F=\"docs/plans/.probe-$$\" && echo 'probe' > \"$F\" && rm \"$F\" && echo OK")
+Change frontmatter:
+```yaml
+context: fork
+isolation: worktree   # ← ADD (WorktreeCreate hook syncs .claude/cc-teams/ memory)
 ```
 
----
-
-### Fix 15 — Investigator sends challenge messages before lead opens debate (`investigator.md:112-131`)
-
-**Problem:** Investigators have SendMessage and instructions to "challenge peers." No gate
-says "wait for lead's debate-start signal." An early investigator can message peers before
-all others have submitted their findings, breaking sequencing.
-
-**Fix:** Add explicit wait instruction at the top of the Challenging section.
+### 4b. `memory: project` on Investigator
 
 **File:** `plugins/cc-teams/agents/investigator.md`
 
-Prefix the "## Challenging Other Investigators" section with:
+Change frontmatter:
+```yaml
+model: inherit
+memory: project       # ← ADD (persistent bug patterns across sessions in this codebase)
+```
+
+NOTE: This is ADDITIVE to the manual `.claude/cc-teams/` system. The `memory: project` gives the investigator its own persistent store for codebase-specific bug patterns. It doesn't replace or conflict with workflow memory files.
+
+### 4c. `memory: user` on Security-Reviewer
+
+**File:** `plugins/cc-teams/agents/security-reviewer.md`
+
+Change frontmatter:
+```yaml
+model: inherit
+memory: user          # ← ADD (persistent vulnerability patterns across ALL codebases)
+```
+
+Same additive rationale — supplements cross-session security intelligence.
+
+---
+
+## Batch 5: Lint Scripts + Artifact Policy
+
+**File:** `scripts/lint-cc-teams-agent-tools.sh`
+
+**Change 1 — Add new reviewer agents to the reviewer case:**
+```bash
+# OLD:
+live-reviewer|hunter|security-reviewer|performance-reviewer|quality-reviewer)
+# NEW:
+live-reviewer|hunter|security-reviewer|performance-reviewer|quality-reviewer|accessibility-reviewer|api-contract-reviewer)
+```
+
+**Change 2 — Add new builder agents to the builder case:**
+```bash
+# Add separate case for frontend-builder and backend-builder:
+frontend-builder|backend-builder)
+  assert_has "$agent" "$tools" "Write"
+  assert_has "$agent" "$tools" "Edit"
+  assert_has "$agent" "$tools" "Bash"
+  ;;
+```
+
+**Change 3 — Add new agents to the agent iteration list** (lines 83-93):
+```bash
+for agent in \
+  builder frontend-builder backend-builder \
+  planner \
+  investigator \
+  verifier \
+  live-reviewer \
+  hunter \
+  security-reviewer performance-reviewer quality-reviewer \
+  accessibility-reviewer api-contract-reviewer; do
+```
+
+**File:** `scripts/lint-cc-teams-artifact-policy.sh`
+
+Add new agents to the artifact/evidence checks:
+```bash
+# Add to reviewer artifact discipline loop:
+for agent in live-reviewer hunter security-reviewer performance-reviewer quality-reviewer accessibility-reviewer api-contract-reviewer; do
+  require_pattern "$file" "^## Artifact Discipline" ...
+done
+
+# Add frontend-builder/backend-builder to write policy loop:
+for agent in builder planner frontend-builder backend-builder; do
+  require_pattern "$file" "^## Write Policy" ...
+done
+```
+
+---
+
+## Batch 6: CHANGELOG + Versions
+
+### `CHANGELOG.md` — Add v0.1.18
+
 ```markdown
-**WAIT FOR LEAD SIGNAL:** Do NOT message other investigators until the lead explicitly
-sends you a message initiating the debate phase. Complete your own investigation first,
-output your Router Contract, then wait. The lead will share all findings and open debate.
-Unsolicited peer messages before lead's debate signal are out-of-order and break the verdict.
+## [0.1.18] - 2026-02-22
+
+### Added
+
+**Specialist Reviewer Agents (conditional)**
+- `accessibility-reviewer`: WCAG 2.1 AA audit agent — 10-point checklist covering keyboard nav, ARIA, color contrast, semantic HTML, screen reader support. Spawned when UI files detected in builder's FILES_MODIFIED.
+- `api-contract-reviewer`: API breaking-change detector — 9-point checklist for removed endpoints, schema diffs, type incompatibility, auth/status code changes. Spawned when API route files detected.
+- Both integrate into Review Arena challenge round; conflict resolution: a11y and API contract win on CRITICAL (regulatory/client-facing impact)
+
+**Cross-Layer BUILD Workflow**
+- `frontend-builder` agent: TDD builder owning frontend scope (components/pages/hooks/styles), with isolation: worktree and frontend-patterns skill hints
+- `backend-builder` agent: TDD builder owning backend scope (api/services/models/db), with isolation: worktree and architecture-patterns skill hints
+- `cross-layer-build` skill: Protocol for running both builders in parallel with mandatory contract-first relay phase (backend defines API contract, lead validates, frontend implements against it)
+- Async live-reviewer mode: reviews all changes from both builders post-completion (vs blocking per-module in standard pair-build)
+- File conflict gate: lead validates no FILES_MODIFIED overlap across builders before proceeding
+
+**Pre-Spawn Optimization**
+- Downstream agents now pre-spawned when their predecessor STARTS (not when it finishes)
+- hunter pre-spawned when builder task starts → hunter executes immediately when builder completes
+- review triad pre-spawned when hunter starts → reviewers execute immediately when hunter completes
+- verifier pre-spawned when review tasks start → executes immediately when challenge completes
+- Eliminates 1-2 turn spawn overhead between each phase
+
+**Persistent Agent Memory**
+- `investigator`: `memory: project` — accumulates codebase-specific bug patterns across sessions
+- `security-reviewer`: `memory: user` — accumulates vulnerability patterns across ALL codebases
+- Both additive to existing .claude/cc-teams/ workflow memory system
+
+**Planner Worktree Isolation**
+- `planner`: `isolation: worktree` — plan file writes are now branch-isolated (WorktreeCreate hook syncs memory)
 ```
 
 ---
 
-### Fix 16 — Builder output section inconsistent with v2.4 contract (`builder.md:219-227`)
+## Critical Files
 
-**Problem:** `## Router Handoff (Stable Extraction)` (plain text section) doesn't include
-`PHASE_GATE_RESULT` or `PHASE_GATE_CMD`, but the YAML block below does.
-Two output sections now disagree.
-
-**Fix:** Add PHASE_GATE_RESULT to the Router Handoff stable extraction section.
-
-**File:** `plugins/cc-teams/agents/builder.md`
-
-In `### Router Handoff (Stable Extraction)`, add after `EVIDENCE_COMMANDS`:
-```
-PHASE_GATE_RESULT: [PASS/FAIL/N/A]
-PHASE_GATE_CMD: [gate command from plan or N/A]
-```
-
----
-
-### Fix 17 — Reviewers send unlimited messages after challenge complete (`security/performance/quality-reviewer.md`)
-
-**Problem:** After responding to the challenge round, reviewers continue messaging peers
-indefinitely. No close signal exists. Challenge phase can overshoot its deadline.
-
-**Fix:** Add one-response discipline to all 3 reviewer agents.
-
-**Files:** `plugins/cc-teams/agents/security-reviewer.md`, `performance-reviewer.md`, `quality-reviewer.md`
-
-Add to each reviewer's "## Challenge Round Response (MANDATORY)" section:
-```markdown
-**One-response discipline:** After you send your challenge response (AGREE/DISAGREE/ESCALATE),
-you are DONE with the challenge round. Do NOT send additional messages unless another reviewer
-directly messages you with a new argument that changes your assessment.
-Maximum one unsolicited challenge message per reviewer. The lead will synthesize consensus.
-```
+| File | Type | Change |
+|------|------|--------|
+| `plugins/cc-teams/agents/accessibility-reviewer.md` | CREATE | New reviewer agent |
+| `plugins/cc-teams/agents/api-contract-reviewer.md` | CREATE | New reviewer agent |
+| `plugins/cc-teams/agents/frontend-builder.md` | CREATE | New builder variant |
+| `plugins/cc-teams/agents/backend-builder.md` | CREATE | New builder variant |
+| `plugins/cc-teams/skills/cross-layer-build/SKILL.md` | CREATE | New workflow skill |
+| `plugins/cc-teams/skills/cc-teams-lead/SKILL.md` | EDIT | Pre-spawn; conditional routing; cross-layer detection; BUILD-CROSSLAYER template |
+| `plugins/cc-teams/skills/review-arena/SKILL.md` | EDIT | Add 2 conditional reviewers; conflict resolution rules |
+| `plugins/cc-teams/skills/pair-build/SKILL.md` | EDIT | Phase 3 conditional spawning |
+| `plugins/cc-teams/agents/planner.md` | EDIT | Add `isolation: worktree` |
+| `plugins/cc-teams/agents/investigator.md` | EDIT | Add `memory: project` |
+| `plugins/cc-teams/agents/security-reviewer.md` | EDIT | Add `memory: user` |
+| `scripts/lint-cc-teams-agent-tools.sh` | EDIT | Add new agents to case patterns |
+| `scripts/lint-cc-teams-artifact-policy.sh` | EDIT | Add new agents to checks |
+| `CHANGELOG.md` | EDIT | v0.1.18 entry |
+| `package.json` + `plugin.json` | EDIT | Bump to 0.1.18 |
 
 ---
-
-### Fix 18 — teammate-idle.sh has stale CONTRACT_VERSION check (`hooks/teammate-idle.sh:34`)
-
-**Problem:** The hook's error message says "CONTRACT_VERSION 2.3 schema" but we're now on 2.4.
-
-**Fix:** Update the version reference.
-
-**File:** `plugins/cc-teams/hooks/teammate-idle.sh`
-Change: `"See cc-teams:router-contract skill for the required CONTRACT_VERSION 2.3 schema."`
-To: `"See cc-teams:router-contract skill for the required CONTRACT_VERSION 2.4 schema."`
-
----
-
-## Critical Files Modified
-
-| File | Changes |
-|------|---------|
-| `plugins/cc-teams/agents/planner.md` | Fix SendMessage recipient (plain text output), fix probe race condition |
-| `plugins/cc-teams/agents/hunter.md` | Add SendMessage to tools |
-| `plugins/cc-teams/agents/verifier.md` | Add SendMessage to tools; fix npm audit jq check |
-| `plugins/cc-teams/agents/builder.md` | Add PHASE_GATE fields to Router Handoff section |
-| `plugins/cc-teams/agents/investigator.md` | Add debate phase gate (wait for lead signal) |
-| `plugins/cc-teams/agents/security-reviewer.md` | Add one-response discipline |
-| `plugins/cc-teams/agents/performance-reviewer.md` | Add one-response discipline |
-| `plugins/cc-teams/agents/quality-reviewer.md` | Add one-response discipline |
-| `plugins/cc-teams/skills/cc-teams-lead/SKILL.md` | Memory Update escape; orphan sweep confirmation; handoff payload roster; shutdown retry bound; pre-compaction hook reference |
-| `plugins/cc-teams/skills/bug-court/SKILL.md` | All-BLOCKED exit path; debate round counter |
-| `plugins/cc-teams/skills/review-arena/SKILL.md` | Confidence formula; reviewer message discipline |
-| `plugins/cc-teams/skills/router-contract/SKILL.md` | Synthesized contract merge rules |
-| `plugins/cc-teams/hooks/teammate-idle.sh` | Size guard; version string update |
-| `CHANGELOG.md` | Add v0.1.17 |
-| `package.json` + `plugin.json` | Bump to 0.1.17 |
 
 ## Verification
 
-1. `npm run check:functional-bible` — pass
-2. `npm run check:agent-tools` — pass (SendMessage added to hunter/verifier, allowed by lint)
-3. `npm run check:artifact-policy` — pass
-4. Smoke test: planner probe with PID file — no race condition on concurrent spawn
-5. Smoke test: teammate-idle hook with large message — size guard prevents OOM
-6. Manual review: orphan sweep no longer silently deletes — asks user for multi-workflow case
+1. `npm run check:agent-tools` — must pass for all 13 agents (9 existing + 4 new)
+2. `npm run check:artifact-policy` — must pass (new agents added to discipline loops)
+3. `npm run check:functional-bible` — must pass (no citation shifts from this batch)
+4. Manual: BUILD workflow with UI files → accessibility-reviewer spawned
+5. Manual: BUILD workflow with API route files → api-contract-reviewer spawned
+6. Manual: BUILD workflow with no UI/API → only standard 3 reviewers
+7. Manual: Cross-layer BUILD → both frontend-builder and backend-builder spawn, no FILES_MODIFIED overlap
+8. Smoke: `planner.md` probe still runs correctly in worktree mode
 
-## False Alarms (No Fix Needed)
+## No-Conflict Guarantee
 
-| Flaw # | Why No Fix |
-|--------|-----------|
-| Challenge Round vs Delegate Mode | Reference docs: delegate mode allows messaging. Challenge round is SendMessage-only. Valid as-is. |
-| "Advisory pre-check" boundary | Already defined precisely: destructive commands and secret exposure are the examples. Sufficient for now. |
-| QUICK path condition 4 vacuously true | Acceptable: fresh workflow has no open REM-FIX by definition. QUICK escalates to FULL if blocker discovered. |
+| Risk | Resolution |
+|------|-----------|
+| Conditional reviewers not spawned when needed | Lead detects FILES_MODIFIED from builder contract — explicit signal, not guesswork |
+| memory: project conflicts with .claude/cc-teams/ | Additive (different storage; agent-level vs workflow-level memory) |
+| Pre-spawn creates idle agent noise | Blocked tasks = no output, no tool calls; agents wait silently until unblocked |
+| Cross-layer builders edit same file | File conflict gate: lead validates FILES_MODIFIED across both contracts before proceeding |
+| async live-review in cross-layer loses real-time feedback | Accepted trade-off for true parallel implementation; post-completion review still catches issues before hunter |

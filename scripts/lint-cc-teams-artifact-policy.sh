@@ -30,7 +30,7 @@ require_pattern "$router_contract" "CLAIMED_ARTIFACTS" "Router Contract skill mu
 require_pattern "$router_contract" "EVIDENCE_COMMANDS" "Router Contract skill must define EVIDENCE_COMMANDS"
 
 for agent in \
-  builder \
+  builder frontend-builder backend-builder \
   planner \
   live-reviewer \
   hunter \
@@ -38,7 +38,9 @@ for agent in \
   verifier \
   security-reviewer \
   performance-reviewer \
-  quality-reviewer; do
+  quality-reviewer \
+  accessibility-reviewer \
+  api-contract-reviewer; do
   file="$repo/plugins/cc-teams/agents/$agent.md"
   [[ -f "$file" ]] || { echo "FAIL: Missing agent file $file" >&2; exit 1; }
   require_pattern "$file" "CONTRACT_VERSION: \"2\\.4\"" "$agent must emit Router Contract schema version"
@@ -51,7 +53,9 @@ for agent in \
   hunter \
   security-reviewer \
   performance-reviewer \
-  quality-reviewer; do
+  quality-reviewer \
+  accessibility-reviewer \
+  api-contract-reviewer; do
   file="$repo/plugins/cc-teams/agents/$agent.md"
   require_pattern "$file" "^## Artifact Discipline \\(MANDATORY\\)" "$agent must define Artifact Discipline section"
   require_pattern "$file" "Do NOT create standalone report files" "$agent must forbid standalone report files"
@@ -64,7 +68,7 @@ for agent in investigator verifier; do
   require_pattern "$file" "Do NOT create standalone .*report files" "$agent must forbid standalone report files"
 done
 
-for agent in builder planner; do
+for agent in builder frontend-builder backend-builder planner; do
   file="$repo/plugins/cc-teams/agents/$agent.md"
   [[ -f "$file" ]] || { echo "FAIL: Missing agent file $file" >&2; exit 1; }
   require_pattern "$file" "^## Write Policy \\(MANDATORY\\)" "$agent must define Write Policy section"
