@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.15] - 2026-02-22
+
+### Added
+- **Hook Infrastructure** (`plugins/cc-teams/hooks/`, `plugins/cc-teams/settings.json`)
+  - `TeammateIdle` hook: enforces Router Contract YAML presence before any agent goes idle
+  - `TaskCompleted` hook: validates `CC-TEAMS Memory Update` task has real memory files
+  - `WorktreeCreate` hook: syncs `.claude/cc-teams/` memory to new builder worktree
+  - `PreCompact` hook: writes compact checkpoint marker to `progress.md`
+  - `settings.json`: plugin-level hook registration (auto-activates on Claude Code v2.1.49+)
+- **Worktree isolation for builder** (`isolation: worktree` in agent frontmatter)
+  - Builder now runs in an isolated git worktree during BUILD workflows
+  - Eliminates file conflict risk for long-running or parallel build sessions
+- **`activeForm` convention** documented in task templates (present-continuous spinner label)
+
+### Fixed
+- Keyboard shortcut corrected: `Shift+Down` only (Shift+Up removed in Claude Code v2.1.47)
+- Added `Ctrl+F` (kill all background agents, two-press confirm) to display controls table
+
+### Notes
+- Core orchestration unchanged — all hooks exit 0 on unknown input (no-break guarantee)
+- Lead spawn prompt memory summary remains the primary memory source for builder in worktrees;
+  `WorktreeCreate` hook syncs files as an additional fidelity layer
+
 ## [0.1.14] - 2026-02-12
 
 ### Fixed

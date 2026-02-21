@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "TeammateIdle": [
+      {
+        "type": "command",
+        "command": "bash plugins/cc-teams/hooks/teammate-idle.sh"
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "type": "command",
+        "command": "bash plugins/cc-teams/hooks/task-completed.sh"
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "type": "command",
+        "command": "bash plugins/cc-teams/hooks/worktree-create.sh"
+      }
+    ],
+    "PreCompact": [
+      {
+        "type": "command",
+        "command": "bash plugins/cc-teams/hooks/pre-compact.sh"
+      }
+    ]
+  }
+}

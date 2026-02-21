@@ -1,6 +1,6 @@
 {
   "name": "cc-teams",
-  "version": "0.1.12",
+  "version": "0.1.15",
   "description": "Next-generation orchestration built on Agent Teams. Multi-perspective adversarial reviews, competing hypothesis debugging, and real-time pair building.",
   "author": {
     "name": "Rom Iluz",

@@ -398,6 +398,7 @@ This avoids lost/phantom tasks during team initialization.
 - Every workflow ends with `CC-TEAMS Memory Update` task (blocked by final phase)
 - Use `TaskUpdate({ taskId, addBlockedBy: [...] })` to enforce phase ordering
 - Include plan file path in description if following a plan
+- Include `activeForm` for UI spinner display (present-continuous, e.g., `activeForm: "Implementing {feature}"`)
 
 #### BUILD Tasks (FULL depth - default)
 
@@ -1112,15 +1113,25 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 | Action | Shortcut | When to Use |
 |--------|----------|-------------|
 | Enter delegate mode | **Shift+Tab** | After team creation (MANDATORY) |
-| Select teammate to view | **Shift+Up/Down** | Monitor teammate progress |
+| Select teammate to view | **Shift+Down** | Cycle through teammates (wraps to lead) |
 | Toggle task list | **Ctrl+T** | Check task status during workflow |
+| Kill all background agents | **Ctrl+F** (two-press confirm) | Emergency stop all teammates |
 | Interrupt teammate | **Escape** | Stop a teammate that's stuck or off-track |
 
-## Optional Hook-Driven Quality Gates (Disabled By Default)
+## Hook-Driven Quality Gates (Opt-in via `plugins/cc-teams/settings.json`)
 
-CC-Teams core orchestration MUST work without hooks. If project opts in:
-- `TeammateIdle`: exit code `2` if no Router Contract or missing evidence
-- `TaskCompleted`: exit code `2` if contract missing, `BLOCKING=true` without REM-FIX, or `SPEC_COMPLIANCE=FAIL` without user skip
+CC-Teams core orchestration works without hooks. Hooks add an automated safety net layer on top.
+When `plugins/cc-teams/settings.json` is loaded, four hooks activate:
+
+| Hook | Trigger | CC-Teams Effect |
+|------|---------|-----------------|
+| `TeammateIdle` | Teammate going idle | Enforces Router Contract YAML presence |
+| `TaskCompleted` | Task marked complete | Enforces Memory Update file existence |
+| `WorktreeCreate` | Builder worktree created | Syncs `.claude/cc-teams/` to new worktree |
+| `PreCompact` | Context compaction imminent | Writes checkpoint marker to `progress.md` |
+
+Hook scripts: `plugins/cc-teams/hooks/`
+Core behavior is unchanged if hooks are not installed or `settings.json` is not loaded.
 
 ## Model Selection Guidance
 

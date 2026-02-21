@@ -183,7 +183,9 @@ Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:1020`
 
 ## Hooks and Self-Claim Policy Canon
 
-- Hooks are optional and disabled-by-default for core runtime correctness.
+- Hooks are opt-in via `plugins/cc-teams/settings.json`; core orchestration runs correctly without them.
+- Four hooks implemented: `TeammateIdle` (Router Contract enforcement), `TaskCompleted` (Memory Update gate), `WorktreeCreate` (memory sync), `PreCompact` (checkpoint marker).
+- Hook scripts live in `plugins/cc-teams/hooks/`; all exit 0 on unknown/ambiguous input.
 - Self-claim is explicit opt-in and not default in role-specialized BUILD/DEBUG flows.
 
 Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:956`

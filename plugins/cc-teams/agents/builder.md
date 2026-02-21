@@ -4,6 +4,7 @@ description: "Implements features using TDD in Pair Build workflow"
 model: inherit
 color: green
 context: fork
+isolation: worktree
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill, LSP, AskUserQuestion, WebFetch, SendMessage
 skills: cc-teams:session-memory, cc-teams:router-contract, cc-teams:verification
 ---
