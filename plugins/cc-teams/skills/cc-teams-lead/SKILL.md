@@ -40,7 +40,7 @@ description: |
 | **REVIEW** | `cc-teams:review-arena` | 3 reviewers (security, performance, quality) |
 | **DEBUG** | `cc-teams:bug-court` | 2-5 investigators → builder fix → Review Arena (3 reviewers + challenge) → verifier |
 | **BUILD** | `cc-teams:pair-build` | Builder + Live Reviewer → Hunter → Review Arena (3 reviewers + challenge) → Verifier |
-| **PLAN** | Plan Approval Mode | Single planner (mode: "plan", lead approves) |
+| **PLAN** | `cc-teams:planning-patterns` | Single planner (**NO plan mode** — planner writes docs directly, lead reviews after) |
 
 ---
 
@@ -569,15 +569,26 @@ Research is a PREREQUISITE, not a hint. Planner cannot skip it.
 
 4. **Create Agent Team (MANDATORY gate)**:
    - `TeamCreate(...)` with deterministic team name
-   - spawn planner teammate **WITHOUT `mode: "plan"`**
+   - spawn planner teammate **WITHOUT `mode: "plan"`** — use default mode or `dontAsk`
+   - **Add this line at the TOP of the planner's spawn prompt:**
+     ```
+     IMPORTANT: DO NOT ENTER PLAN MODE. You are a documentation writer creating plan files.
+     You MUST be able to write files. If you detect plan mode is active, message me immediately.
+     ```
    - verify teammate reachability via direct message
    - enter delegate mode (`Shift+Tab`)
    - run `TaskList()` to confirm team-scoped task context
    - if team gate fails: STOP
 5. **Create task hierarchy in the team-scoped task list** (see Task-Based Orchestration above)
 6. **Invoke planner** (pass research results + file path if step 3 was executed)
-7. **Review plan file** after planner completes → Request revision via message if needed
-8. Update memory → Reference saved plan, then execute TEAM_SHUTDOWN gate
+7. **If planner sends `BLOCKED: plan mode detected`:**
+   - This is Claude Code auto-enabling plan mode for the planner agent
+   - Shut down the current planner teammate
+   - Re-spawn planner with `mode: "dontAsk"` to prevent auto-plan-mode
+   - Start the spawn prompt with the anti-plan-mode header (see step 4 above)
+   - This is a known Claude Code behavior — do not treat as workflow failure
+8. **Review plan file** after planner completes → Request revision via message if needed
+9. Update memory → Reference saved plan, then execute TEAM_SHUTDOWN gate
 
 **PLANNER MODE RULE (CRITICAL):**
 ```
@@ -586,6 +597,11 @@ NEVER spawn planner with mode: "plan"
 - Planner writes documentation (plan files), not code
 - Agent Teams plan mode is for reviewing CODE changes before they happen
 - Plan files are documentation artifacts, not code changes
+
+Claude Code auto-plan-mode mitigation:
+- Always add "DO NOT ENTER PLAN MODE" at the TOP of the planner spawn prompt
+- Use mode: "dontAsk" if auto-plan-mode keeps triggering
+- If planner sends BLOCKED message → re-spawn with dontAsk mode (see step 7 above)
 ```
 
 ---
@@ -1169,7 +1185,7 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 10. **Lead is fixed for team lifetime.** The creator session remains the lead; do not assume leadership transfer to teammates.
 11. **Permission inheritance at spawn.** Teammates start with lead permission mode; per-teammate permission tuning can only happen after spawn.
 12. **Broadcast sparingly.** Prefer targeted `message` over `broadcast`; broadcast token cost scales with team size.
-13. **NEVER spawn planner with `mode: "plan"`.** Plan mode = read-only = planner cannot write plan files = DEADLOCK. Plan mode is for reviewing CODE changes, not documentation. Planner writes plan files directly.
+13. **NEVER spawn planner with `mode: "plan"`.** Plan mode = read-only = planner cannot write plan files = DEADLOCK. Claude Code may auto-enable plan mode for agents doing planning work — always add "DO NOT ENTER PLAN MODE" at the top of the planner spawn prompt and use `mode: "dontAsk"` if needed. If planner sends BLOCKED message, re-spawn with `dontAsk`. See PLAN workflow step 7.
 
 ## Agent Teams Display & Controls
 
