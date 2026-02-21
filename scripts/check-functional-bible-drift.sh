@@ -15,13 +15,13 @@ command -v rg >/dev/null 2>&1 || fail "ripgrep (rg) is required"
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 manifest="$repo/docs/functional-governance/protocol-manifest.md"
-bible="$repo/docs/functional-governance/cc100x-bible-functional.md"
+bible="$repo/docs/functional-governance/cc-teams-bible-functional.md"
 
 require_file "$manifest"
 require_file "$bible"
 
-rg -q '^-\s+`plugins/cc100x/skills`$' "$manifest" || fail "Manifest missing skills source root"
-rg -q '^-\s+`plugins/cc100x/agents`$' "$manifest" || fail "Manifest missing agents source root"
+rg -q '^-\s+`plugins/cc-teams/skills`$' "$manifest" || fail "Manifest missing skills source root"
+rg -q '^-\s+`plugins/cc-teams/agents`$' "$manifest" || fail "Manifest missing agents source root"
 
 mapfile -t citations < <(sed -n 's/^Source: `\([^`]*\)`[[:space:]]*$/\1/p' "$bible")
 (( ${#citations[@]} >= 12 )) || fail "Bible must include at least 12 Source citations"
@@ -31,7 +31,7 @@ for citation in "${citations[@]}"; do
   line="${citation##*:}"
 
   case "$path" in
-    plugins/cc100x/skills/*|plugins/cc100x/agents/*) ;;
+    plugins/cc-teams/skills/*|plugins/cc-teams/agents/*) ;;
     *) fail "Non-functional source citation: $citation" ;;
   esac
 

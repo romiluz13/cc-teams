@@ -1,8 +1,9 @@
 # Agent Teams - Complete Official Documentation
 
-> **Source**: `code.claude.com/docs/en/agent-teams` (fetched Feb 5, 2026)
+> **Source**: `docs.anthropic.com/en/docs/claude-code/agent-teams` (fetched Feb 21, 2026)
 > **Status**: Experimental, disabled by default
 > **Enable**: `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings.json env
+> **Latest CLI**: v2.1.50
 
 ---
 
@@ -172,13 +173,67 @@ Each teammate is a full, independent Claude Code session.
 **In-process mode:**
 | Action | Shortcut |
 |--------|----------|
-| Select/cycle teammates | **Shift+Up/Down** |
+| Cycle through teammates | **Shift+Down** (wraps back to lead) |
 | Send message to selected | **Type** |
 | View teammate's session | **Enter** |
 | Interrupt current turn | **Escape** |
 | Toggle task list | **Ctrl+T** |
+| Kill all background agents | **Ctrl+F** (two-press confirmation) |
+
+> **Changed in v2.1.47**: Simplified to Shift+Down only (with wrapping). Shift+Up removed.
 
 **Split-pane mode:** Click into a teammate's pane to interact directly.
+
+---
+
+## Enforce Quality Gates with Hooks
+
+Use hooks to enforce rules when teammates finish work or tasks complete (added v2.1.33):
+
+| Hook | Trigger | Effect of exit code 2 |
+|------|---------|----------------------|
+| **`TeammateIdle`** | Teammate about to go idle | Sends stderr as feedback; teammate keeps working |
+| **`TaskCompleted`** | Task being marked complete | Prevents completion; sends stderr feedback to model |
+
+`TeammateIdle` fires on every occurrence (no matchers). Input includes `teammate_name` and `team_name`.
+
+`TaskCompleted` fires when a task is marked via `TaskUpdate` or when a teammate finishes with in-progress tasks. Input includes `task_id`, `task_subject`, and optionally `task_description`, `teammate_name`, `team_name`.
+
+**Example `TeammateIdle` hook** (require build artifact before going idle):
+```bash
+#!/bin/bash
+if [ ! -f "./dist/output.js" ]; then
+  echo "Build artifact missing. Run the build before stopping." >&2
+  exit 2
+fi
+exit 0
+```
+
+Other hooks added after v2.1.32:
+- **`ConfigChange`** (v2.1.49): fires when config files change during a session — useful for enterprise auditing
+- **`WorktreeCreate`** / **`WorktreeRemove`** (v2.1.50): fires when worktree isolation creates/removes worktrees — replaces default git behavior
+
+---
+
+## Worktree Isolation for Agents
+
+Added v2.1.49-v2.1.50. Agents can run in isolated git worktrees:
+
+```bash
+# Start Claude in an isolated worktree
+claude --worktree  # or -w
+```
+
+Agent definitions support declarative isolation:
+```yaml
+---
+isolation: worktree
+---
+```
+
+Subagents launched via `Task` tool also support `isolation: "worktree"` parameter. Hooks `WorktreeCreate` and `WorktreeRemove` fire during worktree lifecycle.
+
+**`background: true` in agent definitions** (v2.1.49): agents always run as background tasks when defined with this field.
 
 ---
 
@@ -313,7 +368,7 @@ Removes shared team resources. **Fails if teammates still running** → shut the
 
 ---
 
-## Known Limitations (Feb 5, 2026)
+## Known Limitations (Updated Feb 21, 2026 — v2.1.50)
 
 | Limitation | Details |
 |-----------|---------|
@@ -327,6 +382,13 @@ Removes shared team resources. **Fails if teammates still running** → shut the
 | **Split panes need tmux/iTerm2** | In-process works anywhere. Split panes not in VS Code terminal, Windows Terminal, Ghostty. |
 
 **CLAUDE.md works normally**: teammates read CLAUDE.md from their working directory.
+
+**Resolved issues (post-Feb 5)**:
+- Fixed Agent Teams using wrong model identifier for Bedrock/Vertex/Foundry (v2.1.41)
+- Fixed agent teammate sessions in tmux to send and receive messages (v2.1.33)
+- Fixed custom agent `model` field in `.claude/agents/*.md` being ignored when spawning team teammates (v2.1.47)
+- Fixed memory leak where completed teammate tasks were never garbage collected (v2.1.50)
+- Fixed Agent Teams teammates failing on Bedrock/Vertex/Foundry (v2.1.45)
 
 ---
 
@@ -349,8 +411,15 @@ Removes shared team resources. **Fails if teammates still running** → shut the
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | env / settings.json | `"1"` | Enable feature |
 | `teammateMode` | settings.json | `"auto"` / `"in-process"` / `"tmux"` | Display mode |
 | `--teammate-mode` | CLI flag | `in-process` | Per-session override |
+| `--worktree` / `-w` | CLI flag | — | Start in isolated git worktree (v2.1.49) |
+| `isolation: worktree` | agent definition frontmatter | — | Declarative worktree isolation (v2.1.50) |
+| `background: true` | agent definition frontmatter | — | Always run as background task (v2.1.49) |
+| `memory` | agent definition frontmatter | `user`/`project`/`local` | Persistent agent memory (v2.1.33) |
+| `CLAUDE_CODE_DISABLE_1M_CONTEXT` | env | `1` | Disable 1M context window support (v2.1.50) |
 | Team config | `~/.claude/teams/{name}/config.json` | JSON | Team member registry |
 | Task list | `~/.claude/tasks/{name}/` | Files | Shared task state |
+
+**New CLI command** (v2.1.50): `claude agents` — lists all configured agents.
 
 ---
 

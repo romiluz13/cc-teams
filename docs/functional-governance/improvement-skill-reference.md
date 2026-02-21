@@ -1,14 +1,14 @@
 # Improvement Skill Reference Contract
 
-This is the operating contract for any future "improvement" workflow that updates CC100x orchestration.
+This is the operating contract for any future "improvement" workflow that updates CC-Teams orchestration.
 
 ## Read Order (Mandatory)
 
 1. `docs/functional-governance/protocol-manifest.md`
-2. `docs/functional-governance/cc100x-bible-functional.md`
+2. `docs/functional-governance/cc-teams-bible-functional.md`
 3. Functional targets only:
-   - `plugins/cc100x/skills`
-   - `plugins/cc100x/agents`
+   - `plugins/cc-teams/skills`
+   - `plugins/cc-teams/agents`
 
 ## Hard Rules
 
@@ -27,7 +27,7 @@ npm run check:functional-bible
 
 ## Merge Checklist
 
-- [ ] Functional change implemented in `plugins/cc100x/skills` or `plugins/cc100x/agents`
+- [ ] Functional change implemented in `plugins/cc-teams/skills` or `plugins/cc-teams/agents`
 - [ ] `protocol-manifest.md` updated if behavior changed
-- [ ] `cc100x-bible-functional.md` updated with citations
+- [ ] `cc-teams-bible-functional.md` updated with citations
 - [ ] Drift check passes

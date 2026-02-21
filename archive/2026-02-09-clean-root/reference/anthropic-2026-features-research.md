@@ -7,8 +7,115 @@
 
 ---
 
-**Last Updated**: February 5, 2026
+**Last Updated**: February 21, 2026 (latest CLI: v2.1.50)
 **Purpose**: External reference for Claude Code features and capabilities (not CC10x-specific)
+
+---
+
+## February 2026 Releases (Post-Launch Updates — v2.1.33 through v2.1.50)
+
+### TeammateIdle + TaskCompleted Hooks (v2.1.33)
+
+**Quality gates for multi-agent workflows.**
+
+Two new hook events enable enforcement of completion criteria before agents stop or tasks close:
+
+| Hook | Fires when | Exit code 2 effect |
+|------|-----------|-------------------|
+| `TeammateIdle` | Teammate about to go idle | Sends stderr feedback; teammate stays working |
+| `TaskCompleted` | Task being marked complete | Prevents completion; feeds stderr to model |
+
+**`TeammateIdle` input**: common fields + `teammate_name`, `team_name`
+**`TaskCompleted` input**: common fields + `task_id`, `task_subject`, optionally `task_description`, `teammate_name`, `team_name`
+
+Neither hook supports matchers — both fire on every occurrence.
+
+Also in v2.1.33:
+- Fixed agent teammate sessions in tmux to send/receive messages
+- Added `Task(agent_type)` syntax for restricting which sub-agents can be spawned
+- Added `memory` frontmatter for agents (`user`/`project`/`local` scope)
+
+---
+
+### Worktree Isolation (v2.1.49-v2.1.50)
+
+**Isolated git worktrees for agents and subagents.**
+
+- `--worktree` / `-w` flag: start Claude in an isolated git worktree
+- `isolation: "worktree"` in subagent Task calls: subagent works in a temporary worktree
+- `isolation: worktree` in agent definition frontmatter: declarative worktree isolation
+- `background: true` in agent definition frontmatter: agent always runs as background task
+
+New hooks for worktree lifecycle:
+- `WorktreeCreate` (v2.1.50): fires when worktree created via `--worktree` or `isolation: "worktree"`. Replaces default git behavior.
+- `WorktreeRemove` (v2.1.50): fires when worktree removed at session exit or subagent finish.
+
+---
+
+### Additional New Hooks (v2.1.49-v2.1.50)
+
+- `ConfigChange` (v2.1.49): fires when configuration files change during a session. Useful for enterprise security auditing. Can optionally block settings changes.
+- `PostToolUseFailure`: fires after a tool call fails
+- `PermissionRequest`: fires when a permission dialog appears
+- `SubagentStart`: fires when a subagent is spawned
+- `PreCompact`: fires before context compaction
+- `SessionEnd`: fires when a session terminates
+
+---
+
+### Sonnet 4.6 + Fast Mode (v2.1.45, v2.1.36)
+
+- Claude Sonnet 4.6 added (v2.1.45) — Sonnet 4.5 with 1M context being removed from Max plan
+- Fast mode for Opus 4.6 available (v2.1.36) — now includes full 1M context window (v2.1.50)
+- `CLAUDE_CODE_DISABLE_1M_CONTEXT` env var to disable 1M context support
+
+---
+
+### Simplified Teammate Navigation (v2.1.47)
+
+**Changed**: Shifted to Shift+Down only (with wrapping) for cycling teammates. Shift+Up removed.
+
+Also in v2.1.47:
+- Fixed custom agent `model` field in `.claude/agents/*.md` being ignored when spawning team teammates
+- Added `last_assistant_message` field to Stop and SubagentStop hook inputs
+- Ctrl+F to kill all background agents (two-press confirmation)
+
+---
+
+### `claude agents` CLI Command (v2.1.50)
+
+Lists all configured agents:
+```bash
+claude agents
+```
+
+---
+
+### Agent Teams Bug Fixes (Post-Feb 5)
+
+| Version | Fix |
+|---------|-----|
+| v2.1.33 | Fixed agent teammate sessions in tmux not sending/receiving messages |
+| v2.1.33 | Fixed warnings about agent teams not being available on your plan |
+| v2.1.34 | Fixed crash when agent teams setting changed between renders |
+| v2.1.41 | Fixed Agent Teams using wrong model identifier for Bedrock/Vertex/Foundry |
+| v2.1.45 | Fixed Agent Teams teammates failing on Bedrock/Vertex/Foundry (env var propagation to tmux) |
+| v2.1.47 | Fixed custom agent `model` field being ignored when spawning team teammates |
+| v2.1.50 | Fixed memory leak where completed teammate tasks were never garbage collected |
+
+---
+
+### Other Notable v2.1.28-v2.1.50 Features
+
+| Version | Feature |
+|---------|---------|
+| v2.1.30 | `pages` param for Read tool on PDFs; token count + tool metrics in Task results |
+| v2.1.32 | Agent Teams launch; automatic memory recording and recall |
+| v2.1.41 | `claude auth login/status/logout` CLI subcommands; Windows ARM64 support |
+| v2.1.42 | Improved prompt cache hit rates by moving date out of system prompt |
+| v2.1.45 | claude.ai MCP connectors support in Claude Code |
+| v2.1.49 | Plugins can ship `settings.json` for default configuration |
+| v2.1.50 | `CLAUDE_CODE_SIMPLE` disables MCP tools, attachments, hooks, CLAUDE.md loading |
 
 ---
 
@@ -230,6 +337,17 @@ Each teammate has its own context window. When spawned, a teammate loads the sam
 
 ---
 
+### Enforce Quality Gates with Hooks (v2.1.33+)
+
+Use hooks to enforce rules at key agent lifecycle points:
+
+- **`TeammateIdle`**: runs when a teammate is about to go idle. Exit code 2 sends stderr as feedback and keeps teammate working.
+- **`TaskCompleted`**: runs when a task is being marked complete. Exit code 2 prevents completion and sends feedback to the model.
+
+Configure in `settings.json` under `hooks.TeammateIdle` or `hooks.TaskCompleted`.
+
+---
+
 ### Shutting Down Teammates
 
 Gracefully end a teammate's session:
@@ -351,7 +469,7 @@ debate. Update the findings doc with whatever consensus emerges.
 
 ---
 
-### Known Limitations (Official - As of Feb 5, 2026)
+### Known Limitations (Official - Updated Feb 21, 2026)
 
 | Limitation | Description |
 |-----------|-------------|
@@ -404,11 +522,12 @@ Agent Teams automate what you'd otherwise do manually with multiple terminal ses
 
 | Shortcut | Action |
 |----------|--------|
-| **Shift+Up/Down** | Select / cycle through teammates |
+| **Shift+Down** | Cycle through teammates (wraps back to lead). **Note**: Shift+Up removed in v2.1.47. |
 | **Enter** | View selected teammate's session |
-| **Escape** | Interrupt teammate's current turn |
+| **Escape** | Interrupt teammate's current turn (background agents keep running) |
 | **Ctrl+T** | Toggle the task list |
 | **Shift+Tab** | Cycle into delegate mode |
+| **Ctrl+F** | Kill all background agents (two-press confirmation) — added v2.1.47/v2.1.49 |
 | **Type** | Send message to selected teammate |
 
 ---
@@ -527,10 +646,19 @@ The old TodoWrite had critical issues:
 
 ---
 
-### Recent Changelog Highlights (v2.1.17 - v2.1.27)
+### Recent Changelog Highlights (v2.1.17 - v2.1.50)
 
 | Version | Key Features |
 |---------|-------------|
+| v2.1.50 | `WorktreeCreate`/`WorktreeRemove` hooks, `claude agents` CLI, memory leak fixes in agent teams, `CLAUDE_CODE_DISABLE_1M_CONTEXT` |
+| v2.1.49 | `--worktree` flag, `isolation: "worktree"` for subagents, `ConfigChange` hook, `background: true` agent def, Ctrl+F kill agents |
+| v2.1.47 | Shift+Down only teammate nav, `last_assistant_message` in Stop hooks, fix custom agent model field ignored |
+| v2.1.45 | Sonnet 4.6 support, fix Agent Teams on Bedrock/Vertex/Foundry |
+| v2.1.41 | `claude auth login/status/logout` subcommands, Windows ARM64, fix Agent Teams model ID on Bedrock |
+| v2.1.36 | Fast mode for Opus 4.6 |
+| v2.1.33 | `TeammateIdle` + `TaskCompleted` hooks, `memory` frontmatter for agents, `Task(agent_type)` restriction |
+| v2.1.32 | **Agent Teams launch** (research preview), automatic memory recording/recall |
+| v2.1.30 | `pages` param for PDF reading, token/tool metrics in Task results |
 | v2.1.27 | `--from-pr` flag to resume sessions by PR, auto PR linking |
 | v2.1.23 | Customizable spinner verbs, mTLS/proxy fixes |
 | v2.1.21 | Python venv auto-activation, prefer Read/Edit over bash cat/sed |
@@ -646,13 +774,27 @@ JSON Schema defines structure but NOT:
 
 | Hook Type | Trigger |
 |-----------|---------|
-| UserPromptSubmit | Before Claude processes prompt |
-| PreToolUse | Before tool execution |
-| PostToolUse | After tool completes |
-| Stop | When Claude stops working |
-| SubagentStop | When subagent completes |
+| `SessionStart` | When session begins or resumes |
+| `UserPromptSubmit` | Before Claude processes prompt |
+| `PreToolUse` | Before tool execution (can block) |
+| `PermissionRequest` | When a permission dialog appears |
+| `PostToolUse` | After tool completes |
+| `PostToolUseFailure` | After a tool call fails |
+| `Notification` | When Claude sends a notification |
+| `SubagentStart` | When a subagent is spawned |
+| `SubagentStop` | When subagent completes |
+| `Stop` | When Claude stops working |
+| `TeammateIdle` | When agent team teammate about to go idle (v2.1.33) |
+| `TaskCompleted` | When a task is being marked complete (v2.1.33) |
+| `ConfigChange` | When config file changes during session (v2.1.49) |
+| `WorktreeCreate` | When worktree created via `--worktree` or `isolation: "worktree"` (v2.1.50) |
+| `WorktreeRemove` | When worktree removed at session exit or subagent finish (v2.1.50) |
+| `PreCompact` | Before context compaction |
+| `SessionEnd` | When a session terminates |
 
 **Prompt-Based Hooks:** For Stop/SubagentStop - Claude makes intelligent, context-aware decisions.
+
+**`TeammateIdle` and `TaskCompleted`** use exit codes only (no JSON decision control). Exit code 2 sends stderr as feedback and blocks the idle/completion.
 
 ---
 
@@ -677,10 +819,13 @@ JSON Schema defines structure but NOT:
 
 | Variable | Purpose |
 |----------|---------|
+| `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | Enable agent teams feature (set to `"1"`) |
 | `CLAUDE_CODE_TASK_LIST_ID` | Share task state across sessions |
 | `CLAUDE_CODE_ENABLE_TASKS` | Toggle new Tasks system (default: true) |
 | `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` | Disable beta features |
-| `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAU_MD` | Load CLAUDE.md from --add-dir paths |
+| `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD` | Load CLAUDE.md from --add-dir paths |
+| `CLAUDE_CODE_DISABLE_1M_CONTEXT` | Disable 1M context window support (v2.1.50) |
+| `CLAUDE_CODE_SIMPLE` | Minimal mode: disables skills, memory, agents, MCP, hooks, CLAUDE.md (v2.1.50) |
 
 ---
 

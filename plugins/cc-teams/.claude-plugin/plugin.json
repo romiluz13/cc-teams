@@ -1,0 +1,24 @@
+{
+  "name": "cc-teams",
+  "version": "0.1.12",
+  "description": "Next-generation orchestration built on Agent Teams. Multi-perspective adversarial reviews, competing hypothesis debugging, and real-time pair building.",
+  "author": {
+    "name": "Rom Iluz",
+    "email": "rom@iluz.net",
+    "url": "https://github.com/romiluz13"
+  },
+  "homepage": "https://github.com/romiluz13/cc-teams",
+  "repository": "https://github.com/romiluz13/cc-teams",
+  "license": "MIT",
+  "keywords": [
+    "agent-teams",
+    "orchestration",
+    "adversarial-review",
+    "competing-hypotheses",
+    "pair-building",
+    "code-review",
+    "tdd",
+    "debugging",
+    "claude-code"
+  ]
+}

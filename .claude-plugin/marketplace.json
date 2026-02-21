@@ -1,17 +1,17 @@
 {
-  "name": "cc100x",
+  "name": "cc-teams",
   "owner": {
     "name": "Rom Iluz",
     "email": "rom@iluz.net",
     "url": "https://github.com/romiluz13"
   },
   "metadata": {
-    "description": "cc100x v0.1.12 - Next-Gen Orchestration on Agent Teams",
+    "description": "cc-teams v0.1.12 - Next-Gen Orchestration on Agent Teams",
     "version": "0.1.12"
   },
   "plugins": [
     {
-      "name": "cc100x",
+      "name": "cc-teams",
       "description": "Next-generation orchestration built on Agent Teams. Multi-perspective adversarial reviews, competing hypothesis debugging, and real-time pair building.",
       "version": "0.1.12",
       "author": {
@@ -19,8 +19,8 @@
         "email": "rom@iluz.net",
         "url": "https://github.com/romiluz13"
       },
-      "homepage": "https://github.com/romiluz13/cc100x",
-      "repository": "https://github.com/romiluz13/cc100x",
+      "homepage": "https://github.com/romiluz13/cc-teams",
+      "repository": "https://github.com/romiluz13/cc-teams",
       "license": "MIT",
       "keywords": [
         "agent-teams",
@@ -34,7 +34,7 @@
         "claude-code"
       ],
       "category": "development-tools",
-      "source": "./plugins/cc100x"
+      "source": "./plugins/cc-teams"
     }
   ]
 }

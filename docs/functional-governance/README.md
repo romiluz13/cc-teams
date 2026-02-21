@@ -1,13 +1,13 @@
-# Functional Governance (CC100x)
+# Functional Governance (CC-Teams)
 
-This folder defines how documentation stays correct while CC100x evolves.
+This folder defines how documentation stays correct while CC-Teams evolves.
 
 ## Canonical Rule
 
 Only these folders are functional source of truth:
 
-- `plugins/cc100x/skills`
-- `plugins/cc100x/agents`
+- `plugins/cc-teams/skills`
+- `plugins/cc-teams/agents`
 
 Everything else is derived documentation.
 
@@ -15,7 +15,7 @@ Everything else is derived documentation.
 
 - `protocol-manifest.md`
   Canonical orchestration map extracted from functional files.
-- `cc100x-bible-functional.md`
+- `cc-teams-bible-functional.md`
   Functional bible with source citations for every rule.
 - `improvement-skill-reference.md`
   Contract for future improvement work (what to read first, what to validate).

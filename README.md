@@ -1,4 +1,4 @@
-# cc100x
+# cc-teams
 
 ### Next-Gen Orchestration on Agent Teams
 
@@ -20,8 +20,8 @@
 
 ```bash
 # Step 1: Install plugin
-/plugin marketplace add romiluz13/cc100x-experiment-next-version-of-cc10x
-/plugin install cc100x@romiluz13
+/plugin marketplace add romiluz13/cc-teams-experiment-next-version-of-cc10x
+/plugin install cc-teams@romiluz13
 
 # Step 2: Enable Agent Teams in ~/.claude/settings.json
 {
@@ -33,17 +33,17 @@
 # Step 3: Restart Claude Code
 ```
 
-> **Tip:** Copy this README, paste it into Claude Code, and say: **"Set up cc100x for me"**
+> **Tip:** Copy this README, paste it into Claude Code, and say: **"Set up cc-teams for me"**
 
 ---
 
-## What Makes CC100x Different From CC10x
+## What Makes CC-Teams Different From CC10x
 
 CC10x uses **sequential agent delegation** - one agent at a time, orchestrated by the router.
 
-CC100x uses **Agent Teams** - real teammates that message each other, debate, and work in parallel:
+CC-Teams uses **Agent Teams** - real teammates that message each other, debate, and work in parallel:
 
-| Feature | CC10x | CC100x |
+| Feature | CC10x | CC-Teams |
 |---------|-------|--------|
 | **Code Review** | Single reviewer | **3 reviewers** (security + performance + quality) who **challenge each other** |
 | **Debugging** | Single investigator | **Multiple investigators** each championing a different hypothesis, then **debating** |
@@ -59,7 +59,7 @@ CC100x uses **Agent Teams** - real teammates that message each other, debate, an
 YOU: "build a user auth system"
 
                     ┌──────────────────────────────────────────────┐
-                    │              cc100x-lead                       │
+                    │              cc-teams-lead                       │
                     │       (creates team, delegates)                │
                     └───────────────┬──────────────────────────────┘
                                     │
@@ -155,7 +155,7 @@ Reviewer: "LGTM"
 
 | Skill | Purpose |
 |-------|---------|
-| **cc100x-lead** | Entry point - creates teams, delegates, collects results |
+| **cc-teams-lead** | Entry point - creates teams, delegates, collects results |
 | **review-arena** | Multi-perspective adversarial review protocol |
 | **bug-court** | Competing hypothesis debugging protocol |
 | **pair-build** | Real-time pair programming protocol |
@@ -182,11 +182,11 @@ Domain skills provide deep expertise. Loaded automatically by the lead via SKILL
 
 ---
 
-## What Makes CC100x TRULY 100x (Not Just Renamed CC10x)
+## What Makes CC-Teams TRULY 100x (Not Just Renamed CC10x)
 
-CC100x isn't just CC10x with Agent Teams bolted on. It's architecturally different:
+CC-Teams isn't just CC10x with Agent Teams bolted on. It's architecturally different:
 
-| Dimension | CC10x (Sequential) | CC100x (Agent Teams) |
+| Dimension | CC10x (Sequential) | CC-Teams (Agent Teams) |
 |-----------|---------------------|----------------------|
 | **Review quality** | 1 reviewer sees everything | 3 specialists see what others miss, then **cross-examine** |
 | **Debug speed** | 1 hypothesis at a time, try → fail → next | 3+ hypotheses **in parallel**, strongest evidence wins |
@@ -198,16 +198,16 @@ CC100x isn't just CC10x with Agent Teams bolted on. It's architecturally differe
 | **Conflict resolution** | Router decides | **Agents debate**, lead arbitrates with evidence |
 | **Communication** | Hub-spoke (router relays) | **Peer-to-peer mesh** (agents message each other directly) |
 
-**The fundamental shift:** CC10x = one brain orchestrating one agent at a time. CC100x = one coordinator managing a team of specialists who challenge each other.
+**The fundamental shift:** CC10x = one brain orchestrating one agent at a time. CC-Teams = one coordinator managing a team of specialists who challenge each other.
 
 ---
 
 ## Memory Persistence
 
-CC100x survives context compaction:
+CC-Teams survives context compaction:
 
 ```
-.claude/cc100x/
+.claude/cc-teams/
 ├── activeContext.md   # Current focus, decisions, learnings
 ├── patterns.md        # Project conventions, common gotchas
 └── progress.md        # Completed work, verification evidence
@@ -219,14 +219,14 @@ CC100x survives context compaction:
 
 ## Quality Validation Harness (Phase D)
 
-CC100x includes reproducible benchmark scaffolding for production change-control gates.
+CC-Teams includes reproducible benchmark scaffolding for production change-control gates.
 
 ```bash
 # Run static protocol checks
-npm run check:cc100x
+npm run check:cc-teams
 
 # Create a benchmark run scaffold
-npm run eval:run -- --candidate cc100x --profile deterministic
+npm run eval:run -- --candidate cc-teams --profile deterministic
 
 # Score a filled run scaffold
 npm run eval:score -- --run-dir artifacts/eval/<run-id>/deterministic
@@ -245,8 +245,8 @@ Generated benchmark artifacts:
 ### Step 1: Install Plugin
 
 ```bash
-/plugin marketplace add romiluz13/cc100x-experiment-next-version-of-cc10x
-/plugin install cc100x@romiluz13
+/plugin marketplace add romiluz13/cc-teams-experiment-next-version-of-cc10x
+/plugin install cc-teams@romiluz13
 ```
 
 `/plugin install` uses the plugin package name (`name` in `plugin.json`), not the repository slug.
@@ -264,7 +264,7 @@ Add to `~/.claude/settings.json`:
 
 ### Step 3: Activate
 
-Copy this README, paste it into Claude Code, and say: **"Set up cc100x for me"**
+Copy this README, paste it into Claude Code, and say: **"Set up cc-teams for me"**
 
 ### Step 4: Restart Claude Code
 
@@ -272,7 +272,7 @@ Copy this README, paste it into Claude Code, and say: **"Set up cc100x for me"**
 
 ## For Claude Code: Setup Instructions
 
-**When user says "set up cc100x", "install cc100x", or similar:**
+**When user says "set up cc-teams", "install cc-teams", or similar:**
 
 ### Step 1: Check Existing Files
 - Read `~/.claude/CLAUDE.md` (may not exist)
@@ -281,21 +281,21 @@ Copy this README, paste it into Claude Code, and say: **"Set up cc100x for me"**
 ### Step 2: Update `~/.claude/CLAUDE.md`
 
 **If file doesn't exist:** CREATE with the template below.
-**If file exists:** PREPEND the cc100x section below, keep user's existing content.
+**If file exists:** PREPEND the cc-teams section below, keep user's existing content.
 
 ```markdown
-# CC100x Orchestration (Always On)
+# CC-Teams Orchestration (Always On)
 
-IMPORTANT: For ANY development task, route through cc100x-lead before making code changes.
+IMPORTANT: For ANY development task, route through cc-teams-lead before making code changes.
 IMPORTANT: Read-only exploration is allowed, but invoke the lead before Edit/Write/code-changing Bash.
 IMPORTANT: Never bypass the lead. It is the system.
-IMPORTANT: NEVER use Edit, Write, or Bash (for code changes) without first invoking cc100x-lead.
+IMPORTANT: NEVER use Edit, Write, or Bash (for code changes) without first invoking cc-teams-lead.
 
-**Skip CC100x ONLY when:**
-- User EXPLICITLY says "don't use cc100x", "without cc100x", or "skip cc100x"
+**Skip CC-Teams ONLY when:**
+- User EXPLICITLY says "don't use cc-teams", "without cc-teams", or "skip cc-teams"
 - No interpretation. No guessing. Only these exact opt-out phrases.
 
-[CC100x]|entry: cc100x:cc100x-lead
+[CC-Teams]|entry: cc-teams:cc-teams-lead
 ```
 
 ### Step 3: Update `~/.claude/settings.json`
@@ -311,7 +311,7 @@ Ensure Agent Teams is enabled:
 
 Add permissions:
 ```json
-"Bash(mkdir -p .claude/cc100x)",
+"Bash(mkdir -p .claude/cc-teams)",
 "Bash(mkdir -p docs/plans)",
 "Bash(mkdir -p docs/research)",
 "Bash(git status)",
@@ -321,7 +321,7 @@ Add permissions:
 ```
 
 ### Step 4: Confirm
-> "cc100x is set up! Please restart Claude Code to activate."
+> "cc-teams is set up! Please restart Claude Code to activate."
 
 ---
 
@@ -332,7 +332,7 @@ USER REQUEST
      │
      ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              cc100x-lead (TEAM COORDINATOR)                   │
+│              cc-teams-lead (TEAM COORDINATOR)                   │
 │         Detects intent → Creates Agent Team → Delegates       │
 └─────────────────────────────────────────────────────────────┘
      │
@@ -344,7 +344,7 @@ USER REQUEST
      │
      └── PLAN ───► planner
 
-MEMORY (.claude/cc100x/)
+MEMORY (.claude/cc-teams/)
 ├── activeContext.md  ◄── Current focus, decisions, learnings
 ├── patterns.md       ◄── Project conventions, common gotchas
 └── progress.md       ◄── Completed work, remaining tasks
@@ -355,7 +355,7 @@ MEMORY (.claude/cc100x/)
 ## File Structure
 
 ```
-plugins/cc100x/
+plugins/cc-teams/
 ├── .claude-plugin/
 │   └── plugin.json
 ├── CLAUDE.md
@@ -370,7 +370,7 @@ plugins/cc100x/
 │   ├── investigator.md
 │   └── planner.md
 └── skills/
-    ├── cc100x-lead/SKILL.md
+    ├── cc-teams-lead/SKILL.md
     ├── review-arena/SKILL.md
     ├── bug-court/SKILL.md
     ├── pair-build/SKILL.md
@@ -408,19 +408,19 @@ The lead uses these contracts to:
 
 ## Safety
 
-For safe modification of CC100x orchestration, use the companion safety skill:
+For safe modification of CC-Teams orchestration, use the companion safety skill:
 
 ```
-/cc100x-orchestration-safety
+/cc-teams-orchestration-safety
 ```
 
-This enforces extreme caution when editing lead, agents, or workflow skills. Available as a user-level skill at `~/.claude/skills/cc100x-orchestration-safety/SKILL.md`.
+This enforces extreme caution when editing lead, agents, or workflow skills. Available as a user-level skill at `~/.claude/skills/cc-teams-orchestration-safety/SKILL.md`.
 
 ---
 
 ## Evolved From CC10x
 
-CC100x evolves from [CC10x](https://github.com/romiluz13/cc10x) (250+ commits, 12 skills, 6 agents). Everything that worked in CC10x is preserved:
+CC-Teams evolves from [CC10x](https://github.com/romiluz13/cc10x) (250+ commits, 12 skills, 6 agents). Everything that worked in CC10x is preserved:
 
 - All 8 orchestration invariants
 - Memory protocol (load-first, edit-verify, stable anchors)
@@ -440,6 +440,6 @@ MIT License
 ---
 
 <p align="center">
-  <strong>cc100x v0.1.8</strong><br>
+  <strong>cc-teams v0.1.8</strong><br>
   <em>Next-Gen Orchestration on Agent Teams</em>
 </p>

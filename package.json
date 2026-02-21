@@ -1,5 +1,5 @@
 {
-  "name": "cc100x",
+  "name": "cc-teams",
   "version": "0.1.14",
   "description": "Next-Gen Orchestration on Agent Teams for Claude Code",
   "author": {
@@ -10,14 +10,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/romiluz13/cc100x"
+    "url": "https://github.com/romiluz13/cc-teams"
   },
   "scripts": {
     "check:functional-bible": "bash scripts/check-functional-bible-drift.sh",
-    "check:agent-tools": "bash scripts/lint-cc100x-agent-tools.sh",
-    "check:artifact-policy": "bash scripts/lint-cc100x-artifact-policy.sh",
-    "check:protocol-integrity": "bash scripts/lint-cc100x-protocol-integrity.sh",
-    "check:cc100x": "npm run check:functional-bible && npm run check:agent-tools && npm run check:artifact-policy && npm run check:protocol-integrity",
+    "check:agent-tools": "bash scripts/lint-cc-teams-agent-tools.sh",
+    "check:artifact-policy": "bash scripts/lint-cc-teams-artifact-policy.sh",
+    "check:protocol-integrity": "bash scripts/lint-cc-teams-protocol-integrity.sh",
+    "check:cc-teams": "npm run check:functional-bible && npm run check:agent-tools && npm run check:artifact-policy && npm run check:protocol-integrity",
     "eval:run": "bash scripts/eval/run-benchmark.sh",
     "eval:score": "bash scripts/eval/score-benchmark.sh"
   },

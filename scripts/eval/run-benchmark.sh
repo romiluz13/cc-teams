@@ -7,7 +7,7 @@ Usage:
   bash scripts/eval/run-benchmark.sh [options]
 
 Options:
-  --candidate <name>          Candidate label (default: cc100x)
+  --candidate <name>          Candidate label (default: cc-teams)
   --profile <name>            Execution profile (default: deterministic)
   --baseline-id <id>          Baseline label for comparison metadata (default: B0)
   --run-id <id>               Run id (default: UTC timestamp YYYYMMDDTHHMMSSZ)
@@ -23,7 +23,7 @@ Output:
 USAGE
 }
 
-candidate="cc100x"
+candidate="cc-teams"
 profile="deterministic"
 baseline_id="B0"
 run_id="$(date -u +%Y%m%dT%H%M%SZ)"

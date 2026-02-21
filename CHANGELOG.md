@@ -22,7 +22,7 @@
   | `security-reviewer.md` | Added "Task Response (MANDATORY)" section (existing Challenge Round Response kept) |
   | `performance-reviewer.md` | Added "Task Response (MANDATORY)" section (existing Challenge Round Response kept) |
   | `quality-reviewer.md` | Added "Task Response (MANDATORY)" section (existing Challenge Round Response kept) |
-  | `cc100x-lead/SKILL.md` | Fixed execution loop step 4: explicit escalation when waiting |
+  | `cc-teams-lead/SKILL.md` | Fixed execution loop step 4: explicit escalation when waiting |
   | `review-arena/SKILL.md` | Fixed Phase 1 Lead actions: explicit escalation |
   | `bug-court/SKILL.md` | Added Lead actions to Phase 2: explicit escalation |
 
@@ -68,7 +68,7 @@ All agents now include:
 
 ### Fixed
 
-- **Planner Deadlock** (planner.md, cc100x-lead/SKILL.md)
+- **Planner Deadlock** (planner.md, cc-teams-lead/SKILL.md)
   - Root cause: Planner was spawned with `mode: "plan"` which is READ-ONLY
   - Planner couldn't save plan files or update memory
   - Fix: Removed `mode: "plan"` from planner spawning, added explicit Plan Mode Rule
@@ -77,17 +77,17 @@ All agents now include:
 
 ### Fixed
 
-- **Test Process Discipline** (builder.md, verifier.md, cc100x-lead/SKILL.md, test-driven-development/SKILL.md)
+- **Test Process Discipline** (builder.md, verifier.md, cc-teams-lead/SKILL.md, test-driven-development/SKILL.md)
   - Root cause: Vitest watch mode left 61 hanging processes, froze user's computer
   - Fix: Added Test Process Discipline sections requiring `CI=true` or `--run` flag
-  - Added Test Process Cleanup Gate (#13) to cc100x-lead before Team Shutdown
+  - Added Test Process Cleanup Gate (#13) to cc-teams-lead before Team Shutdown
   - Updated TDD skill examples with proper flags
 
 ## [0.1.10] - 2026-02-10
 
 ### Fixed
 
-- **REM-EVIDENCE Timeout** (cc100x-lead/SKILL.md)
+- **REM-EVIDENCE Timeout** (cc-teams-lead/SKILL.md)
   - Root cause: Builder didn't respond to REM-EVIDENCE request for Router Contract
   - Workflow hung indefinitely waiting for response
   - Fix: Added REM-EVIDENCE Timeout Rule connecting to Task Status Lag escalation ladder
@@ -109,10 +109,10 @@ All agents now include:
 
 ### Added
 
-- Initial CC100x release
+- Initial CC-Teams release
 - Agent Teams-based orchestration for Claude Code
 - 9 specialized agents: builder, planner, verifier, hunter, investigator, live-reviewer, security-reviewer, performance-reviewer, quality-reviewer
-- 8 skills: cc100x-lead, review-arena, bug-court, pair-build, router-contract, session-memory, test-driven-development, verification
+- 8 skills: cc-teams-lead, review-arena, bug-court, pair-build, router-contract, session-memory, test-driven-development, verification
 - Router Contract YAML format for machine-readable agent handoffs
 - Challenge Round protocol for reviewer consensus
 - Task Status Lag escalation ladder
