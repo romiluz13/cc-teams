@@ -89,6 +89,18 @@ CI=true npm run test:e2e
 
 # Cleanup check (run after all tests)
 pgrep -f "vitest|jest" && pkill -f "vitest|jest" || echo "No hanging test processes"
+
+# Dependency vulnerability audit (run if package.json exists)
+if [ -f "package.json" ]; then
+  npm audit --json 2>/dev/null | jq -r '
+    .metadata.vulnerabilities |
+    "critical=\(.critical) high=\(.high) moderate=\(.moderate)"
+  ' 2>/dev/null || npm audit 2>&1 | tail -3
+fi
+# DEPENDENCY_AUDIT=FAIL if high/critical > 0 → BLOCKING=true
+# DEPENDENCY_AUDIT=WARN if moderate > 0 → non-blocking, document
+# DEPENDENCY_AUDIT=PASS if all zero
+# DEPENDENCY_AUDIT=SKIPPED if no package.json
 ```
 
 ## Goal-Backward Lens
@@ -230,25 +242,27 @@ EVIDENCE_COMMANDS: ["<verification command> => exit <code>", "..."]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: PASS | FAIL
 SCENARIOS_TOTAL: [total]
 SCENARIOS_PASSED: [passed]
 BLOCKERS: [count]
-BLOCKING: [true if STATUS=FAIL]
-REQUIRES_REMEDIATION: [true if BLOCKERS > 0]
-REMEDIATION_REASON: null | "Fix E2E failures: {summary}"
+BLOCKING: [true if STATUS=FAIL or DEPENDENCY_AUDIT=FAIL]
+REQUIRES_REMEDIATION: [true if BLOCKERS > 0 or DEPENDENCY_AUDIT=FAIL]
+REMEDIATION_REASON: null | "Fix E2E failures: {summary}" | "Fix dependency vulnerabilities: {detail}"
 SPEC_COMPLIANCE: [PASS|FAIL]
+DEPENDENCY_AUDIT: PASS | WARN | FAIL | SKIPPED
+DEPENDENCY_AUDIT_DETAIL: "0 high, 0 critical" | "2 high vulns found" | "N/A"
 TIMESTAMP: [ISO 8601]
 AGENT_ID: "verifier"
 FILES_MODIFIED: []
 CLAIMED_ARTIFACTS: []
-EVIDENCE_COMMANDS: ["<verification command> => exit <code>", "..."]
+EVIDENCE_COMMANDS: ["<verification command> => exit <code>", "npm audit => exit <code>", "..."]
 DEVIATIONS_FROM_PLAN: null
 MEMORY_NOTES:
   learnings: ["Integration insights"]
   patterns: ["Edge cases discovered"]
-  verification: ["E2E: {SCENARIOS_PASSED}/{SCENARIOS_TOTAL} passed"]
+  verification: ["E2E: {SCENARIOS_PASSED}/{SCENARIOS_TOTAL} passed, dep audit: {DEPENDENCY_AUDIT}"]
 ```
 **CONTRACT RULE:** STATUS=PASS requires BLOCKERS=0 and SCENARIOS_PASSED=SCENARIOS_TOTAL
 ```

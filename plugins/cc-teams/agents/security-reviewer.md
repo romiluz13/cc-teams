@@ -77,6 +77,39 @@ Grep(pattern="cors|Access-Control", path="src")
 - [ ] Session management follows best practices (secure, httpOnly, sameSite cookies)
 - [ ] Password hashing uses bcrypt/argon2 (not MD5/SHA1)
 
+## Dependency Security (Read-Only Scan)
+
+Cannot run `npm audit` (no Bash access — enforced by design). Use read-only checks below.
+Executable audit runs in verifier; cross-reference its `DEPENDENCY_AUDIT` contract field.
+
+### Lock File Check (MANDATORY)
+```
+Glob(pattern="package-lock.json", path=".")
+Glob(pattern="yarn.lock", path=".")
+Glob(pattern="Pipfile.lock", path=".")
+Glob(pattern="poetry.lock", path=".")
+```
+**If no lock file found:** Report HIGH — reproducible builds not enforced, supply chain unpredictable.
+
+### Package Configuration Check
+```
+Glob(pattern="package.json", path=".")
+Read(file_path="package.json")
+Grep(pattern="postinstall|preinstall", path="package.json")
+```
+**Flag CRITICAL** if `postinstall` or `preinstall` script executes arbitrary code (e.g., `"bash ..."`).
+**Flag HIGH** if any dependency name matches known malicious package patterns:
+```
+Grep(pattern="node-serialize|serialize-to-js|cryo|funcster", path="package.json")
+```
+
+### DEPENDENCY_AUDIT Contract Field
+Report one of:
+- `LOCK_FILE_PRESENT` — lock file found, no suspicious scripts
+- `LOCK_FILE_MISSING` — no lock file found (HIGH severity)
+- `SUSPICIOUS_SCRIPT` — postinstall/preinstall runs arbitrary code (CRITICAL)
+- `SKIPPED` — no package.json found
+
 ## Confidence Scoring
 
 | Score | Meaning | Action |
@@ -196,7 +229,7 @@ EVIDENCE_COMMANDS: ["<review command> => exit <code>", "..."]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: APPROVE | CHANGES_REQUESTED
 CONFIDENCE: [80-100]
 CRITICAL_ISSUES: [count]
@@ -205,6 +238,7 @@ BLOCKING: [true if CRITICAL_ISSUES > 0]
 REQUIRES_REMEDIATION: [true if STATUS=CHANGES_REQUESTED or CRITICAL_ISSUES > 0]
 REMEDIATION_REASON: null | "Fix security issues: {summary}"
 SPEC_COMPLIANCE: [PASS|FAIL]
+DEPENDENCY_AUDIT: LOCK_FILE_PRESENT | LOCK_FILE_MISSING | SUSPICIOUS_SCRIPT | SKIPPED
 TIMESTAMP: [ISO 8601]
 AGENT_ID: "security-reviewer"
 FILES_MODIFIED: []
@@ -214,7 +248,7 @@ DEVIATIONS_FROM_PLAN: null
 MEMORY_NOTES:
   learnings: ["Security insights"]
   patterns: ["Security patterns found"]
-  verification: ["Security review: {STATUS} with {CONFIDENCE}% confidence"]
+  verification: ["Security review: {STATUS} with {CONFIDENCE}% confidence, dep audit: {DEPENDENCY_AUDIT}"]
 ```
 **CONTRACT RULE:** STATUS=APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80
 ```

@@ -632,7 +632,60 @@ IMPORTANT:
 Execute the task and include 'Task {TASK_ID}: COMPLETED' in your output when done.
 ```
 
-**TASK ID is REQUIRED in prompt.** Lead updates task status after teammate returns.
+**TASK ID is REQUIRED in prompt.**
+
+## Per-Agent Spawn Context Requirements (MANDATORY)
+
+The generic template above applies to all agents. The fields below are **required additions per agent type**.
+The lead MUST include every field listed. Use `N/A` only when genuinely unavailable — never silently omit.
+
+### builder
+```
+TECH_STACK: {language} / {framework} / {test-runner}
+TEST_CMD:   {exact command, e.g. "CI=true npm test" or "npx vitest run"}
+BUILD_CMD:  {exact command, e.g. "npm run build" or "N/A if no build step"}
+SCOPE:      {files/modules this implementation touches}
+REQUIREMENTS: {all AskUserQuestion responses from requirements clarification}
+```
+
+### investigator-{N}
+```
+ASSIGNED_HYPOTHESIS: H{N}: {title}
+CONFIDENCE:  {score}/100 — {rationale}
+NEXT_TEST:   {smallest discriminating command to prove/disprove}
+ERROR_CONTEXT: {full error message / stack trace / observed symptom}
+REPRODUCTION:  {exact steps or command to reproduce}
+GIT_CONTEXT:   {output of: git log --oneline -5 -- <affected-files>}
+ALL_HYPOTHESES: {list of all HN titles so investigator can challenge others}
+```
+
+### security-reviewer / performance-reviewer / quality-reviewer
+```
+SCOPE:          {specific files list OR "full codebase" — from user's AskUserQuestion response}
+FOCUS:          {security|performance|quality|all — from user's AskUserQuestion response}
+BLOCKING_ONLY:  {yes|no — from user's AskUserQuestion response}
+AUTH_METHOD:    {JWT|session|OAuth|API-key|N/A — from activeContext.md or grep of codebase}
+SENSITIVE_FILES: {files containing auth/secrets/payments — from patterns.md or initial grep}
+```
+_(`AUTH_METHOD` and `SENSITIVE_FILES` are required for security-reviewer only. All 5 fields apply across all 3 reviewers.)_
+
+### verifier
+```
+TEST_CMD:          {exact test command}
+BUILD_CMD:         {exact build command or N/A}
+HUNTER_FINDINGS:   {STATUS + CRITICAL_ISSUES count from hunter Router Contract}
+REVIEWER_FINDINGS: {STATUS + CRITICAL_ISSUES from each of the 3 reviewer Router Contracts}
+PLAN_EXIT_CRITERIA: {prose exit criteria from plan phase, or N/A}
+PHASE_GATE_CMD:    {gate_command from plan phase, or N/A}
+```
+
+### planner
+```
+RESEARCH_SUMMARY:  {if research was executed — key findings + path to research file, else N/A}
+EXISTING_PATTERNS: {top 3 relevant entries from patterns.md for this feature}
+PRIOR_DECISIONS:   {decisions from activeContext.md ## Decisions relevant to this feature}
+REQUIREMENTS:      {all AskUserQuestion responses}
+``` Lead updates task status after teammate returns.
 
 ## Skill Loading Hierarchy (DEFINITIVE)
 
@@ -738,6 +791,16 @@ After each teammate completes, validate:
 
    If EVIDENCE_COMMANDS missing/inconsistent for evidence-required roles:
      → Create `CC-TEAMS REM-EVIDENCE`, STOP.
+
+   If contract.PHASE_GATE_RESULT == "FAIL":
+     → Create `CC-TEAMS REM-FIX: phase-gate failed — {contract.PHASE_GATE_CMD}`
+     → Block all downstream tasks via TaskUpdate
+     → STOP until builder re-runs gate command and reports PHASE_GATE_RESULT=PASS
+
+   If contract.DEPENDENCY_AUDIT == "FAIL":
+     → Treat as BLOCKING=true for the verifier phase
+     → Create `CC-TEAMS REM-FIX: dependency vulnerabilities — {contract.DEPENDENCY_AUDIT_DETAIL}`
+     → Block Memory Update until resolved
 
    Collect contract.MEMORY_NOTES for workflow-final persistence.
 

@@ -426,14 +426,17 @@ TaskCreate({
 # For each phase in plan:
 TaskCreate({
   subject: "CC-TEAMS Phase 1: {phase_title}",
-  description: "**Plan:** docs/plans/YYYY-MM-DD-{feature}-plan.md\n**Section:** Phase 1\n**Exit Criteria:** {demonstrable_milestone}\n\n{phase_details}",
+  description: "**Plan:** docs/plans/YYYY-MM-DD-{feature}-plan.md\n**Section:** Phase 1\n**Exit Criteria:** {demonstrable_milestone}\n**Gate Command:** {gate_command or 'N/A'}\n\n{phase_details}",
   activeForm: "Working on {phase_title}"
 })
 # Returns phase_1_id
+# Gate Command = single executable command proving phase is complete
+# Examples: "CI=true npm test -- --testPathPattern=auth", "npm run build && npm run lint"
+# Use "N/A" only when no isolated command is possible for this phase
 
 TaskCreate({
   subject: "CC-TEAMS Phase 2: {phase_title}",
-  description: "**Plan:** docs/plans/YYYY-MM-DD-{feature}-plan.md\n**Section:** Phase 2\n**Exit Criteria:** {demonstrable_milestone}\n\n{phase_details}",
+  description: "**Plan:** docs/plans/YYYY-MM-DD-{feature}-plan.md\n**Section:** Phase 2\n**Exit Criteria:** {demonstrable_milestone}\n**Gate Command:** {gate_command or 'N/A'}\n\n{phase_details}",
   activeForm: "Working on {phase_title}"
 })
 TaskUpdate({ taskId: phase_2_id, addBlockedBy: [phase_1_id] })

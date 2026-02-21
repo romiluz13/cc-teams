@@ -180,7 +180,7 @@ EVIDENCE_COMMANDS: ["<hunt command> => exit <code>", "..."]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: CLEAN | ISSUES_FOUND
 CRITICAL_ISSUES: [count]
 HIGH_ISSUES: [count]

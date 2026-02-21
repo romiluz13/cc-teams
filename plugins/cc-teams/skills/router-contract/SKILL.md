@@ -24,7 +24,7 @@ Every teammate MUST include this section at the end of their output:
 ````markdown
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: [value from agent-specific list below]
 CONFIDENCE: [0-100]
 CRITICAL_ISSUES: [count]
@@ -33,6 +33,11 @@ BLOCKING: [true|false]
 REQUIRES_REMEDIATION: [true|false]
 REMEDIATION_REASON: [null or description of what needs fixing]
 SPEC_COMPLIANCE: [PASS|FAIL|N/A]
+# v2.4 additions (agent-specific — include only for relevant roles):
+PHASE_GATE_RESULT: [PASS|FAIL|N/A]          # builder only
+PHASE_GATE_CMD: ["gate command or N/A"]     # builder only
+DEPENDENCY_AUDIT: [PASS|WARN|FAIL|SKIPPED]  # verifier + security-reviewer
+DEPENDENCY_AUDIT_DETAIL: ["detail or N/A"]  # verifier only
 TIMESTAMP: [ISO 8601 timestamp]
 AGENT_ID: [teammate name, e.g., "investigator-1"]
 FILES_MODIFIED: [list of files changed, or empty]
@@ -67,7 +72,9 @@ MEMORY_NOTES:
 ## Field Definitions
 
 ### CONTRACT_VERSION
-Contract schema version emitted by teammate. Current target is `2.3`.
+Contract schema version emitted by teammate. Current target is `2.4`.
+- `2.4`: Added PHASE_GATE_RESULT/PHASE_GATE_CMD (builder), DEPENDENCY_AUDIT/DETAIL (verifier + security-reviewer)
+- `2.3`: Stable baseline (all existing fields)
 
 ### STATUS
 Agent's self-reported completion status. See table above for valid values per agent.

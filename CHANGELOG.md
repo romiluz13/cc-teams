@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.1.16] - 2026-02-22
+
+### Added
+- **Per-Agent Spawn Context Requirements** (cc-teams-lead/SKILL.md)
+  - Each agent type now has a canonical list of REQUIRED fields the lead must include at spawn
+  - builder: TECH_STACK, TEST_CMD, BUILD_CMD, SCOPE, REQUIREMENTS
+  - investigator: ASSIGNED_HYPOTHESIS, CONFIDENCE, NEXT_TEST, ERROR_CONTEXT, REPRODUCTION, GIT_CONTEXT, ALL_HYPOTHESES
+  - reviewer triad: SCOPE, FOCUS, BLOCKING_ONLY, AUTH_METHOD, SENSITIVE_FILES
+  - verifier: TEST_CMD, BUILD_CMD, HUNTER_FINDINGS, REVIEWER_FINDINGS, PLAN_EXIT_CRITERIA, PHASE_GATE_CMD
+  - planner: RESEARCH_SUMMARY, EXISTING_PATTERNS, PRIOR_DECISIONS, REQUIREMENTS
+- **Dependency Security audit** (security-reviewer.md, verifier.md)
+  - security-reviewer: read-only lock file + package.json scan (no Bash required), DEPENDENCY_AUDIT contract field
+  - verifier: `npm audit --json` added to verification commands, DEPENDENCY_AUDIT + DEPENDENCY_AUDIT_DETAIL in contract
+  - DEPENDENCY_AUDIT=FAIL (high/critical vulns found) → BLOCKING=true in verifier contract
+- **Phase Gate Commands** (planner.md, planning-patterns/SKILL.md, builder.md, cc-teams-lead/SKILL.md)
+  - Planner Plan Format adds `**Gate Command:**` field per phase (exit criteria become executable)
+  - planning-patterns phase TaskCreate description now includes Gate Command field
+  - Builder Verify step runs gate_command if plan specifies one; captures PHASE_GATE_RESULT
+  - Lead contract validation blocks on PHASE_GATE_RESULT=FAIL or DEPENDENCY_AUDIT=FAIL
+- **Router Contract v2.4** — new fields: PHASE_GATE_RESULT, PHASE_GATE_CMD (builder);
+  DEPENDENCY_AUDIT, DEPENDENCY_AUDIT_DETAIL (verifier + security-reviewer)
+
 ## [0.1.15] - 2026-02-22
 
 ### Added

@@ -232,7 +232,7 @@ EVIDENCE_COMMANDS: ["<diagnostic command> => exit <code>", "..."]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: EVIDENCE_FOUND | INVESTIGATING | BLOCKED
 CONFIDENCE: [0-100]
 AGENT_ID: "investigator-{N}"

@@ -196,7 +196,7 @@ EVIDENCE_COMMANDS: ["<review command> => exit <code>", "..."]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: APPROVE | CHANGES_REQUESTED
 CONFIDENCE: [80-100]
 CRITICAL_ISSUES: [count of unresolved STOP issues]

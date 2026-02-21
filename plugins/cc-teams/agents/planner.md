@@ -105,7 +105,9 @@ AskUserQuestion({
 
 ## Phase 1: [Demonstrable Milestone]
 
-> **Exit Criteria:** [What must be true when complete]
+> **Exit Criteria:** [What must be true when complete — user-observable behavior]
+> **Gate Command:** `CI=true npm test -- --testPathPattern=<feature>` ← exact command that exits 0 when phase complete
+> _(Gate Command is REQUIRED for phases with isolatable tests. Use `N/A` only if no isolated command is possible.)_
 
 ### Task 1: [Component Name]
 
@@ -260,7 +262,7 @@ EVIDENCE_COMMANDS: []
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: PLAN_CREATED | NEEDS_CLARIFICATION
 CONFIDENCE: [0-100]
 PLAN_FILE: "[path to saved plan, e.g., docs/plans/2026-02-05-feature-plan.md]"

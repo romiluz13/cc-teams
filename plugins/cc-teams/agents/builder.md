@@ -87,7 +87,13 @@ If a skill fails to load (not installed), note it in Memory Notes and continue w
 2. **RED** - Write failing test (must exit 1)
 3. **GREEN** - Minimal code to pass (must exit 0)
 4. **REFACTOR** - Clean up, keep tests green
-5. **Verify** - All tests pass, functionality works
+5. **Verify** - All tests pass, functionality works. If the plan specifies a **Gate Command** for
+   this phase, run it and capture exit code for the Router Contract `PHASE_GATE_RESULT` field.
+   ```bash
+   # Example: CI=true npm test -- --testPathPattern=auth
+   {gate_command from plan}
+   # Must exit 0. If exit 1 → fix until gate passes, then re-run. Do NOT proceed on failure.
+   ```
 6. **Review request** - Message `live-reviewer`: "Review {file_path}"
 7. **Wait for feedback** - LGTM → continue. STOP → fix first.
 8. **Repeat** for next module
@@ -235,26 +241,28 @@ EVIDENCE_COMMANDS: ["<red command> => exit 1", "<green command> => exit 0"]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.3"
+CONTRACT_VERSION: "2.4"
 STATUS: PASS | FAIL
 CONFIDENCE: [0-100]
 TDD_RED_EXIT: [1 if red phase ran, null if missing]
 TDD_GREEN_EXIT: [0 if green phase ran, null if missing]
+PHASE_GATE_RESULT: PASS | FAIL | N/A
+PHASE_GATE_CMD: "{gate_command from plan, or N/A}"
 CRITICAL_ISSUES: 0
-BLOCKING: [true if STATUS=FAIL]
-REQUIRES_REMEDIATION: [true if TDD evidence missing]
-REMEDIATION_REASON: null | "Missing TDD evidence - need RED exit=1 and GREEN exit=0"
+BLOCKING: [true if STATUS=FAIL or PHASE_GATE_RESULT=FAIL]
+REQUIRES_REMEDIATION: [true if TDD evidence missing or PHASE_GATE_RESULT=FAIL]
+REMEDIATION_REASON: null | "Missing TDD evidence" | "Phase gate failed: {PHASE_GATE_CMD}"
 SPEC_COMPLIANCE: [PASS|FAIL]
 TIMESTAMP: [ISO 8601]
 AGENT_ID: "builder"
 FILES_MODIFIED: ["src/auth/middleware.ts", "src/auth/middleware.test.ts"]
 CLAIMED_ARTIFACTS: []
-EVIDENCE_COMMANDS: ["<red command> => exit 1", "<green command> => exit 0"]
+EVIDENCE_COMMANDS: ["<red command> => exit 1", "<green command> => exit 0", "{gate_command} => exit 0"]
 DEVIATIONS_FROM_PLAN: [null or "Added extra validation per live-reviewer feedback"]
 MEMORY_NOTES:
   learnings: ["What was built and key patterns used"]
   patterns: ["Any new conventions discovered"]
-  verification: ["TDD evidence: RED exit={TDD_RED_EXIT}, GREEN exit={TDD_GREEN_EXIT}"]
+  verification: ["TDD: RED exit={TDD_RED_EXIT}, GREEN exit={TDD_GREEN_EXIT}, gate: {PHASE_GATE_RESULT}"]
 ```
 **CONTRACT RULE:** STATUS=PASS requires TDD_RED_EXIT=1 AND TDD_GREEN_EXIT=0
 ```
