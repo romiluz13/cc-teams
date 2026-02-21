@@ -2,12 +2,12 @@
 
 ### Next-Gen Orchestration on Agent Teams
 
-**Current version:** 0.1.8
+**Current version:** 0.1.18
 
 **Requires: Agent Teams enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)**
 
 <p align="center">
-  <strong>1 Lead</strong> &nbsp;•&nbsp; <strong>9 Agents</strong> &nbsp;•&nbsp; <strong>8 Workflow Skills</strong> &nbsp;•&nbsp; <strong>4 Workflows</strong> &nbsp;•&nbsp; <strong>9 Domain Skills</strong>
+  <strong>1 Lead</strong> &nbsp;•&nbsp; <strong>13 Agents</strong> &nbsp;•&nbsp; <strong>5 Workflows</strong> &nbsp;•&nbsp; <strong>17 Skills</strong>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ CC-Teams uses **Agent Teams** - real teammates that message each other, debate, 
 
 | Feature | CC10x | CC-Teams |
 |---------|-------|--------|
-| **Code Review** | Single reviewer | **3 reviewers** (security + performance + quality) who **challenge each other** |
+| **Code Review** | Single reviewer | **3–5 reviewers** (security + performance + quality + conditional WCAG/API-contract) who **challenge each other** |
 | **Debugging** | Single investigator | **Multiple investigators** each championing a different hypothesis, then **debating** |
 | **Building** | Builder then reviewer | Builder and reviewer work **simultaneously** - real-time pair programming |
 | **Communication** | Router passes results between agents | Agents **message each other directly** |
@@ -135,33 +135,50 @@ Reviewer: "LGTM"
 
 ---
 
-## The 9 Agents
+## The 13 Agents
 
-| Agent | Role | Mode |
-|-------|------|------|
-| **security-reviewer** | OWASP top 10, auth, injection, secrets | READ-ONLY |
-| **performance-reviewer** | N+1, memory leaks, caching, bundle size | READ-ONLY |
-| **quality-reviewer** | Patterns, naming, complexity, test coverage | READ-ONLY |
-| **builder** | TDD implementation (RED-GREEN-REFACTOR) | READ+WRITE |
-| **live-reviewer** | Real-time review during Pair Build | READ-ONLY |
-| **hunter** | Silent failure detection | READ-ONLY |
-| **verifier** | E2E integration verification | READ-ONLY |
-| **investigator** | Hypothesis champion in Bug Court | READ-ONLY |
-| **planner** | Comprehensive plan creation | WRITE (plan files only) |
+| Agent | Role | Mode | When Active |
+|-------|------|------|-------------|
+| **security-reviewer** | OWASP top 10, auth, injection, secrets | READ-ONLY | All workflows |
+| **performance-reviewer** | N+1, memory leaks, caching, bundle size | READ-ONLY | All workflows |
+| **quality-reviewer** | Patterns, naming, complexity, test coverage | READ-ONLY | All workflows |
+| **accessibility-reviewer** | WCAG 2.1 AA — keyboard nav, ARIA, contrast, semantic HTML | READ-ONLY | **Conditional** (UI files detected) |
+| **api-contract-reviewer** | Breaking change detection — endpoints, schema diffs, type safety | READ-ONLY | **Conditional** (API files detected) |
+| **builder** | TDD implementation (RED-GREEN-REFACTOR) | READ+WRITE | BUILD, DEBUG |
+| **frontend-builder** | TDD implementation — frontend scope only (components/pages/hooks) | READ+WRITE | BUILD-CROSSLAYER |
+| **backend-builder** | TDD implementation — backend scope only (api/services/models) | READ+WRITE | BUILD-CROSSLAYER |
+| **live-reviewer** | Real-time review (per-module) or async review (cross-layer) | READ-ONLY | BUILD, BUILD-CROSSLAYER |
+| **hunter** | Silent failure detection — empty catches, swallowed errors | READ-ONLY | BUILD, BUILD-CROSSLAYER, DEBUG |
+| **verifier** | E2E integration verification + dependency audit | READ-ONLY | All workflows |
+| **investigator** | Hypothesis champion in Bug Court | READ-ONLY | DEBUG |
+| **planner** | Comprehensive plan creation | WRITE (plan files only) | PLAN |
 
 ---
 
-## The 8 Workflow Skills
+## The 5 Workflows
+
+| Workflow | Team Composition | Best For |
+|----------|-----------------|---------|
+| **BUILD** | builder + live-reviewer → hunter → 3–5 reviewers + challenge → verifier | Single-layer feature implementation |
+| **BUILD-CROSSLAYER** | backend-builder (contract) → frontend-builder → async live-reviewer → hunter → 5 reviewers + challenge → verifier | Features spanning UI + API + services |
+| **DEBUG** | 2–5 investigators → debate → builder → 3–5 reviewers + challenge → verifier | Bug investigation with competing hypotheses |
+| **REVIEW** | 3–5 reviewers + challenge | Code audit, PR review |
+| **PLAN** | planner | Architecture planning, feature design |
+
+---
+
+## The 9 Workflow Skills
 
 | Skill | Purpose |
 |-------|---------|
-| **cc-teams-lead** | Entry point - creates teams, delegates, collects results |
-| **review-arena** | Multi-perspective adversarial review protocol |
+| **cc-teams-lead** | Entry point — creates teams, delegates, collects results |
+| **review-arena** | Multi-perspective adversarial review protocol (3–5 reviewers) |
 | **bug-court** | Competing hypothesis debugging protocol |
 | **pair-build** | Real-time pair programming protocol |
+| **cross-layer-build** | Parallel frontend + backend implementation with API contract relay |
 | **session-memory** | Context persistence across sessions |
 | **verification** | Evidence-before-claims enforcement |
-| **router-contract** | YAML contract format for all agents |
+| **router-contract** | YAML contract format for all agents (v2.4) |
 | **github-research** | External code research via Octocode/GitHub with tiered fallbacks |
 
 ## The 9 Domain Skills

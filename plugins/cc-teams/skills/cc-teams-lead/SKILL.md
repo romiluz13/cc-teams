@@ -37,9 +37,9 @@ description: |
 
 | Workflow | Protocol | Team Composition |
 |----------|----------|-----------------|
-| **REVIEW** | `cc-teams:review-arena` | 3 reviewers (security, performance, quality) |
-| **DEBUG** | `cc-teams:bug-court` | 2-5 investigators → builder fix → Review Arena (3 reviewers + challenge) → verifier |
-| **BUILD** | `cc-teams:pair-build` | Builder + Live Reviewer → Hunter → Review Arena (3 reviewers + challenge) → Verifier |
+| **REVIEW** | `cc-teams:review-arena` | 3–5 reviewers (security, performance, quality + conditional a11y/api-contract) |
+| **DEBUG** | `cc-teams:bug-court` | 2-5 investigators → builder fix → Review Arena (3–5 reviewers + challenge) → verifier |
+| **BUILD** | `cc-teams:pair-build` | Builder + Live Reviewer → Hunter → Review Arena (3–5 reviewers + challenge) → Verifier |
 | **PLAN** | `cc-teams:planning-patterns` | Single planner (**NO plan mode** — planner writes docs directly, lead reviews after) |
 
 ---
@@ -741,14 +741,14 @@ BLOCKING_ONLY:  {yes|no — from user's AskUserQuestion response}
 AUTH_METHOD:    {JWT|session|OAuth|API-key|N/A — from activeContext.md or grep of codebase}
 SENSITIVE_FILES: {files containing auth/secrets/payments — from patterns.md or initial grep}
 ```
-_(`AUTH_METHOD` and `SENSITIVE_FILES` are required for security-reviewer only. All 5 fields apply across all 3 reviewers.)_
+_(`AUTH_METHOD` and `SENSITIVE_FILES` are required for security-reviewer only. All 5 fields apply across all active reviewers — the standard triad plus any conditional reviewers spawned.)_
 
 ### verifier
 ```
 TEST_CMD:          {exact test command}
 BUILD_CMD:         {exact build command or N/A}
 HUNTER_FINDINGS:   {STATUS + CRITICAL_ISSUES count from hunter Router Contract}
-REVIEWER_FINDINGS: {STATUS + CRITICAL_ISSUES from each of the 3 reviewer Router Contracts}
+REVIEWER_FINDINGS: {STATUS + CRITICAL_ISSUES from each active reviewer Router Contract (3–5)}
 PLAN_EXIT_CRITERIA: {prose exit criteria from plan phase, or N/A}
 PHASE_GATE_CMD:    {gate_command from plan phase, or N/A}
 ```
@@ -1142,33 +1142,38 @@ Avoid:
 
 ## Results Collection (Parallel Teammates)
 
-When parallel teammates complete (e.g., 3 reviewers in Review Arena), their outputs must be collected and cross-referenced.
+When parallel teammates complete (3–5 reviewers in Review Arena depending on signals), their outputs must be collected and cross-referenced.
 
 ### Pattern: Collect and Pass Findings
 
 ```
-# After all parallel teammates complete:
-1. TaskList()  # Verify all show "completed"
+# After all active reviewers complete:
+1. TaskList()  # Verify all active reviewer tasks show "completed"
 
-2. Collect outputs from teammate messages:
+2. Collect outputs from ALL active reviewer messages:
    REVIEWER_1_FINDINGS = {security-reviewer's Critical Issues + Verdict}
    REVIEWER_2_FINDINGS = {performance-reviewer's Critical Issues + Verdict}
    REVIEWER_3_FINDINGS = {quality-reviewer's Critical Issues + Verdict}
+   # If spawned:
+   REVIEWER_4_FINDINGS = {accessibility-reviewer's Critical Issues + Verdict}  # if UI files
+   REVIEWER_5_FINDINGS = {api-contract-reviewer's Critical Issues + Verdict}   # if API files
 
-3. For Challenge Round: Share each reviewer's findings with the others via peer messaging:
+3. For Challenge Round: Share EACH reviewer's findings with ALL others via peer messaging:
    SendMessage(type="message", recipient="security-reviewer",
-     content="Here are findings from other reviewers: {REVIEWER_2_FINDINGS + REVIEWER_3_FINDINGS}. Challenge or agree?")
-   # Repeat for other reviewers
+     content="Here are findings from other reviewers: {all_other_reviewers_findings}. Challenge or agree?")
+   # Repeat for ALL active reviewers (3–5)
 
    Challenge completion criteria (per review-arena/SKILL.md):
-   - All 3 reviewers acknowledged peer findings (no silent reviewer)
-   - At least one cross-review response from each reviewer (agreement or challenge)
+   - All ACTIVE reviewers acknowledged peer findings (no silent reviewer)
+   - At least one cross-review response from each active reviewer (agreement or challenge)
    - Conflicts are resolved or explicitly escalated
 
    Conflict resolution priority (per review-arena/SKILL.md):
    - Security says CRITICAL, others disagree → Security wins (conservative principle)
+   - A11y says CRITICAL, others disagree → A11y wins (regulatory/compliance impact)
+   - API contract says CRITICAL, others disagree → API contract wins (client-breaking impact)
    - Performance vs Quality conflict → Present both to user with trade-off analysis
-   - No consensus → Present all 3 perspectives to user, let them decide
+   - No consensus → Present all active reviewer perspectives to user, let them decide
 
 4. For downstream teammates (e.g., verifier after hunt + review challenge):
    Include ALL findings in teammate prompt:

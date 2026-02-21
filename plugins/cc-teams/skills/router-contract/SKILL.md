@@ -58,9 +58,13 @@ MEMORY_NOTES:
 | Agent | Valid STATUS Values | Description |
 |-------|-------------------|-------------|
 | **builder** | `PASS`, `FAIL` | PASS = TDD evidence present (RED exit=1, GREEN exit=0) |
+| **frontend-builder** | `PASS`, `FAIL` | Same as builder; FILES_MODIFIED must be frontend-scope only |
+| **backend-builder** | `PASS`, `FAIL` | Same as builder; FILES_MODIFIED must be backend-scope only; API_CONTRACT_SPEC required in MEMORY_NOTES |
 | **security-reviewer** | `APPROVE`, `CHANGES_REQUESTED` | APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80 |
 | **performance-reviewer** | `APPROVE`, `CHANGES_REQUESTED` | APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80 |
 | **quality-reviewer** | `APPROVE`, `CHANGES_REQUESTED` | APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80 |
+| **accessibility-reviewer** | `APPROVE`, `CHANGES_REQUESTED` | APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80 (WCAG AA violations) |
+| **api-contract-reviewer** | `APPROVE`, `CHANGES_REQUESTED` | APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80 (breaking changes) |
 | **live-reviewer** | `APPROVE`, `CHANGES_REQUESTED` | APPROVE requires no STOP-level issues raised |
 | **hunter** | `CLEAN`, `ISSUES_FOUND` | CLEAN requires CRITICAL_ISSUES=0 |
 | **verifier** | `PASS`, `FAIL` | PASS requires all scenarios passed |
@@ -184,6 +188,48 @@ HIGH_ISSUES: [count]
 CLAIMED_ARTIFACTS: []
 EVIDENCE_COMMANDS: ["npm test => exit 0"]
 ```
+
+### Accessibility Reviewer (conditional — spawned when UI files detected)
+```yaml
+STATUS: APPROVE | CHANGES_REQUESTED
+# CONTRACT RULE: STATUS=APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80
+# CRITICAL = WCAG 2.1 AA violation that blocks accessibility (keyboard trap, missing alt, no label)
+SPEC_COMPLIANCE: PASS | FAIL
+CRITICAL_ISSUES: [count of WCAG AA violations]
+HIGH_ISSUES: [count of WCAG issues that degrade UX]
+DEPENDENCY_AUDIT: SKIPPED
+CLAIMED_ARTIFACTS: []
+EVIDENCE_COMMANDS: ["<grep pattern> => exit <code>"]
+```
+
+### API Contract Reviewer (conditional — spawned when API route files detected)
+```yaml
+STATUS: APPROVE | CHANGES_REQUESTED
+# CONTRACT RULE: STATUS=APPROVE requires CRITICAL_ISSUES=0 and CONFIDENCE>=80
+# CRITICAL = breaking change (removed endpoint, removed required field, incompatible type change)
+SPEC_COMPLIANCE: PASS | FAIL
+CRITICAL_ISSUES: [count of breaking changes]
+HIGH_ISSUES: [count of high-severity contract issues]
+DEPENDENCY_AUDIT: SKIPPED
+CLAIMED_ARTIFACTS: []
+EVIDENCE_COMMANDS: ["<grep pattern> => exit <code>"]
+```
+
+### Frontend Builder / Backend Builder (Cross-Layer BUILD)
+Same contract rules as `Builder`:
+```yaml
+STATUS: PASS | FAIL
+# CONTRACT RULE: STATUS=PASS requires TDD_RED_EXIT=1 AND TDD_GREEN_EXIT=0
+TDD_RED_EXIT: [1 if red phase ran, null if missing]
+TDD_GREEN_EXIT: [0 if green phase ran, null if missing]
+PHASE_GATE_RESULT: PASS | FAIL | N/A
+PHASE_GATE_CMD: "[gate command from plan or N/A]"
+FILES_MODIFIED: [list — must not overlap with sibling builder's FILES_MODIFIED]
+CLAIMED_ARTIFACTS: []
+EVIDENCE_COMMANDS: ["<red command> => exit 1", "<green command> => exit 0"]
+DEVIATIONS_FROM_PLAN: [null or deviation description]
+```
+**Cross-layer additional**: backend-builder MUST include `API_CONTRACT_SPEC` in MEMORY_NOTES.
 
 ### Hunter
 ```yaml
