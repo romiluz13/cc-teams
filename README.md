@@ -20,8 +20,8 @@
 
 ```bash
 # Step 1: Install plugin
-/plugin marketplace add romiluz13/cc-teams-experiment-next-version-of-cc10x
-/plugin install cc-teams@romiluz13
+/plugin marketplace add romiluz13/cc-teams
+/plugin install cc-teams@cc-teams
 
 # Step 2: Enable Agent Teams in ~/.claude/settings.json
 {
@@ -262,11 +262,11 @@ Generated benchmark artifacts:
 ### Step 1: Install Plugin
 
 ```bash
-/plugin marketplace add romiluz13/cc-teams-experiment-next-version-of-cc10x
-/plugin install cc-teams@romiluz13
+/plugin marketplace add romiluz13/cc-teams
+/plugin install cc-teams@cc-teams
 ```
 
-`/plugin install` uses the plugin package name (`name` in `plugin.json`), not the repository slug.
+`/plugin install` uses `plugin-name@marketplace-name`. The marketplace name comes from the `name` field in `.claude-plugin/marketplace.json`.
 
 ### Step 2: Enable Agent Teams
 

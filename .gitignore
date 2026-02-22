@@ -1,4 +1,5 @@
 .DS_Store
 node_modules/
-.claude/cc100x/
+.claude/plans/
+.claude/settings.local.json
 *.log
