@@ -33,6 +33,7 @@ readme="$repo/README.md"
 changelog="$repo/CHANGELOG.md"
 plugin_json="$repo/plugins/cc-teams/.claude-plugin/plugin.json"
 marketplace_json="$repo/.claude-plugin/marketplace.json"
+agents_dir="$repo/plugins/cc-teams/agents"
 
 require_file "$readme" "Missing README.md"
 require_file "$changelog" "Missing CHANGELOG.md"
@@ -47,5 +48,9 @@ require_pattern "$readme" "<strong>$agent_count Agents</strong>" "README agent c
 require_pattern "$readme" "^## The $agent_count Agents" "README agent heading must match actual agent count"
 require_pattern "$readme" "<strong>$skill_count Skills</strong>" "README skill count banner must match actual skill count"
 require_pattern "$readme" "router-contract\\*\\* \\| YAML contract format for all agents \\(v2\\.5\\)" "README must advertise Router Contract v2.5"
+
+while IFS= read -r agent_file; do
+  require_pattern "$agent_file" "^model: inherit$" "All shipped CC-Teams agents must use model: inherit ($agent_file)"
+done < <(find "$agents_dir" -maxdepth 1 -name '*.md' | sort)
 
 echo "OK: CC-Teams release/publication audit is consistent."

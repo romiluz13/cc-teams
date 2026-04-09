@@ -100,6 +100,8 @@ PROPOSED FIX: [How to fix]
 ### Agent Teams lifecycle
 - [ ] Lead performs Agent Teams preflight before team execution.
 - [ ] Lead executes explicit team creation gate (team created + teammates reachable) before task assignment.
+- [ ] Each spawned teammate receives an explicit kickoff message after spawn; spawn prompt alone is not treated as sufficient operational proof.
+- [ ] Each spawned teammate returns a first `WORKING` / `BLOCKED` / `DONE` status before the lead treats it as active.
 - [ ] Lead enters delegate mode after team creation and stays orchestration-only.
 - [ ] Lead assigns or coordinates tasks; lead does not do feature implementation work.
 - [ ] Teammates are spawned phase-scoped (on demand), not all at workflow kickoff.
@@ -234,6 +236,7 @@ Expected runtime behavior:
   - `QUICK` only for bounded low-risk build scope
   - `FULL` for all high-risk/cross-layer/ambiguous scope
 - [ ] Team kickoff spawns only builder + live-reviewer; downstream roles spawn when their tasks become runnable.
+- [ ] Missing required workflow/stage `SKILL_HINTS` causes lead-side re-spawn or prompt repair; the workflow does not silently continue skill-starved.
 - [ ] Builder and live-reviewer coordinate in real time using direct teammate messaging.
 - [ ] Builder owns all writes; other teammates are read-only.
 - [ ] Builder receives the active phase contract and executes only that phase when the workflow is plan-backed.

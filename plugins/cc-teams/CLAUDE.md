@@ -52,6 +52,7 @@ CC-Teams includes domain expertise skills that agents load automatically via SKI
 | `cc-teams:brainstorming` | planner | Structured discovery, one-question-at-a-time, YAGNI, incremental design validation |
 
 These are loaded automatically by the lead's SKILL_HINTS mechanism. You don't need to invoke them manually.
+If a teammate that should have workflow/domain skills receives no `SKILL_HINTS`, treat that as an orchestration bug, not a normal degraded mode.
 
 ---
 

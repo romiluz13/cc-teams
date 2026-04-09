@@ -62,10 +62,11 @@ Before team execution or resume:
 - Session must not keep stale active team state.
 - Team naming is deterministic.
 - Lead enters delegate mode before assignment.
-- `TEAM_CREATED` is an operational gate (not narrative): team exists, required teammates are spawned, direct messaging is reachable.
+- `TEAM_CREATED` is an operational gate (not narrative): team exists, required teammates are spawned, direct messaging is reachable, kickoff is sent, and the first teammate status reply is received.
 - Downstream agents are not pre-spawned for blocked tasks; the lead spawns teammates only when their task is runnable.
 - Conditional agents (accessibility-reviewer, api-contract-reviewer) are spawned based on FILES_MODIFIED signals from builder Router Contract — not spawned at kickoff.
 - Teammate prompts declare default memory owner as lead.
+- Missing required workflow/stage `SKILL_HINTS` is a spawn-contract failure, not a soft omission.
 
 Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:47`
 Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:57`

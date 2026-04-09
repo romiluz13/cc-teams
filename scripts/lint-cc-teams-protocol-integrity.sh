@@ -68,6 +68,9 @@ require_pattern "^## Execution Depth Selector \(MANDATORY\)" "Lead must define d
 require_pattern "^### Runnable Evidence Gate \(MANDATORY\)" "Lead must define runnable evidence gate"
 require_pattern "team_name = cc-teams-\\{project_key\\}-\\{workflow\\}-\\{YYYYMMDD-HHMMSS\\}" "Lead must define project-scoped team naming format"
 require_pattern "Do NOT auto-clean foreign project teams" "Lead must forbid auto-cleanup of foreign-project teams"
+require_pattern 'explicit kickoff `SendMessage' "Lead must require explicit kickoff messaging after spawn"
+require_pattern "first status reply" "Lead must require first status reply before treating teammate as active"
+require_pattern "Missing required workflow/stage SKILL_HINTS is a spawn-contract failure" "Lead must fail closed on missing required SKILL_HINTS"
 
 # Team shutdown requirements
 require_pattern "shutdown_request" "Lead must require shutdown_request messages"
@@ -117,6 +120,8 @@ require_pattern_file "^## 11\\. Harmony Report \\(Completeness Gate\\)" "$runboo
 require_pattern_file "Required Pass Criteria" "$runbook" "Runbook must include explicit Harmony pass criteria"
 require_pattern_file "pre-runnable teammate findings are advisory" "$runbook" "Runbook must require advisory handling for non-runnable teammate findings"
 require_pattern_file 'project-scoped: `cc-teams-\{project_key\}-\{workflow\}-\{timestamp\}`' "$runbook" "Runbook must require project-scoped team naming"
+require_pattern_file "spawn prompt alone is not treated as sufficient operational proof" "$runbook" "Runbook must require explicit kickoff after spawn"
+require_pattern_file 'Missing required workflow/stage `SKILL_HINTS` causes lead-side re-spawn or prompt repair' "$runbook" "Runbook must fail closed on missing SKILL_HINTS"
 
 # Required gates presence
 for gate in \

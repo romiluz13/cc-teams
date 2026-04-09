@@ -78,6 +78,8 @@ Before creating or resuming any workflow:
 4. Verify team health before task assignment:
    - required teammate names exist
    - each teammate can receive a direct message (`SendMessage(type="message", ...)`)
+   - each spawned teammate receives an explicit kickoff `SendMessage(type="message", ...)` after spawn
+   - each spawned teammate returns a first status reply (`WORKING` / `BLOCKED` / `DONE`) before the lead treats it as active
 5. Enter delegate mode (`Shift+Tab`).
 6. Only then assign any teammate task from TaskList.
 
@@ -124,6 +126,8 @@ Non-negotiable rules:
 1. Do not pre-spawn downstream teammates for blocked tasks.
 2. Blocked tasks are valid task-list state, not a reason to spawn an idle teammate.
 3. Spawn a teammate only when that teammate has at least one runnable task.
+4. A spawned teammate is not operationally active until the lead sends an explicit kickoff message and receives the first status reply.
+5. If kickoff gets no useful reply, do NOT assume the spawn prompt was enough; re-message or re-spawn before trusting the teammate.
 
 ### Runnable Evidence Gate (MANDATORY)
 
@@ -1208,6 +1212,7 @@ When spawning a teammate, include this structured context:
 ## SKILL_HINTS (INVOKE via Skill() - not optional)
 {detected skills from table below}
 **If skills listed:** Call `Skill(skill="{skill-name}")` immediately after memory load.
+**If required workflow/stage skills are missing or the section is empty when your role expects them:** reply `BLOCKED: missing SKILL_HINTS` and do not pretend skill-backed execution happened.
 
 ---
 IMPORTANT:
@@ -1368,6 +1373,7 @@ skills: cc-teams:session-memory, cc-teams:verification
 - Lead passes SKILL_HINTS for teammate skills that must be invoked explicitly on the Agent Teams path
 - **Source 1:** Lead detection table — `github-research` when research triggers fire
 - **Source 2:** CLAUDE.md Complementary Skills table — domain skills matching task signals
+- **Source 3:** Explicit user-requested complementary skills, including repo/user installed skills such as `find-skills`
 - Agent calls `Skill(skill="{name}")` for each skill in SKILL_HINTS after memory load
 - If a skill fails to load (not installed), agent notes it in Memory Notes and continues
 
@@ -1391,6 +1397,8 @@ skills: cc-teams:session-memory, cc-teams:verification
 **Detection runs BEFORE agent invocation. Pass detected skills in SKILL_HINTS.**
 
 **Workflow-based skills are ALWAYS passed for the matching workflow/stage.** They are not conditional — every BUILD gets TDD+code-gen, every REVIEW and post-fix/post-hunt comprehensive review gate gets code-review-patterns, etc. This mirrors CC10x's guaranteed quality coverage while preserving Agent Teams structure.
+
+**Lead-side hard rule:** Missing required workflow/stage SKILL_HINTS is a spawn-contract failure. Do NOT silently continue with an under-equipped teammate. Rebuild the teammate prompt with the required SKILL_HINTS and re-kickoff the teammate.
 
 **Note:** `cc-teams:router-contract`, `cc-teams:verification`, and `cc-teams:session-memory` are NOT in this table because they load via agent frontmatter (unconditional). Every agent gets router-contract + verification; builder/planner also load session-memory for memory read discipline and Memory Notes structure. These do NOT need SKILL_HINTS.
 
