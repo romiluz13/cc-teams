@@ -1,0 +1,36 @@
+{
+  "id": "postcompact-event",
+  "workflow_type": "DEBUG",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-debug-20260409-131000",
+    "workflow_kind": "DEBUG",
+    "project_root": "/workspace/debug",
+    "team_name": "cc-teams-debug-20260409-131000",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "critical_path",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Fix compact resume drift"
+    },
+    "traceability": {},
+    "phase_cursor": "debug-investigate",
+    "task_ids": {},
+    "results": {},
+    "evidence": {},
+    "quality": {
+      "convergence_state": "needs_iteration"
+    },
+    "remediation_history": [],
+    "pending_gate": "CONTRACTS_VALIDATED",
+    "resume_entrypoint": "resume bug-court debate",
+    "stale_assumptions": []
+  },
+  "expected": {
+    "event": "compact_occurred",
+    "required_fields": [
+      "summary",
+      "pending_gate",
+      "resume_entrypoint"
+    ]
+  }
+}

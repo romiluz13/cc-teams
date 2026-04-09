@@ -1,0 +1,61 @@
+{
+  "id": "build-scope-gate",
+  "workflow_type": "BUILD",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-checkout-build-20260409-124000",
+    "workflow_kind": "BUILD",
+    "project_root": "/workspace/checkout",
+    "team_name": "cc-teams-checkout-build-20260409-124000",
+    "plan_file": "docs/plans/2026-04-09-checkout-scope.md",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "standard",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Build checkout flow"
+    },
+    "traceability": {
+      "requirements": [],
+      "phases": [],
+      "verification": [],
+      "remediation": []
+    },
+    "normalized_phases": [],
+    "active_phase_contract": {},
+    "phase_cursor": "phase-1",
+    "task_ids": {},
+    "phase_status": {},
+    "results": {},
+    "evidence": {},
+    "challenge_decisions": {},
+    "regressions": {},
+    "boundary_history": {},
+    "phase_transition_summaries": {},
+    "loop_counts": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "memory_notes_collected": [],
+    "pending_gate": "scope_decision",
+    "resume_entrypoint": "pause for scope decision",
+    "stale_assumptions": [],
+    "created_at": "2026-04-09T12:40:00Z",
+    "updated_at": "2026-04-09T12:47:00Z"
+  },
+  "relevant_tasks": {},
+  "agent_outputs": {
+    "parallel_findings": {
+      "critical_issues": 1,
+      "high_issues": 3
+    }
+  },
+  "expected": {
+    "next_action": "pause_for_scope_decision",
+    "pending_gate": "scope_decision",
+    "artifact_delta": {
+      "quality": {
+        "convergence_state": "needs_iteration"
+      }
+    }
+  }
+}

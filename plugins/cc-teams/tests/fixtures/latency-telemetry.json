@@ -1,0 +1,94 @@
+{
+  "id": "latency-telemetry",
+  "workflow_type": "BUILD",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-proof-build-20260409-122000",
+    "workflow_kind": "BUILD",
+    "project_root": "/workspace/proof",
+    "team_name": "cc-teams-proof-build-20260409-122000",
+    "plan_file": "docs/plans/2026-04-09-latency-proof.md",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "critical_path",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Measure verifier latency safely"
+    },
+    "traceability": {
+      "requirements": [],
+      "phases": [],
+      "verification": [],
+      "remediation": []
+    },
+    "normalized_phases": [],
+    "active_phase_contract": {},
+    "phase_cursor": "phase-1",
+    "task_ids": {},
+    "phase_status": {},
+    "results": {},
+    "evidence": {},
+    "challenge_decisions": {},
+    "regressions": {},
+    "boundary_history": {},
+    "phase_transition_summaries": {},
+    "loop_counts": {
+      "re_review": 1,
+      "re_hunt": 1,
+      "re_verify": 1
+    },
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "latency_telemetry": {
+      "task_metrics_available": true,
+      "workflow_wall_clock_seconds": 1980,
+      "agent_wall_clock_seconds": {
+        "builder": 420,
+        "investigator": 0,
+        "reviewer": 180,
+        "hunter": 180,
+        "verifier": 1200,
+        "planner": 0
+      },
+      "loop_counts": {
+        "re_review": 1,
+        "re_hunt": 1,
+        "re_verify": 1
+      },
+      "verifier": {
+        "phase_exit_proof_runs": 1,
+        "extended_audit_runs": 1,
+        "workload_seconds": {
+          "tests": 600,
+          "build": 180,
+          "scan": 240,
+          "reconcile": 90,
+          "reasoning": 90
+        }
+      }
+    },
+    "memory_notes_collected": [],
+    "pending_gate": "CONTRACTS_VALIDATED",
+    "resume_entrypoint": "report latency breakdown",
+    "stale_assumptions": [],
+    "created_at": "2026-04-09T12:20:00Z",
+    "updated_at": "2026-04-09T12:53:00Z"
+  },
+  "relevant_tasks": {},
+  "agent_outputs": {},
+  "expected": {
+    "next_action": "report_latency_breakdown",
+    "artifact_delta": {
+      "latency_telemetry": {
+        "loop_counts": {
+          "re_verify": 1
+        },
+        "verifier": {
+          "workload_seconds": {
+            "tests": 600
+          }
+        }
+      }
+    }
+  }
+}

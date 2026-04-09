@@ -1,0 +1,65 @@
+{
+  "id": "memory-sync-blocking",
+  "workflow_type": "DEBUG",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-app-debug-20260409-121000",
+    "workflow_kind": "DEBUG",
+    "project_root": "/workspace/app",
+    "team_name": "cc-teams-app-debug-20260409-121000",
+    "plan_file": "docs/plans/2026-04-09-retry-banner-fix.md",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "standard",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Fix flaky retry banner"
+    },
+    "traceability": {
+      "requirements": [],
+      "phases": [],
+      "verification": [],
+      "remediation": []
+    },
+    "normalized_phases": [],
+    "active_phase_contract": {},
+    "phase_cursor": "debug-investigate",
+    "task_ids": {},
+    "phase_status": {},
+    "results": {},
+    "evidence": {},
+    "challenge_decisions": {},
+    "regressions": {},
+    "boundary_history": {},
+    "phase_transition_summaries": {},
+    "loop_counts": {},
+    "quality": {
+      "convergence_state": "needs_iteration"
+    },
+    "remediation_history": [],
+    "memory_notes_collected": [],
+    "memory_sync": {
+      "blocking_exit_persisted": true,
+      "next_action": "stop_after_memory_sync",
+      "last_persisted_at": "2026-04-09T12:15:00Z"
+    },
+    "pending_gate": "memory_sync",
+    "resume_entrypoint": "persist workflow-final memory sync",
+    "stale_assumptions": [],
+    "debug_reset_marker": "debug-reset-7",
+    "attempt_baseline": 3,
+    "created_at": "2026-04-09T12:10:00Z",
+    "updated_at": "2026-04-09T12:15:00Z"
+  },
+  "relevant_tasks": {},
+  "agent_outputs": {},
+  "expected": {
+    "next_action": "stop_after_memory_sync",
+    "artifact_delta": {
+      "memory_sync": {
+        "blocking_exit_persisted": true
+      },
+      "quality": {
+        "convergence_state": "needs_iteration"
+      }
+    }
+  }
+}

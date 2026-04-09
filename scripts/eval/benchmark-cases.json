@@ -1,0 +1,386 @@
+[
+  {
+    "case_id": "P-01",
+    "workflow": "PLAN",
+    "category": "ambiguous-requirements",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "planner with plan approval",
+    "pass_criteria": [
+      "Plan is actionable and phase-structured",
+      "Risks and validation commands are explicit",
+      "Memory references and artifacts are correctly linked"
+    ],
+    "primary_kpis": ["K1", "K8"]
+  },
+  {
+    "case_id": "P-02",
+    "workflow": "PLAN",
+    "category": "cross-layer-auth-redesign",
+    "risk_class": "critical",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "planner with architecture constraints",
+    "pass_criteria": [
+      "Plan is actionable and phase-structured",
+      "Risks and validation commands are explicit",
+      "Memory references and artifacts are correctly linked"
+    ],
+    "primary_kpis": ["K1", "K8"]
+  },
+  {
+    "case_id": "P-03",
+    "workflow": "PLAN",
+    "category": "migration-rollback-strategy",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "planner + risk-heavy plan",
+    "pass_criteria": [
+      "Plan is actionable and phase-structured",
+      "Risks and validation commands are explicit",
+      "Memory references and artifacts are correctly linked"
+    ],
+    "primary_kpis": ["K1", "K8"]
+  },
+  {
+    "case_id": "P-04",
+    "workflow": "PLAN",
+    "category": "legacy-module-decomposition",
+    "risk_class": "medium",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "planner decomposition roadmap",
+    "pass_criteria": [
+      "Plan is actionable and phase-structured",
+      "Risks and validation commands are explicit",
+      "Memory references and artifacts are correctly linked"
+    ],
+    "primary_kpis": ["K1", "K8"]
+  },
+  {
+    "case_id": "P-05",
+    "workflow": "PLAN",
+    "category": "external-sdk-integration",
+    "risk_class": "medium",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "planner + external research context",
+    "pass_criteria": [
+      "Plan is actionable and phase-structured",
+      "Risks and validation commands are explicit",
+      "Memory references and artifacts are correctly linked"
+    ],
+    "primary_kpis": ["K1", "K8"]
+  },
+  {
+    "case_id": "P-06",
+    "workflow": "PLAN",
+    "category": "incident-followup-hardening",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "planner with phased remediation",
+    "pass_criteria": [
+      "Plan is actionable and phase-structured",
+      "Risks and validation commands are explicit",
+      "Memory references and artifacts are correctly linked"
+    ],
+    "primary_kpis": ["K1", "K8"]
+  },
+  {
+    "case_id": "B-01",
+    "workflow": "BUILD",
+    "category": "low-coupling-feature",
+    "risk_class": "medium",
+    "coupling": "low",
+    "seeded_defects": 0,
+    "expected_topology": "pair-build standard chain",
+    "pass_criteria": [
+      "TDD evidence exists (RED then GREEN)",
+      "Post-build gates pass (hunter + review arena + verifier)",
+      "No orchestration integrity violations"
+    ],
+    "primary_kpis": ["K1", "K5", "K8"]
+  },
+  {
+    "case_id": "B-02",
+    "workflow": "BUILD",
+    "category": "cross-layer-feature",
+    "risk_class": "high",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "pair-build full chain",
+    "pass_criteria": [
+      "TDD evidence exists (RED then GREEN)",
+      "Post-build gates pass (hunter + review arena + verifier)",
+      "No orchestration integrity violations"
+    ],
+    "primary_kpis": ["K1", "K5", "K6", "K8"]
+  },
+  {
+    "case_id": "B-03",
+    "workflow": "BUILD",
+    "category": "shared-state-concurrency",
+    "risk_class": "critical",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "pair-build + strict verifier focus",
+    "pass_criteria": [
+      "No data race regression in test suite",
+      "Verifier passes all concurrency scenarios"
+    ],
+    "primary_kpis": ["K1", "K5", "K6", "K8"]
+  },
+  {
+    "case_id": "B-04",
+    "workflow": "BUILD",
+    "category": "file-overlap-stress",
+    "risk_class": "high",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "deterministic profile expected",
+    "pass_criteria": [
+      "TDD evidence exists (RED then GREEN)",
+      "Post-build gates pass (hunter + review arena + verifier)",
+      "No orchestration integrity violations"
+    ],
+    "primary_kpis": ["K6", "K8", "K10"]
+  },
+  {
+    "case_id": "B-05",
+    "workflow": "BUILD",
+    "category": "security-sensitive-auth-flow",
+    "risk_class": "critical",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "pair-build + strong review arena",
+    "pass_criteria": [
+      "TDD evidence exists (RED then GREEN)",
+      "Post-build gates pass (hunter + review arena + verifier)",
+      "No orchestration integrity violations"
+    ],
+    "primary_kpis": ["K1", "K2", "K3", "K5"]
+  },
+  {
+    "case_id": "B-06",
+    "workflow": "BUILD",
+    "category": "performance-sensitive-endpoint",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "pair-build + perf scrutiny",
+    "pass_criteria": [
+      "TDD evidence exists (RED then GREEN)",
+      "Post-build gates pass (hunter + review arena + verifier)",
+      "No orchestration integrity violations"
+    ],
+    "primary_kpis": ["K1", "K2", "K5"]
+  },
+  {
+    "case_id": "B-07",
+    "workflow": "BUILD",
+    "category": "mid-remediation-interruption-resume",
+    "risk_class": "critical",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "pair-build recovery + handoff payload",
+    "pass_criteria": [
+      "Handoff payload is emitted before interruption boundary",
+      "Resume continues from deterministic resume_entrypoint",
+      "Recovery preserves post-build review and verifier rigor"
+    ],
+    "primary_kpis": ["K6", "K7", "K8", "K10"]
+  },
+  {
+    "case_id": "R-01",
+    "workflow": "REVIEW",
+    "category": "seeded-owasp-defects",
+    "risk_class": "critical",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "review-arena triad + challenge",
+    "pass_criteria": [
+      "High-confidence findings are mostly true positives",
+      "Seeded defects are detected at target rates",
+      "Challenge round resolves conflicts explicitly"
+    ],
+    "primary_kpis": ["K2", "K3", "K8"]
+  },
+  {
+    "case_id": "R-02",
+    "workflow": "REVIEW",
+    "category": "seeded-performance-regressions",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "review-arena triad + challenge",
+    "pass_criteria": [
+      "High-confidence findings are mostly true positives",
+      "Seeded defects are detected at target rates",
+      "Challenge round resolves conflicts explicitly"
+    ],
+    "primary_kpis": ["K2", "K3"]
+  },
+  {
+    "case_id": "R-03",
+    "workflow": "REVIEW",
+    "category": "maintainability-cluster",
+    "risk_class": "medium",
+    "coupling": "low",
+    "seeded_defects": 0,
+    "expected_topology": "review-arena quality-heavy",
+    "pass_criteria": [
+      "High-confidence findings are mostly true positives",
+      "Challenge round resolves conflicts explicitly"
+    ],
+    "primary_kpis": ["K2"]
+  },
+  {
+    "case_id": "R-04",
+    "workflow": "REVIEW",
+    "category": "false-positive-trap",
+    "risk_class": "medium",
+    "coupling": "low",
+    "seeded_defects": 0,
+    "expected_topology": "review-arena precision stress",
+    "pass_criteria": [
+      "High-confidence findings are mostly true positives",
+      "Challenge round resolves conflicts explicitly"
+    ],
+    "primary_kpis": ["K2", "K10"]
+  },
+  {
+    "case_id": "R-05",
+    "workflow": "REVIEW",
+    "category": "pre-existing-vs-new-issues",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "review-arena causality check",
+    "pass_criteria": [
+      "High-confidence findings are mostly true positives",
+      "Challenge round resolves conflicts explicitly"
+    ],
+    "primary_kpis": ["K2", "K8"]
+  },
+  {
+    "case_id": "R-06",
+    "workflow": "REVIEW",
+    "category": "cross-review-conflict",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "review challenge resolution",
+    "pass_criteria": [
+      "High-confidence findings are mostly true positives",
+      "Challenge round resolves conflicts explicitly"
+    ],
+    "primary_kpis": ["K2", "K8", "K10"]
+  },
+  {
+    "case_id": "D-01",
+    "workflow": "DEBUG",
+    "category": "deterministic-crash",
+    "risk_class": "medium",
+    "coupling": "low",
+    "seeded_defects": 0,
+    "expected_topology": "bug-court with 2-3 hypotheses",
+    "pass_criteria": [
+      "Winning hypothesis maps to actual root cause",
+      "First fix is verified and stable where expected",
+      "Recovery behavior is correct after interruption scenarios"
+    ],
+    "primary_kpis": ["K4", "K5", "K8"]
+  },
+  {
+    "case_id": "D-02",
+    "workflow": "DEBUG",
+    "category": "intermittent-race-condition",
+    "risk_class": "critical",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "bug-court with 4-5 hypotheses",
+    "pass_criteria": [
+      "Winning hypothesis maps to actual root cause",
+      "First fix is verified and stable where expected",
+      "Recovery behavior is correct after interruption scenarios"
+    ],
+    "primary_kpis": ["K4", "K5", "K6"]
+  },
+  {
+    "case_id": "D-03",
+    "workflow": "DEBUG",
+    "category": "external-api-regression",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "bug-court + research-aware path",
+    "pass_criteria": [
+      "Winning hypothesis maps to actual root cause",
+      "First fix is verified and stable where expected"
+    ],
+    "primary_kpis": ["K4", "K5"]
+  },
+  {
+    "case_id": "D-04",
+    "workflow": "DEBUG",
+    "category": "ambiguous-multi-root-cause",
+    "risk_class": "critical",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "bug-court full debate rigor",
+    "pass_criteria": [
+      "Winning hypothesis maps to actual root cause",
+      "First fix is verified and stable where expected",
+      "Recovery behavior is correct after interruption scenarios"
+    ],
+    "primary_kpis": ["K4", "K5", "K10"]
+  },
+  {
+    "case_id": "D-05",
+    "workflow": "DEBUG",
+    "category": "session-interruption-recovery",
+    "risk_class": "high",
+    "coupling": "medium",
+    "seeded_defects": 0,
+    "expected_topology": "recovery protocol + handoff payload + resumed team",
+    "pass_criteria": [
+      "Handoff payload is emitted before interruption boundary",
+      "Resume continues from deterministic resume_entrypoint",
+      "Recovery preserves debug proof continuity"
+    ],
+    "primary_kpis": ["K6", "K7", "K8"]
+  },
+  {
+    "case_id": "D-06",
+    "workflow": "DEBUG",
+    "category": "multi-remediation-loop",
+    "risk_class": "high",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "bug-court + remediation re-review",
+    "pass_criteria": [
+      "Winning hypothesis maps to actual root cause",
+      "First fix is verified and stable where expected",
+      "Recovery behavior is correct after interruption scenarios"
+    ],
+    "primary_kpis": ["K5", "K6", "K8"]
+  },
+  {
+    "case_id": "D-07",
+    "workflow": "DEBUG",
+    "category": "mid-debate-interruption-resume",
+    "risk_class": "critical",
+    "coupling": "high",
+    "seeded_defects": 0,
+    "expected_topology": "bug-court recovery + handoff payload",
+    "pass_criteria": [
+      "Handoff payload is emitted before interruption boundary",
+      "Resume continues from deterministic resume_entrypoint",
+      "Recovery preserves debate history and winning-hypothesis rigor"
+    ],
+    "primary_kpis": ["K6", "K7", "K8", "K10"]
+  }
+]

@@ -1,0 +1,262 @@
+[
+  {
+    "case_id": "P-01",
+    "fixture_id": "fixture-p-01",
+    "workflow": "PLAN",
+    "category": "ambiguous-requirements",
+    "deterministic_seed": "cc-teams-P-01",
+    "interruption_profile": "none",
+    "ground_truth_mode": "requirements-traceability",
+    "fixture_notes": "Conflicting requirement plan synthesis with approval checkpoint."
+  },
+  {
+    "case_id": "P-02",
+    "fixture_id": "fixture-p-02",
+    "workflow": "PLAN",
+    "category": "cross-layer-auth-redesign",
+    "deterministic_seed": "cc-teams-P-02",
+    "interruption_profile": "none",
+    "ground_truth_mode": "architecture-constraints",
+    "fixture_notes": "Cross-layer auth redesign with hard architectural constraints."
+  },
+  {
+    "case_id": "P-03",
+    "fixture_id": "fixture-p-03",
+    "workflow": "PLAN",
+    "category": "migration-rollback-strategy",
+    "deterministic_seed": "cc-teams-P-03",
+    "interruption_profile": "none",
+    "ground_truth_mode": "rollback-readiness",
+    "fixture_notes": "Migration planning case with explicit rollback and recovery expectations."
+  },
+  {
+    "case_id": "P-04",
+    "fixture_id": "fixture-p-04",
+    "workflow": "PLAN",
+    "category": "legacy-module-decomposition",
+    "deterministic_seed": "cc-teams-P-04",
+    "interruption_profile": "none",
+    "ground_truth_mode": "phase-decomposition",
+    "fixture_notes": "Legacy module decomposition plan with phased dependency unwinding."
+  },
+  {
+    "case_id": "P-05",
+    "fixture_id": "fixture-p-05",
+    "workflow": "PLAN",
+    "category": "external-sdk-integration",
+    "deterministic_seed": "cc-teams-P-05",
+    "interruption_profile": "none",
+    "ground_truth_mode": "research-backed-planning",
+    "fixture_notes": "External SDK planning case with research-dependent decisions."
+  },
+  {
+    "case_id": "P-06",
+    "fixture_id": "fixture-p-06",
+    "workflow": "PLAN",
+    "category": "incident-followup-hardening",
+    "deterministic_seed": "cc-teams-P-06",
+    "interruption_profile": "none",
+    "ground_truth_mode": "remediation-roadmap",
+    "fixture_notes": "Incident follow-up planning with phased hardening roadmap."
+  },
+  {
+    "case_id": "B-01",
+    "fixture_id": "fixture-b-01",
+    "workflow": "BUILD",
+    "category": "low-coupling-feature",
+    "deterministic_seed": "cc-teams-B-01",
+    "interruption_profile": "none",
+    "ground_truth_mode": "tdd-and-proof",
+    "fixture_notes": "Low-coupling build path with standard pair-build and proof closure."
+  },
+  {
+    "case_id": "B-02",
+    "fixture_id": "fixture-b-02",
+    "workflow": "BUILD",
+    "category": "cross-layer-feature",
+    "deterministic_seed": "cc-teams-B-02",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "cross-layer-integration",
+    "fixture_notes": "Cross-layer build with UI, API, and tests under full chain validation."
+  },
+  {
+    "case_id": "B-03",
+    "fixture_id": "fixture-b-03",
+    "workflow": "BUILD",
+    "category": "shared-state-concurrency",
+    "deterministic_seed": "cc-teams-B-03",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "concurrency-proof",
+    "fixture_notes": "Shared-state concurrency case with strict verifier focus."
+  },
+  {
+    "case_id": "B-04",
+    "fixture_id": "fixture-b-04",
+    "workflow": "BUILD",
+    "category": "file-overlap-stress",
+    "deterministic_seed": "cc-teams-B-04",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "parallel-safety",
+    "fixture_notes": "Parallel file-overlap stress case for deterministic orchestration safety."
+  },
+  {
+    "case_id": "B-05",
+    "fixture_id": "fixture-b-05",
+    "workflow": "BUILD",
+    "category": "security-sensitive-auth-flow",
+    "deterministic_seed": "cc-teams-B-05",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "security-review-proof",
+    "fixture_notes": "Security-sensitive auth flow requiring strong review arena scrutiny."
+  },
+  {
+    "case_id": "B-06",
+    "fixture_id": "fixture-b-06",
+    "workflow": "BUILD",
+    "category": "performance-sensitive-endpoint",
+    "deterministic_seed": "cc-teams-B-06",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "performance-proof",
+    "fixture_notes": "Performance-sensitive endpoint with perf-focused validation."
+  },
+  {
+    "case_id": "B-07",
+    "fixture_id": "fixture-b-07",
+    "workflow": "BUILD",
+    "category": "mid-remediation-interruption-resume",
+    "deterministic_seed": "cc-teams-B-07",
+    "interruption_profile": "mid-remediation",
+    "ground_truth_mode": "resume-recovery",
+    "fixture_notes": "Mid-remediation interruption requiring deterministic resume and handoff continuity."
+  },
+  {
+    "case_id": "R-01",
+    "fixture_id": "fixture-r-01",
+    "workflow": "REVIEW",
+    "category": "seeded-owasp-defects",
+    "deterministic_seed": "cc-teams-R-01",
+    "interruption_profile": "none",
+    "ground_truth_mode": "seeded-security-findings",
+    "fixture_notes": "OWASP-seeded review corpus for adversarial review recall."
+  },
+  {
+    "case_id": "R-02",
+    "fixture_id": "fixture-r-02",
+    "workflow": "REVIEW",
+    "category": "seeded-performance-regressions",
+    "deterministic_seed": "cc-teams-R-02",
+    "interruption_profile": "none",
+    "ground_truth_mode": "seeded-performance-findings",
+    "fixture_notes": "Performance regression review corpus with seeded high-confidence traps."
+  },
+  {
+    "case_id": "R-03",
+    "fixture_id": "fixture-r-03",
+    "workflow": "REVIEW",
+    "category": "maintainability-cluster",
+    "deterministic_seed": "cc-teams-R-03",
+    "interruption_profile": "none",
+    "ground_truth_mode": "maintainability-findings",
+    "fixture_notes": "Maintainability-heavy review case with code smell clustering."
+  },
+  {
+    "case_id": "R-04",
+    "fixture_id": "fixture-r-04",
+    "workflow": "REVIEW",
+    "category": "false-positive-trap",
+    "deterministic_seed": "cc-teams-R-04",
+    "interruption_profile": "none",
+    "ground_truth_mode": "precision-trap",
+    "fixture_notes": "False-positive trap corpus for review precision hardening."
+  },
+  {
+    "case_id": "R-05",
+    "fixture_id": "fixture-r-05",
+    "workflow": "REVIEW",
+    "category": "pre-existing-vs-new-issues",
+    "deterministic_seed": "cc-teams-R-05",
+    "interruption_profile": "none",
+    "ground_truth_mode": "causality-separation",
+    "fixture_notes": "Review case separating pre-existing issues from new regressions."
+  },
+  {
+    "case_id": "R-06",
+    "fixture_id": "fixture-r-06",
+    "workflow": "REVIEW",
+    "category": "cross-review-conflict",
+    "deterministic_seed": "cc-teams-R-06",
+    "interruption_profile": "none",
+    "ground_truth_mode": "challenge-synthesis",
+    "fixture_notes": "Cross-review conflict case requiring challenge-round synthesis."
+  },
+  {
+    "case_id": "D-01",
+    "fixture_id": "fixture-d-01",
+    "workflow": "DEBUG",
+    "category": "deterministic-crash",
+    "deterministic_seed": "cc-teams-D-01",
+    "interruption_profile": "none",
+    "ground_truth_mode": "root-cause-verdict",
+    "fixture_notes": "Deterministic crash with stack trace and bounded hypothesis space."
+  },
+  {
+    "case_id": "D-02",
+    "fixture_id": "fixture-d-02",
+    "workflow": "DEBUG",
+    "category": "intermittent-race-condition",
+    "deterministic_seed": "cc-teams-D-02",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "race-debugging",
+    "fixture_notes": "Intermittent race-condition debugging with multiple competing hypotheses."
+  },
+  {
+    "case_id": "D-03",
+    "fixture_id": "fixture-d-03",
+    "workflow": "DEBUG",
+    "category": "external-api-regression",
+    "deterministic_seed": "cc-teams-D-03",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "research-backed-debugging",
+    "fixture_notes": "External API regression requiring research-aware debugging."
+  },
+  {
+    "case_id": "D-04",
+    "fixture_id": "fixture-d-04",
+    "workflow": "DEBUG",
+    "category": "ambiguous-multi-root-cause",
+    "deterministic_seed": "cc-teams-D-04",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "multi-root-cause-debate",
+    "fixture_notes": "Ambiguous multi-root-cause case requiring full bug-court rigor."
+  },
+  {
+    "case_id": "D-05",
+    "fixture_id": "fixture-d-05",
+    "workflow": "DEBUG",
+    "category": "session-interruption-recovery",
+    "deterministic_seed": "cc-teams-D-05",
+    "interruption_profile": "mid-execution",
+    "ground_truth_mode": "resume-recovery",
+    "fixture_notes": "Mid-debug interruption requiring deterministic resume and continuity restoration."
+  },
+  {
+    "case_id": "D-06",
+    "fixture_id": "fixture-d-06",
+    "workflow": "DEBUG",
+    "category": "multi-remediation-loop",
+    "deterministic_seed": "cc-teams-D-06",
+    "interruption_profile": "resume-safe",
+    "ground_truth_mode": "remediation-loop-proof",
+    "fixture_notes": "Multi-remediation debug case with repeated re-review and verifier loops."
+  },
+  {
+    "case_id": "D-07",
+    "fixture_id": "fixture-d-07",
+    "workflow": "DEBUG",
+    "category": "mid-debate-interruption-resume",
+    "deterministic_seed": "cc-teams-D-07",
+    "interruption_profile": "mid-debate",
+    "ground_truth_mode": "debate-resume",
+    "fixture_notes": "Mid-debate interruption case requiring restored bug-court context and verdict continuity."
+  }
+]

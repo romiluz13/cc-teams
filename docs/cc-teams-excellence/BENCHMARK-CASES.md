@@ -3,7 +3,7 @@
 ## Purpose
 Define the benchmark corpus used to validate production-safe CC-Teams upgrades against quality gates from `KPI-SCORECARD.md`.
 
-Current state: this document defines the benchmark corpus and artifact conventions; benchmark runner scripts are implemented under `scripts/eval/`.
+Current state: this document defines the benchmark corpus and artifact conventions; benchmark runner scripts are implemented under `scripts/eval/`, and the canonical executable corpus lives in `scripts/eval/benchmark-cases.json`.
 
 ## Corpus Design Principles
 1. Cover the entire SDLC: PLAN, BUILD, REVIEW, DEBUG.
@@ -108,14 +108,21 @@ Total cases: `26`
 4. If additional profiles are introduced later (`adaptive`, `turbo-quality`), run the same corpus and compare against deterministic + `B0`.
 
 ## Fixture and Artifact Conventions
-1. Fixtures: `artifacts/eval/fixtures/<case_id>/`
-2. Run outputs: `artifacts/eval/<timestamp>/<profile>/`
-3. Case results: one JSON line per case in `case-results.jsonl`
-4. Scorecard computed from case results only (no manual edits)
+1. Workflow-state replay fixtures: `plugins/cc-teams/tests/fixtures/*.json`
+2. Structural replay validation: `python3 scripts/check-cc-teams-workflow-replay.py`
+3. Canonical benchmark corpus: `scripts/eval/benchmark-cases.json`
+4. Canonical deterministic fixture index: `artifacts/eval/fixtures/index.json`
+5. Run outputs: `artifacts/eval/<timestamp>/<profile>/`
+6. Case results: one JSON line per case in `case-results.jsonl`
+7. Scorecard computed from case results only (no manual edits)
+8. Scoring must fail closed if `cases-manifest.json`, `case-results.jsonl`, and `summary-input.json` drift out of alignment.
 
 ## Benchmark Readiness Checklist
 1. Every case has deterministic fixture.
-2. Every case has explicit expected outcomes.
-3. Seeded defects are documented with ground truth.
-4. Case runner can execute all 24 cases without manual intervention.
-5. Failure in one case does not stop corpus execution.
+2. Hook/telemetry replay fixtures cover session start, compaction, stop failure, instruction-load audit, and blocking guard events.
+3. Every case has explicit expected outcomes.
+4. Seeded defects are documented with ground truth.
+5. Case runner consumes the canonical 26-case corpus without inline drift.
+6. Case runner binds every case to canonical deterministic fixture metadata before execution.
+7. Case runner can execute all 26 cases without manual intervention.
+8. Failure in one case does not stop corpus execution.

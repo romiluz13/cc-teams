@@ -40,10 +40,12 @@ for agent in \
   performance-reviewer \
   quality-reviewer \
   accessibility-reviewer \
-  api-contract-reviewer; do
+  api-contract-reviewer \
+  plan-gap-reviewer; do
   file="$repo/plugins/cc-teams/agents/$agent.md"
   [[ -f "$file" ]] || { echo "FAIL: Missing agent file $file" >&2; exit 1; }
-  require_pattern "$file" "CONTRACT_VERSION: \"2\\.4\"" "$agent must emit Router Contract schema version"
+  require_pattern "$file" "CONTRACT_VERSION: \"2\\.5\"" "$agent must emit Router Contract schema version"
+  require_pattern "$file" "STATE_DELTA:" "$agent must emit STATE_DELTA in Router Contract"
   require_pattern "$file" "CLAIMED_ARTIFACTS:" "$agent must emit CLAIMED_ARTIFACTS in Router Contract"
   require_pattern "$file" "EVIDENCE_COMMANDS:" "$agent must emit EVIDENCE_COMMANDS in Router Contract"
 done
@@ -55,7 +57,8 @@ for agent in \
   performance-reviewer \
   quality-reviewer \
   accessibility-reviewer \
-  api-contract-reviewer; do
+  api-contract-reviewer \
+  plan-gap-reviewer; do
   file="$repo/plugins/cc-teams/agents/$agent.md"
   require_pattern "$file" "^## Artifact Discipline \\(MANDATORY\\)" "$agent must define Artifact Discipline section"
   require_pattern "$file" "Do NOT create standalone report files" "$agent must forbid standalone report files"

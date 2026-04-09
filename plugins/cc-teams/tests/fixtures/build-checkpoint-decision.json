@@ -1,0 +1,53 @@
+{
+  "id": "build-checkpoint-decision",
+  "workflow_type": "BUILD",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-payments-build-20260409-125000",
+    "workflow_kind": "BUILD",
+    "project_root": "/workspace/payments",
+    "team_name": "cc-teams-payments-build-20260409-125000",
+    "plan_file": "docs/plans/2026-04-09-payments-plan.md",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "critical_path",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Ship payment confirmation flow"
+    },
+    "traceability": {
+      "requirements": [],
+      "phases": [],
+      "verification": [],
+      "remediation": []
+    },
+    "normalized_phases": [],
+    "active_phase_contract": {
+      "checkpoint_type": "human_approval"
+    },
+    "phase_cursor": "phase-2",
+    "task_ids": {},
+    "phase_status": {},
+    "results": {},
+    "evidence": {},
+    "challenge_decisions": {},
+    "regressions": {},
+    "boundary_history": {},
+    "phase_transition_summaries": {},
+    "loop_counts": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "memory_notes_collected": [],
+    "pending_gate": "checkpoint_decision",
+    "resume_entrypoint": "wait for checkpoint approval",
+    "stale_assumptions": [],
+    "created_at": "2026-04-09T12:50:00Z",
+    "updated_at": "2026-04-09T12:55:00Z"
+  },
+  "relevant_tasks": {},
+  "agent_outputs": {},
+  "expected": {
+    "next_action": "pause_for_checkpoint_decision",
+    "pending_gate": "checkpoint_decision"
+  }
+}

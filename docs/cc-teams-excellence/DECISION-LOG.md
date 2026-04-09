@@ -275,6 +275,21 @@ No major orchestration change should be considered final without a decision entr
 - **Evidence:** Updated runtime prompts/skills + runbook/protocol docs + successful `npm run check:cc-teams`.
 - **Follow-ups:** Validate in live BUILD/DEBUG runs that missing/mismatched claims reliably route to `CC-TEAMS REM-EVIDENCE`.
 
+## DEC-20260409-001
+- **Status:** APPROVED
+- **Date:** 2026-04-09
+- **Phase:** E
+- **Title:** Finalize v0.2.0 Claude Code-native release baseline and capability-validation gate
+- **Owner:** @rom.iluz
+- **Scope:** `README.md`, `CHANGELOG.md`, `package.json`, `plugins/cc-teams/.claude-plugin/plugin.json`, excellence/governance docs, capability validation matrix
+- **Context:** The harness now includes the CC10x migration, deterministic replay/benchmark checks, and official Claude Code capability validation. The repo needed one coherent release baseline that matches the runtime and governance state.
+- **Decision:** Promote the repo to `0.2.0`, publish the Claude Code capability validation matrix as a required release artifact, and refresh the public docs so CC-Teams is presented as the production-grade Claude Code Agent Teams harness baseline.
+- **Alternatives Considered:** Leave the repo on `0.1.18` with phase-era wording; rejected because it understates the shipped runtime and leaves the Claude Code validation work underrepresented at the release surface.
+- **Risk Assessment:** Low
+- **Rollback Plan:** Revert the version bump, changelog entry, README/doc language, and capability-validation messaging if a release-blocking regression appears.
+- **Evidence:** Passing `npm run check:cc-teams`, `check:claude-doc-validation`, replay/benchmark parity checks, and updated release/governance docs.
+- **Follow-ups:** Generate fresh live benchmark scorecards against the CC10x baseline and attach them to future release decisions.
+
 ## Pending Decisions
 1. DEC-Phase-B profile semantics finalization (`deterministic/adaptive/turbo-quality`).
 2. DEC-Phase-C Router Contract v2 field set and strictness strategy.

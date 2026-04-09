@@ -55,6 +55,29 @@ These are loaded automatically by the lead's SKILL_HINTS mechanism. You don't ne
 
 ---
 
+## Optional Hook Runtime
+
+CC-Teams also ships an optional audit-first hook layer as a repo-owned settings snippet in [settings.json](/Users/rom.iluz/Dev/cc10x_v5/cc100x/plugins/cc-teams/settings.json).
+Merge that hook configuration into your Claude Code settings if you want the hooks enabled.
+
+Current optional hooks:
+- `TeammateIdle`
+- `TaskCreated`
+- `TaskCompleted`
+- `WorktreeCreate`
+- `PreCompact`
+- `SessionStart`
+- `PostCompact`
+- `Stop`
+- `StopFailure`
+- `InstructionsLoaded`
+
+These hooks improve continuity and observability, but core CC-Teams orchestration must still function if they are disabled.
+`TaskCreated` now enforces task identity-stamp metadata before a CC-Teams task is allowed into the task list.
+`TaskCompleted` now enforces task identity-stamp metadata and Memory Update runtime invariants before completion.
+
+---
+
 ## Complementary Skills (Work Together with CC-Teams)
 
 **Add to `~/.claude/CLAUDE.md`:**

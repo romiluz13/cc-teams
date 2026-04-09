@@ -5,7 +5,7 @@ Use it as the source of truth while you run full end-to-end cycles and mark `V` 
 
 It is intentionally behavior-first (not synthetic scoring-first).
 
-**Version:** 0.1.8 | **Last Updated:** 2026-02-12
+**Version:** 0.2.0 | **Last Updated:** 2026-04-09
 
 ---
 
@@ -37,8 +37,9 @@ These 11 flaws were identified and fixed. Verify each is working:
 | 2.2 | Debate phase termination | Max 3 rounds; all stated final position + no new evidence = proceed to verdict | `bug-court/SKILL.md` ~line 135 | [ ] |
 | 2.3 | Live-reviewer sync timeout | Escalation ladder reference: MEDIUM at T+5, HIGH at T+8, CRITICAL at T+10 | `pair-build/SKILL.md` ~line 131 | [ ] |
 | 2.4 | Memory Notes preservation | Handoff payload includes `memory_notes_collected` from completed teammates | `cc-teams-lead/SKILL.md` ~line 298 | [ ] |
-| 2.5 | Orphan task handling explicit | Do NOT resume; log to Memory Notes; create fresh stamped; delete if blocking | `cc-teams-lead/SKILL.md` ~line 277 | [ ] |
-| 2.6 | Bug Court verdict criteria | Clear winner / Tie / All weak / Contested rules defined with user decision format | `bug-court/SKILL.md` ~line 155 | [ ] |
+| 2.5 | State delta discipline | Every Router Contract includes `STATE_DELTA` and lead uses it for phase-transition summaries | `router-contract/SKILL.md`, `cc-teams-lead/SKILL.md` | [ ] |
+| 2.6 | Orphan task handling explicit | Do NOT resume; log to Memory Notes; create fresh stamped; delete if blocking | `cc-teams-lead/SKILL.md` ~line 277 | [ ] |
+| 2.7 | Bug Court verdict criteria | Clear winner / Tie / All weak / Contested rules defined with user decision format | `bug-court/SKILL.md` ~line 155 | [ ] |
 
 **Verification method:**
 1. Read each functional file at the specified location
@@ -79,7 +80,7 @@ PROPOSED FIX: [How to fix]
   - `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`
 - [ ] CC-Teams plugin loaded from this repo.
 - [ ] Start from repository root:
-  - `/Users/rom.iluz/Dev/cc10x_v5/cc-teams`
+  - `/Users/rom.iluz/Dev/cc10x_v5/cc100x`
 - [ ] No stale active team in current session (or explicitly cleaned up).
 - [ ] Test in a real coding task, not synthetic prompt-only checks.
 
@@ -130,6 +131,13 @@ PROPOSED FIX: [How to fix]
 - [ ] Resume uses deterministic checklist (TaskList truth + team continuity + blocker revalidation), not stale assumptions.
 - [ ] Workflow is not considered complete before `CC-TEAMS Memory Update` completes.
 - [ ] Workflow is not considered complete before `TEAM_SHUTDOWN` succeeds.
+- [ ] If challenge synthesis ends in `accepted_risk`, Memory Update records the accepted-risk boundary, owner, and revalidation trigger instead of silently treating it as resolved.
+- [ ] Workflow-final Memory Update journals workflow kind, active phase outcome, convergence state, traceability status, strongest evidence, and intentionally open boundaries.
+- [ ] Plan-backed phase transitions persist a durable `phase_transition_summary` before the next phase starts.
+- [ ] Research-informed workflows persist `research_quality` when research quality matters to later resume or audit.
+- [ ] Blocking stop/pause paths persist `memory_sync` before they are treated as safely paused.
+- [ ] Workflow artifacts may persist compact `latency_telemetry` when timing truth is available.
+- [ ] `pending_gate` uses explicit values such as `scope_decision`, `checkpoint_decision`, and `memory_sync`.
 - [ ] BUILD depth selection is deterministic (`QUICK` vs `FULL`) and defaults to `FULL` unless all quick-safety conditions pass.
 - [ ] QUICK mode never bypasses Router Contract validation, verifier evidence, or memory update.
 - [ ] QUICK mode auto-escalates to FULL chain on any blocking/remediation signal.
@@ -138,7 +146,7 @@ PROPOSED FIX: [How to fix]
 ### Router Contract enforcement
 - [ ] Every teammate output ends with `### Router Contract (MACHINE-READABLE)` YAML.
 - [ ] Lead validates contract before marking task complete.
-- [ ] Contract includes `CONTRACT_VERSION`, `CLAIMED_ARTIFACTS`, and `EVIDENCE_COMMANDS` fields.
+- [ ] Contract includes `CONTRACT_VERSION`, `CLAIMED_ARTIFACTS`, `EVIDENCE_COMMANDS`, and `STATE_DELTA` fields.
 - [ ] If contract missing or malformed, lead creates remediation evidence path (non-silent failure).
 - [ ] Unauthorized artifact claims trigger `CC-TEAMS REM-EVIDENCE` (no silent proceed).
 - [ ] Narrative artifact claims must match `CLAIMED_ARTIFACTS`; mismatches trigger `CC-TEAMS REM-EVIDENCE`.
@@ -152,6 +160,11 @@ PROPOSED FIX: [How to fix]
 ### Hooks policy
 - [ ] Core CC-Teams orchestration works with hooks disabled.
 - [ ] Hook gates are optional opt-in only (never hard dependency).
+- [ ] `TaskCreated` validates CC-Teams task identity-stamp metadata before creation.
+- [ ] Optional audit hooks may be enabled for `SessionStart`, `PostCompact`, `Stop`, `StopFailure`, and `InstructionsLoaded`.
+- [ ] Expanded hook runtime is covered by the repo-owned `check:hook-runtime` lint.
+- [ ] Hook commands resolve from `CLAUDE_PROJECT_DIR` instead of assuming hook `cwd` is the project root.
+- [ ] `TaskCompleted` validates task identity-stamp metadata and Memory Update invariants before completion.
 
 ---
 
@@ -171,10 +184,12 @@ Expected gate flow:
 10. `CONTRACTS_VALIDATED`
 11. `ALL_TASKS_COMPLETED`
 12. `MEMORY_UPDATED`
-13. `TEAM_SHUTDOWN`
+13. `TEST_PROCESSES_CLEANED`
+14. `TEAM_SHUTDOWN`
 
 Manual check:
 - [ ] Gate order is respected with no skipped critical gate.
+- [ ] If the workflow pauses on a blocking exit, `pending_gate="memory_sync"` is used until handoff and memory persistence are complete.
 
 ---
 
@@ -183,35 +198,51 @@ Manual check:
 ## PLAN Workflow
 
 Expected runtime behavior:
-- [ ] Planner runs in plan mode (`mode: "plan"`).
-- [ ] Planner drafts plan, calls `ExitPlanMode`, waits for lead approval.
-- [ ] Lead approves/rejects with explicit criteria (tests, paths, risks).
-- [ ] Plan file saved to `docs/plans/YYYY-MM-DD-<feature>-plan.md` only after approval.
+- [ ] Planner is spawned without plan mode (`mode: "plan"` is forbidden).
+- [ ] Planner writes the plan file directly because CC-Teams plans are documentation artifacts, not native Claude Code plan-mode approvals.
+- [ ] Lead reviews the saved plan with explicit criteria (tests, paths, risks) before fresh review.
+- [ ] `plan-gap-reviewer` runs as a clean-room read-only pass using only the request, saved plan, codebase, and approved design/research files.
+- [ ] `plan-gap-reviewer` does NOT receive memory summaries, workflow artifact state, or `.claude/cc-teams/*` context.
+- [ ] Fresh review findings route back to the same planner for revision of the SAME saved plan file.
+- [ ] Memory update does not run until plan-gap-reviewer passes or the user explicitly accepts residual planning risk.
+- [ ] Plan file is saved to `docs/plans/YYYY-MM-DD-<feature>-plan.md`.
 - [ ] Planner emits Memory Notes; lead persists references in memory task.
 
 Expected artifacts:
 - [ ] `CC-TEAMS PLAN: ...` task exists.
 - [ ] `CC-TEAMS planner: ...` task exists.
+- [ ] `CC-TEAMS plan-gap-reviewer: ...` task exists.
 - [ ] `CC-TEAMS Memory Update: Index plan in memory` exists and completes.
 
 Never acceptable:
-- [ ] Planner writes plan file before approval.
+- [ ] Planner is spawned with `mode: "plan"` and cannot write plan files.
+- [ ] Fresh review is anchored by `.claude/cc-teams/*` context or planner-authored memory summaries.
 - [ ] Planner silently completes without Router Contract.
 
 ## BUILD Workflow
 
 Expected runtime behavior:
 - [ ] Plan-first gate triggers when no active plan context.
+- [ ] If a saved plan exists, BUILD hydrates executable phase state before builder assignment.
+- [ ] Workflow artifact carries `normalized_phases`, `phase_cursor`, and `active_phase_contract` for the current phase.
+- [ ] If a prior phase has already been verified, the next phase receives the latest `phase_transition_summary`.
+- [ ] Workflow artifact also carries `intent`, `approved_decisions`, and `traceability` for the current phase.
+- [ ] BUILD trust gate blocks contradictory, empty, or unverifiable acceptance criteria before any builder runs.
+- [ ] Every acceptance criterion maps to a phase, check, or proof path and does not conflict with non-goals or unresolved decisions.
+- [ ] Planner cannot exit with contradiction or coverage-gap flags still open.
 - [ ] Depth is selected before task creation:
   - `QUICK` only for bounded low-risk build scope
   - `FULL` for all high-risk/cross-layer/ambiguous scope
 - [ ] Team kickoff spawns only builder + live-reviewer; downstream roles spawn when their tasks become runnable.
 - [ ] Builder and live-reviewer coordinate in real time using direct teammate messaging.
 - [ ] Builder owns all writes; other teammates are read-only.
+- [ ] Builder receives the active phase contract and executes only that phase when the workflow is plan-backed.
 - [ ] FULL post-build sequence runs: hunter -> 3 reviewers (parallel) -> challenge -> verifier -> memory update.
 - [ ] QUICK post-build sequence runs: builder/live-reviewer -> verifier -> memory update.
 - [ ] No shortcut path from hunter/remediation directly to verifier.
 - [ ] Verifier reports evidence with commands and exit codes.
+- [ ] Verifier checks the active phase exit criteria, not just general build success.
+- [ ] Verifier closes requirement and acceptance-criteria traceability before the phase may advance.
 
 Expected artifacts:
 - [ ] `CC-TEAMS BUILD: ...` parent task.
@@ -245,6 +276,7 @@ Never acceptable:
 
 Expected runtime behavior:
 - [ ] Lead generates multiple falsifiable hypotheses.
+- [ ] Workflow records a debug reset marker and attempt baseline for the current workflow before investigator counting continues.
 - [ ] Investigator count is dynamic (2-5), not hardcoded.
 - [ ] Investigators run in parallel, then debate phase cross-examines hypotheses.
 - [ ] Winning hypothesis passed to builder for TDD fix.
@@ -270,6 +302,22 @@ Never acceptable:
 - [ ] After REM-FIX completion, lead creates re-review tasks (security/performance/quality).
 - [ ] Challenge round and re-hunt run before verifier is unblocked.
 - [ ] Remediation task naming uses `CC-TEAMS REM-FIX:` (legacy `CC-TEAMS REMEDIATION:` accepted only for backward compatibility).
+- [ ] Workflow artifact records remediation history and increments re-review / re-hunt / re-verify loop counts.
+- [ ] Convergence state switches to `needs_iteration` while remediation is open.
+- [ ] Workflow events log records remediation creation/completion and traceability deltas, not just the latest artifact snapshot.
+- [ ] Snapshot state is written before the matching replay event is appended.
+- [ ] Builder proof cannot mark out-of-scope requirements or acceptance criteria as satisfied.
+- [ ] Canonical phase-delta shape is used for planner completion, builder completion, verifier completion, and remediation transitions.
+- [ ] If a later teammate reopens something a prior verified phase marked as closed, lead routes explicit reopened-proof remediation instead of generic failure handling.
+- [ ] Challenge round writes a durable `challenge_decisions` record before verifier intake.
+- [ ] `challenge_decisions.current_phase.resolution_state` distinguishes accepted risk, open disagreement, and reopened prior proof.
+- [ ] `challenge_decisions.accepted_risks` entries include `risk`, `scope_boundary`, `accepted_by`, `reason`, and `revalidation_trigger`.
+- [ ] Reopened-proof regressions are preserved in `challenge_decisions.reopened_proof_regressions` and artifact `regressions.reopened_proof`.
+- [ ] Reopened-proof regressions retire only through explicit verifier retirement records (`reproof_closed` or `superseded_by_decision`).
+- [ ] Later phases inherit active proof from `boundary_history.latest`, not from stale retired boundaries.
+- [ ] Verifier replay emits boundary-history deltas when retirement changes what later phases inherit.
+- [ ] Resume and handoff include a compact `boundary_history.timeline_tail` when recent proof-boundary transitions matter.
+- [ ] `accepted_risk` verifier intake means "verify inside the approved boundary", not "mark the issue resolved".
 
 ### Circuit breaker
 - [ ] If REM-FIX count reaches 3+, lead triggers explicit user choice:
@@ -311,18 +359,31 @@ If session is interrupted mid-workflow:
 - [ ] Lead loads latest handoff payload (if present) from memory before making resume decisions.
 - [ ] Handoff payload contains required fields:
   - `workflow_instance`, `workflow_kind`, `project_root`, `team_name`
-  - `gate`, `task_snapshot`, `contracts`, `remediation`
+  - `gate`, `task_snapshot`, `contracts`, `remediation`, `challenge_decisions`, `regressions`
+  - `research_quality`, `memory_sync`, `latency_telemetry`
   - `next_owner`, `resume_entrypoint`, `stale_assumptions`
 - [ ] Lead detects in-progress tasks and missing teammates.
 - [ ] Existing task state is preserved (no blind reset).
 - [ ] Scoped orphan tasks are normalized before resume (`in_progress` without active teammate -> `pending`).
 - [ ] Team is recreated if needed and only missing teammates are respawned.
+- [ ] If `memory_sync.blocking_exit_persisted != true`, the workflow is not treated as safely paused yet.
 - [ ] Blockers are revalidated before continuing:
   - verifier still blocked by challenge/remediation path when required
   - memory update still blocked by verifier
 - [ ] Execution resumes from task DAG state using explicit `resume_entrypoint`.
 - [ ] If handoff payload conflicts with TaskList state, TaskList wins and conflict is logged.
 - [ ] Only one active workflow instance is resumed for current project.
+- [ ] Resume reconstructs the active BUILD phase from `phase_cursor` / `active_phase_contract` when a saved plan exists.
+- [ ] Resume can explain the last verified phase via `phase_transition_summaries`, not only the currently active phase.
+- [ ] Resume restores traceability state so open requirements and acceptance criteria are not guessed from memory prose.
+- [ ] Resume restores `challenge_decisions` so verifier intake does not guess whether a reviewer conflict was accepted or unresolved.
+- [ ] Resume restores structured accepted-risk records so verifier scope and memory update revalidation triggers are not guessed.
+- [ ] Resume restores reopened-proof regression records so prior closed proof is not mistaken for ordinary deferred scope.
+- [ ] Resume preserves DEBUG attempt counting by using the current workflow reset marker, not older `[DEBUG-N]` history.
+- [ ] Resume restores convergence state from workflow artifact instead of guessing whether remediation already closed.
+- [ ] Replay from `.events.jsonl` can explain planner completion and remediation traceability deltas when the latest artifact alone is insufficient.
+- [ ] Replay never overrides the latest artifact snapshot.
+- [ ] If verifier cannot prove a builder-claimed satisfied item, remediation is opened instead of silently downgrading the claim.
 
 Never acceptable:
 - [ ] Restart from scratch without checking existing task DAG.
@@ -541,7 +602,7 @@ Use this after running the Retrospective Validation (Section 0):
 ```markdown
 # CC-Teams Retrospective Validation Verdict
 
-**Version:** 0.1.8
+**Version:** 0.2.0
 **Date:** [YYYY-MM-DD]
 **Validated By:** [Name/AI]
 

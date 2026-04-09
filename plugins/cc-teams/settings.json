@@ -3,25 +3,61 @@
     "TeammateIdle": [
       {
         "type": "command",
-        "command": "bash plugins/cc-teams/hooks/teammate-idle.sh"
+        "command": "bash \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/hooks/teammate-idle.sh"
+      }
+    ],
+    "TaskCreated": [
+      {
+        "type": "command",
+        "command": "bash \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/hooks/task-created.sh"
       }
     ],
     "TaskCompleted": [
       {
         "type": "command",
-        "command": "bash plugins/cc-teams/hooks/task-completed.sh"
+        "command": "bash \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/hooks/task-completed.sh"
       }
     ],
     "WorktreeCreate": [
       {
         "type": "command",
-        "command": "bash plugins/cc-teams/hooks/worktree-create.sh"
+        "command": "bash \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/hooks/worktree-create.sh"
       }
     ],
     "PreCompact": [
       {
         "type": "command",
-        "command": "bash plugins/cc-teams/hooks/pre-compact.sh"
+        "command": "bash \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/hooks/pre-compact.sh"
+      }
+    ],
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/scripts/cc-teams_sessionstart_context.py"
+      }
+    ],
+    "PostCompact": [
+      {
+        "type": "command",
+        "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/scripts/cc-teams_postcompact_context.py"
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/scripts/cc-teams_stop_persist.py"
+      }
+    ],
+    "StopFailure": [
+      {
+        "type": "command",
+        "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/scripts/cc-teams_stop_failure_log.py"
+      }
+    ],
+    "InstructionsLoaded": [
+      {
+        "type": "command",
+        "command": "python3 \"$CLAUDE_PROJECT_DIR\"/plugins/cc-teams/scripts/cc-teams_instructions_loaded_audit.py"
       }
     ]
   }

@@ -11,12 +11,14 @@ This plan is **compaction-safe** and should be treated as the single source of t
 - CC10x is production-proven.
 - CC-Teams is live in production on Agent Teams foundations.
 - Runtime hooks are **not enabled** and remain optional.
+- Claude Code capability usage is validated in-repo against official docs.
 - Current functional runtime files:
   - `plugins/cc-teams/skills/*`
   - `plugins/cc-teams/agents/*`
 - Phase A docs are complete (`KPI-SCORECARD`, `BENCHMARK-CASES`, `DECISION-LOG`).
 - Phase B/C runtime hardening is implemented for deterministic orchestration.
-- Phase D benchmark harness scripts are implemented (`scripts/eval/run-benchmark.sh`, `scripts/eval/score-benchmark.sh`).
+- Phase D benchmark harness scripts and deterministic replay/readiness checks are implemented.
+- Current release baseline is `0.2.0`.
 
 ---
 
@@ -165,10 +167,13 @@ Exit Criteria:
 Deliver:
 - benchmark scripts and baseline runs CC10x vs CC-Teams
 - deterministic replay of failure scenarios
+- canonical benchmark corpus manifest with runner/doc parity enforcement
 
 Files:
 - `scripts/eval/run-benchmark.sh`
 - `scripts/eval/score-benchmark.sh`
+- `scripts/eval/benchmark-cases.json`
+- `scripts/check-cc-teams-benchmark-corpus.py`
 - `package.json`
 
 Exit Criteria:
@@ -247,10 +252,10 @@ CC-Teams can be called best-in-class only if:
 
 ---
 
-## 12) Next Action List (Immediate)
+## 12) Next Action List (Release Baseline Maintenance)
 1. Run `npm run check:cc-teams` before and after any behavior-affecting change.
-2. Route all audits through `EXPECTED-BEHAVIOR-RUNBOOK.md` + Harmony Report.
-3. For each change, create/update one decision entry with scope, risk, rollback, evidence.
+2. Keep `CLAUDE-CODE-CAPABILITY-VALIDATION.md` aligned with every newly adopted Claude Code capability.
+3. Route all audits through `EXPECTED-BEHAVIOR-RUNBOOK.md` + Harmony Report.
 4. Prefer targeted fixes over structural expansion; avoid role/skill sprawl.
 5. Keep production verdict state in `PHASE-E-VERDICT.md` aligned with real operational evidence.
 

@@ -70,7 +70,7 @@ check_agent() {
       assert_not_has "$agent" "$tools" "Write"
       assert_not_has "$agent" "$tools" "Edit"
       ;;
-    live-reviewer|hunter|security-reviewer|performance-reviewer|quality-reviewer|accessibility-reviewer|api-contract-reviewer)
+    live-reviewer|hunter|security-reviewer|performance-reviewer|quality-reviewer|accessibility-reviewer|api-contract-reviewer|plan-gap-reviewer)
       assert_not_has "$agent" "$tools" "Write"
       assert_not_has "$agent" "$tools" "Edit"
       assert_not_has "$agent" "$tools" "Bash"
@@ -91,7 +91,8 @@ for agent in \
   performance-reviewer \
   quality-reviewer \
   accessibility-reviewer \
-  api-contract-reviewer; do
+  api-contract-reviewer \
+  plan-gap-reviewer; do
   check_agent "$agent"
 done
 

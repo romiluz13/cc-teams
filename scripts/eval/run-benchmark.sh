@@ -65,6 +65,8 @@ done
 
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
 out_dir="$repo/artifacts/eval/$run_id/$profile"
+manifest_src="$repo/scripts/eval/benchmark-cases.json"
+fixture_index_src="$repo/artifacts/eval/fixtures/index.json"
 
 if [[ -d "$out_dir" && "$force" -ne 1 ]]; then
   echo "Run directory already exists: $out_dir" >&2
@@ -72,45 +74,50 @@ if [[ -d "$out_dir" && "$force" -ne 1 ]]; then
   exit 1
 fi
 
+if [[ ! -f "$manifest_src" ]]; then
+  echo "Missing canonical benchmark manifest: $manifest_src" >&2
+  exit 1
+fi
+
+if [[ ! -f "$fixture_index_src" ]]; then
+  echo "Missing canonical fixture index: $fixture_index_src" >&2
+  exit 1
+fi
+
 rm -rf "$out_dir"
 mkdir -p "$out_dir"
 
-cat > "$out_dir/cases-manifest.json" <<'JSON'
-[
-  {"case_id":"P-01","workflow":"PLAN","risk_class":"high","coupling":"medium"},
-  {"case_id":"P-02","workflow":"PLAN","risk_class":"critical","coupling":"high"},
-  {"case_id":"P-03","workflow":"PLAN","risk_class":"high","coupling":"medium"},
-  {"case_id":"P-04","workflow":"PLAN","risk_class":"medium","coupling":"high"},
-  {"case_id":"P-05","workflow":"PLAN","risk_class":"medium","coupling":"medium"},
-  {"case_id":"P-06","workflow":"PLAN","risk_class":"high","coupling":"medium"},
+jq -n \
+  --slurpfile cases "$manifest_src" \
+  --slurpfile fixtures "$fixture_index_src" '
+    $cases[0] as $case_list |
+    $fixtures[0] as $fixture_list |
+    [
+      $case_list[] as $case |
+      ($fixture_list[] | select(.case_id == $case.case_id)) as $fixture |
+      ($case + {
+        fixture_id: $fixture.fixture_id,
+        deterministic_seed: $fixture.deterministic_seed,
+        interruption_profile: $fixture.interruption_profile,
+        ground_truth_mode: $fixture.ground_truth_mode,
+        fixture_notes: $fixture.fixture_notes
+      })
+    ]
+  ' > "$out_dir/cases-manifest.json"
 
-  {"case_id":"B-01","workflow":"BUILD","risk_class":"medium","coupling":"low"},
-  {"case_id":"B-02","workflow":"BUILD","risk_class":"high","coupling":"high"},
-  {"case_id":"B-03","workflow":"BUILD","risk_class":"critical","coupling":"high"},
-  {"case_id":"B-04","workflow":"BUILD","risk_class":"high","coupling":"high"},
-  {"case_id":"B-05","workflow":"BUILD","risk_class":"critical","coupling":"medium"},
-  {"case_id":"B-06","workflow":"BUILD","risk_class":"high","coupling":"medium"},
-
-  {"case_id":"R-01","workflow":"REVIEW","risk_class":"critical","coupling":"medium"},
-  {"case_id":"R-02","workflow":"REVIEW","risk_class":"high","coupling":"medium"},
-  {"case_id":"R-03","workflow":"REVIEW","risk_class":"medium","coupling":"low"},
-  {"case_id":"R-04","workflow":"REVIEW","risk_class":"medium","coupling":"low"},
-  {"case_id":"R-05","workflow":"REVIEW","risk_class":"high","coupling":"medium"},
-  {"case_id":"R-06","workflow":"REVIEW","risk_class":"high","coupling":"medium"},
-
-  {"case_id":"D-01","workflow":"DEBUG","risk_class":"medium","coupling":"low"},
-  {"case_id":"D-02","workflow":"DEBUG","risk_class":"critical","coupling":"high"},
-  {"case_id":"D-03","workflow":"DEBUG","risk_class":"high","coupling":"medium"},
-  {"case_id":"D-04","workflow":"DEBUG","risk_class":"critical","coupling":"high"},
-  {"case_id":"D-05","workflow":"DEBUG","risk_class":"high","coupling":"medium"},
-  {"case_id":"D-06","workflow":"DEBUG","risk_class":"high","coupling":"high"}
-]
-JSON
+cp "$fixture_index_src" "$out_dir/fixtures-index.json"
 
 jq -cr '
   .[] | {
     case_id,
     workflow,
+    category,
+    risk_class,
+    coupling,
+    seeded_defects,
+    expected_topology,
+    pass_criteria,
+    primary_kpis,
     status: "NOT_RUN",
     result_notes: "",
     metrics: {
@@ -170,7 +177,8 @@ cat > "$out_dir/README.md" <<'MD'
 # Benchmark Run Scaffold
 
 ## 1) Execute Cases
-- Use `cases-manifest.json` as the source case list.
+- `cases-manifest.json` is copied from the canonical corpus at `scripts/eval/benchmark-cases.json`.
+- `fixtures-index.json` is copied from the canonical deterministic fixture corpus at `artifacts/eval/fixtures/index.json`.
 - Record each case status in `case-results.jsonl` (`PASS|FAIL|PARTIAL|NOT_RUN`).
 
 ## 2) Aggregate KPI Inputs

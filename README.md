@@ -1,17 +1,21 @@
 # cc-teams
 
-### Next-Gen Orchestration on Agent Teams
+### Production-Grade Claude Code Agent Teams Harness
 
-**Current version:** 0.1.18
+**Current version:** 0.2.0
 
 **Requires: Agent Teams enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`)**
 
 <p align="center">
-  <strong>1 Lead</strong> &nbsp;•&nbsp; <strong>13 Agents</strong> &nbsp;•&nbsp; <strong>5 Workflows</strong> &nbsp;•&nbsp; <strong>17 Skills</strong>
+  <strong>1 Lead</strong> &nbsp;•&nbsp; <strong>14 Agents</strong> &nbsp;•&nbsp; <strong>5 Workflows</strong> &nbsp;•&nbsp; <strong>17 Skills</strong>
 </p>
 
 <p align="center">
   <em>Agent Teams do the work. You review the results.</em>
+</p>
+
+<p align="center">
+  <strong>Release status:</strong> production-ready baseline with repo-enforced Claude Code capability validation
 </p>
 
 ---
@@ -135,7 +139,7 @@ Reviewer: "LGTM"
 
 ---
 
-## The 13 Agents
+## The 14 Agents
 
 | Agent | Role | Mode | When Active |
 |-------|------|------|-------------|
@@ -152,6 +156,7 @@ Reviewer: "LGTM"
 | **verifier** | E2E integration verification + dependency audit | READ-ONLY | All workflows |
 | **investigator** | Hypothesis champion in Bug Court | READ-ONLY | DEBUG |
 | **planner** | Comprehensive plan creation | WRITE (plan files only) | PLAN |
+| **plan-gap-reviewer** | Clean-room plan challenge and contradiction detection | READ-ONLY | PLAN |
 
 ---
 
@@ -178,7 +183,7 @@ Reviewer: "LGTM"
 | **cross-layer-build** | Parallel frontend + backend implementation with API contract relay |
 | **session-memory** | Context persistence across sessions |
 | **verification** | Evidence-before-claims enforcement |
-| **router-contract** | YAML contract format for all agents (v2.4) |
+| **router-contract** | YAML contract format for all agents (v2.5) |
 | **github-research** | External code research via Octocode/GitHub with tiered fallbacks |
 
 ## The 9 Domain Skills
@@ -234,7 +239,7 @@ CC-Teams survives context compaction:
 
 ---
 
-## Quality Validation Harness (Phase D)
+## Quality Validation Harness
 
 CC-Teams includes reproducible benchmark scaffolding for production change-control gates.
 
@@ -254,6 +259,14 @@ Generated benchmark artifacts:
 - `artifacts/eval/<run-id>/<profile>/case-results.jsonl`
 - `artifacts/eval/<run-id>/<profile>/summary.json`
 - `artifacts/eval/<run-id>/<profile>/scorecard.json`
+
+## Claude Code Validation
+
+CC-Teams tracks every Claude Code capability it explicitly relies on against the official docs and enforces that coverage in-repo.
+
+- Capability matrix: [CLAUDE-CODE-CAPABILITY-VALIDATION.md](/Users/rom.iluz/Dev/cc10x_v5/cc100x/docs/cc-teams-excellence/CLAUDE-CODE-CAPABILITY-VALIDATION.md)
+- Capability gate: `npm run check:claude-doc-validation`
+- Full release gate: `npm run check:cc-teams`
 
 ---
 

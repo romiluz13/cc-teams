@@ -5,7 +5,8 @@
 # Appends a marker to progress.md so the lead can detect and emit a handoff payload.
 set -euo pipefail
 
-PROGRESS=".claude/cc-teams/progress.md"
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+PROGRESS="$PROJECT_ROOT/.claude/cc-teams/progress.md"
 
 # Only act if cc-teams memory system is active in this session
 if [[ ! -f "$PROGRESS" ]]; then

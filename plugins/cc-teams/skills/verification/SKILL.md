@@ -12,6 +12,8 @@ Claiming work is complete without verification is dishonesty, not efficiency.
 
 **Core principle:** Evidence before claims, always.
 
+Task completion is not goal achievement. Verify that the user-visible goal works, not that a task or teammate says it is done.
+
 **Violating the letter of this rule is violating the spirit of this rule.**
 
 ## The Iron Law
@@ -222,6 +224,41 @@ Before marking work complete:
 COMPLETE - All verifications passed with fresh evidence
 ```
 
+## Evidence Array Protocol
+
+**Every claim in verification output MUST have a corresponding evidence entry.**
+
+**Format:** `[scenario] | [command] -> exit [code] | expected=[expected] | actual=[actual]`
+
+**Rules:**
+1. One evidence entry per claim — no claim without evidence, no evidence without claim
+2. Evidence must be from THIS session (not recalled from memory)
+3. Exit codes are mandatory — "looks good" is not evidence
+4. For scenario proof, include non-empty expected and actual values:
+
+```
+EVIDENCE:
+  scenarios:
+    - "Auth login | CI=true npm test -- auth.test.ts -> exit 0 | expected=valid user receives session | actual=session cookie created"
+  tests:
+    - "CI=true npm test -> exit 0: 34/34 passed"
+  build:
+    - "npm run build -> exit 0: compiled in 2.3s"
+  regression:
+    - "npm test -- auth.test.ts -> exit 0: regression case passes"
+```
+
+**Verification Summary must include this EVIDENCE block before the Status line.**
+
+**Anti-pattern:** `Status: COMPLETE - All verifications passed` without EVIDENCE block = INVALID.
+
+**Scenario reconciliation rules:**
+1. `SCENARIOS_TOTAL = SCENARIOS_PASSED + SCENARIOS_FAILED`.
+2. `SCENARIOS_PASSED` must equal the number of scenario rows with exit 0 and result PASS.
+3. Every scenario row must have non-empty `Expected` and `Actual`.
+4. Every counted scenario must map to exactly one concrete evidence entry.
+5. If any rule fails, proof status is `gaps_found`, not `passed`.
+
 ## Goal-Backward Lens (GSD-Inspired)
 
 After standard verification passes, apply this additional check:
@@ -230,6 +267,8 @@ After standard verification passes, apply this additional check:
 1. **Truths:** What must be OBSERVABLE? (user-facing behaviors)
 2. **Artifacts:** What must EXIST? (files, endpoints, tests)
 3. **Wiring:** What must be CONNECTED? (component → API → database)
+
+If any truth, artifact, or wiring requirement is inferred instead of verified, proof status is `gaps_found`. No proof, no PASS.
 
 ### Why This Catches Stubs
 A component can:
@@ -266,6 +305,22 @@ Goal check: All boxes checked?
 - Before marking BUILD workflow as done
 
 **Iron Law unchanged:** Exit code 0 still required. This is an additional verification lens, not a replacement.
+
+## Phase-Exit Proof vs Extended Audit
+
+Use this distinction when verification gets expensive:
+
+- **Phase-exit proof** is the non-negotiable minimum:
+  - truths
+  - artifacts
+  - wiring
+  - fresh scenario evidence
+- **Extended audit** is additional confidence work:
+  - broader scans
+  - extra pattern sweeps
+  - deeper blast-radius checks
+
+Never skip phase-exit proof. If extended audit is not run, say so explicitly instead of implying it happened.
 
 ## Stub Detection Patterns
 
@@ -396,3 +451,17 @@ check_auth_protection() {
 Run the command. Read the output. THEN claim the result.
 
 This is non-negotiable.
+
+## Completion Guard (Final Gate Before Router Contract)
+
+**IMMEDIATELY before writing `### Router Contract (MACHINE-READABLE)`, verify ALL:**
+
+1. **Acceptance criteria met?** — Re-read task description. Check each criterion. Any gap = `STATUS: FAIL`
+2. **Evidence array complete?** — Every claim has `[command] -> exit [code]` evidence from THIS session
+3. **Fresh verification?** — Last test/build command ran in THIS task, not earlier in conversation
+4. **Scenario reconciliation?** — Scenario totals, expected/actual values, and evidence rows reconcile exactly
+5. **Truths/artifacts/wiring?** — All three are verified or the Router Contract uses `PROOF_STATUS: gaps_found`
+
+**If ANY check fails:** Fix it first, then re-run Completion Guard. Do NOT emit Router Contract with `STATUS: PASS` until all checks pass.
+
+This is the LAST gate. No exceptions. No "close enough."

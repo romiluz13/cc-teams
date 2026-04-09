@@ -25,7 +25,7 @@ This file is the execution companion to:
 
 ---
 
-## Mandatory Final Live Matrix (Before Approval)
+## Ongoing Audit Matrix (Post-Approval)
 
 Use `docs/cc-teams-excellence/EXPECTED-BEHAVIOR-RUNBOOK.md` and mark:
 1. `S07` standalone REVIEW workflow
@@ -64,3 +64,4 @@ Rationale:
 1. CC-Teams is now live in production and core orchestration gates are enforced.
 2. Remaining high-variance scenarios are managed through post-launch, risk-controlled audits.
 3. Any behavioral change now follows production-change governance (targeted, reversible, evidence-backed).
+4. The v0.2.0 baseline includes repo-enforced Claude Code capability validation and deterministic harness checks.

@@ -1,0 +1,82 @@
+{
+  "id": "debug-research",
+  "workflow_type": "DEBUG",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-oauth-debug-20260409-123000",
+    "workflow_kind": "DEBUG",
+    "project_root": "/workspace/oauth-app",
+    "team_name": "cc-teams-oauth-debug-20260409-123000",
+    "plan_file": "docs/plans/2026-04-09-oauth-callback-debug.md",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "critical_path",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Fix OAuth callback failure"
+    },
+    "traceability": {
+      "requirements": [],
+      "phases": [],
+      "verification": [],
+      "remediation": []
+    },
+    "normalized_phases": [],
+    "active_phase_contract": {},
+    "phase_cursor": "debug-investigate",
+    "task_ids": {},
+    "phase_status": {},
+    "results": {},
+    "evidence": {},
+    "challenge_decisions": {},
+    "regressions": {},
+    "boundary_history": {},
+    "phase_transition_summaries": {},
+    "loop_counts": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "research_quality": {
+      "overall": "medium",
+      "sources": [
+        "github",
+        "web"
+      ],
+      "degraded_reasons": [
+        "provider-specific docs incomplete"
+      ]
+    },
+    "memory_notes_collected": [],
+    "pending_gate": "RESEARCH_EXECUTED",
+    "resume_entrypoint": "reinvoke investigator with research context",
+    "stale_assumptions": [],
+    "debug_reset_marker": "debug-reset-9",
+    "attempt_baseline": 2,
+    "created_at": "2026-04-09T12:30:00Z",
+    "updated_at": "2026-04-09T12:41:00Z"
+  },
+  "relevant_tasks": {},
+  "agent_outputs": {
+    "investigator_contract": {
+      "STATUS": "BLOCKED",
+      "VERIFICATION_RIGOR": "critical_path",
+      "NEEDS_EXTERNAL_RESEARCH": true,
+      "RESEARCH_REASON": "Need provider-specific callback handling pattern"
+    },
+    "research_results": {
+      "web_status": "PARTIAL",
+      "github_status": "DEGRADED",
+      "overall_quality": "medium"
+    }
+  },
+  "expected": {
+    "next_action": "reinvoke_investigator",
+    "artifact_delta": {
+      "research_quality": {
+        "overall": "medium"
+      },
+      "quality": {
+        "convergence_state": "needs_iteration"
+      }
+    }
+  }
+}

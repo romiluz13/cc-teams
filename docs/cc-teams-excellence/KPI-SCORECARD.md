@@ -68,6 +68,7 @@ Each benchmark run must produce:
 1. `artifacts/eval/<timestamp>/<profile>/summary.json`
 2. `artifacts/eval/<timestamp>/<profile>/scorecard.json`
 3. `artifacts/eval/<timestamp>/<profile>/case-results.jsonl`
+4. `artifacts/eval/<timestamp>/<profile>/fixtures-index.json`
 
 Minimum `scorecard.json` shape:
 

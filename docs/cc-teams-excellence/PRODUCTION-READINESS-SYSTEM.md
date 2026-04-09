@@ -13,6 +13,9 @@ CC-Teams is production-ready only when all gates below are true at the same time
 ## Gate PR1 - Protocol Integrity
 1. `npm run check:cc-teams` passes with zero failures.
 2. No known protocol lint regressions in lead/runbook/lint ownership layers.
+3. Fixture-backed workflow replay validation passes for required replay cases.
+4. Benchmark corpus manifest, runner, and benchmark doc stay in 26-case parity.
+5. Deterministic benchmark fixture index stays aligned with the canonical corpus.
 
 ## Gate PR2 - Workflow Completeness
 Required live scenarios are executed and passed:
@@ -115,5 +118,6 @@ In production:
 ---
 
 ## 8) Current Intent
-CC-Teams should continue improvements only when they are targeted, reversible, and evidence-backed.
+CC-Teams v0.2.0 is the current production release baseline.
+Further improvements should continue only when they are targeted, reversible, and evidence-backed.
 The default mode is controlled iteration, not architecture churn.

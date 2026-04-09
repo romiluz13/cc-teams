@@ -1,0 +1,36 @@
+{
+  "id": "instructions-loaded-audit",
+  "workflow_type": "PLAN",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-plan-20260409-131500",
+    "workflow_kind": "PLAN",
+    "project_root": "/workspace/plan",
+    "team_name": "cc-teams-plan-20260409-131500",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "standard",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Plan safely with instruction awareness"
+    },
+    "traceability": {},
+    "phase_cursor": "plan-create",
+    "task_ids": {},
+    "results": {},
+    "evidence": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "pending_gate": "TASKS_CREATED",
+    "resume_entrypoint": "spawn planner",
+    "stale_assumptions": []
+  },
+  "expected": {
+    "event": "instructions_loaded",
+    "required_fields": [
+      "file_path",
+      "memory_type",
+      "source"
+    ]
+  }
+}

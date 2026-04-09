@@ -1,7 +1,7 @@
 {
   "name": "cc-teams",
-  "version": "0.1.18",
-  "description": "Next-Gen Orchestration on Agent Teams for Claude Code",
+  "version": "0.2.0",
+  "description": "Production-grade Claude Code Agent Teams harness",
   "author": {
     "name": "Rom Iluz",
     "email": "rom@iluz.net",
@@ -16,8 +16,15 @@
     "check:functional-bible": "bash scripts/check-functional-bible-drift.sh",
     "check:agent-tools": "bash scripts/lint-cc-teams-agent-tools.sh",
     "check:artifact-policy": "bash scripts/lint-cc-teams-artifact-policy.sh",
+    "check:hook-runtime": "bash scripts/lint-cc-teams-hook-runtime.sh",
+    "check:release-audit": "bash scripts/lint-cc-teams-release-audit.sh",
+    "check:replay-readiness": "bash scripts/lint-cc-teams-replay-readiness.sh",
+    "check:claude-doc-validation": "bash scripts/lint-cc-teams-claude-doc-validation.sh",
+    "check:benchmark-corpus": "bash scripts/lint-cc-teams-benchmark-corpus.sh",
+    "check:benchmark-fixtures": "bash scripts/lint-cc-teams-benchmark-fixtures.sh",
+    "check:workflow-replay": "python3 scripts/check-cc-teams-workflow-replay.py",
     "check:protocol-integrity": "bash scripts/lint-cc-teams-protocol-integrity.sh",
-    "check:cc-teams": "npm run check:functional-bible && npm run check:agent-tools && npm run check:artifact-policy && npm run check:protocol-integrity",
+    "check:cc-teams": "npm run check:functional-bible && npm run check:agent-tools && npm run check:artifact-policy && npm run check:hook-runtime && npm run check:release-audit && npm run check:replay-readiness && npm run check:claude-doc-validation && npm run check:benchmark-corpus && npm run check:benchmark-fixtures && npm run check:workflow-replay && npm run check:protocol-integrity",
     "eval:run": "bash scripts/eval/run-benchmark.sh",
     "eval:score": "bash scripts/eval/score-benchmark.sh"
   },

@@ -36,7 +36,7 @@ The lifecycle is integrated, task-enforced, and covers five workflow variants:
 - BUILD-CROSSLAYER: backend-builder (contract pub) -> frontend-builder (contract-gated) -> async live-reviewer -> Hunter -> triad + a11y + api-contract reviewers + challenge -> Verifier.
 - DEBUG: 2-5 investigators -> debate (max 3 rounds) -> builder fix -> triad + conditional reviewers + challenge -> Verifier.
 - REVIEW: triad + conditional reviewers + challenge round.
-- PLAN: planner writes plan files directly (NO plan mode — plan mode is code-review-only; planner writes documentation).
+- PLAN: planner writes the saved plan, then clean-room plan-gap-reviewer challenges it before memory indexing.
 
 **Phase completion criteria are explicit:**
 - Challenge round: ALL ACTIVE reviewers (3–5) acknowledged peer findings, at least one response from each, conflicts resolved or escalated.
@@ -63,8 +63,8 @@ Before team execution or resume:
 - Team naming is deterministic.
 - Lead enters delegate mode before assignment.
 - `TEAM_CREATED` is an operational gate (not narrative): team exists, required teammates are spawned, direct messaging is reachable.
-- Downstream agents are PRE-SPAWNED with blocked tasks when their predecessor STARTS (not finishes) — eliminates phase-transition spawn latency.
-- Conditional agents (accessibility-reviewer, api-contract-reviewer) are spawned based on FILES_MODIFIED signals from builder Router Contract — not pre-spawned at kickoff.
+- Downstream agents are not pre-spawned for blocked tasks; the lead spawns teammates only when their task is runnable.
+- Conditional agents (accessibility-reviewer, api-contract-reviewer) are spawned based on FILES_MODIFIED signals from builder Router Contract — not spawned at kickoff.
 - Teammate prompts declare default memory owner as lead.
 
 Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:47`
@@ -86,6 +86,13 @@ Workflow execution is DAG-first and closure-gated:
 - Every workflow (BUILD/BUILD-CROSSLAYER/DEBUG/REVIEW/PLAN) includes a `CC-TEAMS Memory Update` task.
 - Workflow cannot complete until Memory Update and TEAM_SHUTDOWN both succeed.
 - Memory Update escape hatch: if verifier stalls at CRITICAL, Memory Update is manually unblocked and persists partial learnings.
+- If challenge synthesis ends in `accepted_risk`, Memory Update must persist the accepted-risk boundary into decision/progress memory with a revalidation trigger; accepted risk is not treated as resolved.
+- Workflow-final Memory Update must journal workflow kind, active phase outcome, convergence state, traceability status, strongest evidence, and intentionally open boundaries so Markdown memory mirrors artifact truth.
+- Plan-backed phase transitions also persist `phase_transition_summaries` so the next phase consumes a durable summary of closed proof and intentionally open boundaries.
+- Research-informed workflows persist `research_quality` so resume can distinguish complete, partial, and degraded research input quality.
+- Blocking exits persist `memory_sync` so stop/resume does not guess whether handoff and workflow-final memory persistence completed safely.
+- Workflow artifacts may also carry compact `latency_telemetry` when timing truth is available.
+- `pending_gate` uses explicit operational states such as `scope_decision`, `checkpoint_decision`, and `memory_sync`.
 - Legacy tasks (missing workflow stamp) are NOT resumed; fresh stamped tasks are created instead.
 
 Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:202`
@@ -97,9 +104,13 @@ Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:396`
 
 ## 5) Router Contract Is Non-Negotiable
 
-Every teammate must emit machine-readable Router Contract YAML (CONTRACT_VERSION: "2.4"). Lead validates contract before completion and routes remediation for blocking outcomes.
+Every teammate must emit machine-readable Router Contract YAML (CONTRACT_VERSION: "2.5"). Lead validates contract before completion and routes remediation for blocking outcomes.
 
-Current schema version 2.4 adds:
+Current schema version 2.5 adds:
+- `STATE_DELTA` — every teammate reports `what_changed`, `remains_open`, `should_stay_closed`, and `next_trigger`
+- lead uses these deltas to synthesize phase-transition summaries and detect regressions against previously closed proof
+
+Version 2.4 adds:
 - `PHASE_GATE_RESULT` / `PHASE_GATE_CMD` — builder, frontend-builder, backend-builder
 - `DEPENDENCY_AUDIT` / `DEPENDENCY_AUDIT_DETAIL` — verifier, security-reviewer
 - `DEPENDENCY_AUDIT: SKIPPED` — accessibility-reviewer, api-contract-reviewer
@@ -146,6 +157,7 @@ Write/read boundaries are explicit and capability-enforced:
 - `security-reviewer`, `performance-reviewer`, `quality-reviewer` — READ-ONLY triad reviewers.
 - `accessibility-reviewer` — READ-ONLY WCAG 2.1 AA specialist (conditional).
 - `api-contract-reviewer` — READ-ONLY API breaking-change validator (conditional).
+- `plan-gap-reviewer` — READ-ONLY fresh plan challenger with anti-anchoring input rules.
 - `hunter`, `verifier`, `live-reviewer` — READ-ONLY.
 - All read-only agents are capability-constrained (no `Write`/`Edit`; no ad-hoc artifact generation path).
 
@@ -159,6 +171,7 @@ Source: `plugins/cc-teams/agents/performance-reviewer.md:15`
 Source: `plugins/cc-teams/agents/quality-reviewer.md:15`
 Source: `plugins/cc-teams/agents/accessibility-reviewer.md:15`
 Source: `plugins/cc-teams/agents/api-contract-reviewer.md:15`
+Source: `plugins/cc-teams/agents/plan-gap-reviewer.md:15`
 Source: `plugins/cc-teams/agents/hunter.md:15`
 Source: `plugins/cc-teams/agents/verifier.md:15`
 Source: `plugins/cc-teams/agents/live-reviewer.md:15`
@@ -209,6 +222,54 @@ Memory persistence is owner-scoped:
 - Teammate direct memory edits require explicit override (`MEMORY_OWNER: teammate`).
 - Session handoff payload includes `memory_notes_collected` and `teammate_roster` to preserve context across compaction boundaries.
 
+## 8.1) Phase-Aware Execution Canon
+
+- Saved plans are not passive references: BUILD hydration normalizes executable phases into workflow artifact state before builder runs.
+- `phase_cursor` identifies the only approved BUILD phase that may run next when a workflow is plan-backed.
+- `active_phase_contract` carries objective, inputs, surfaces, required checks, checkpoint type, autonomy, and exit criteria into builder/verifier prompts.
+- If a prior phase has already been verified, the next phase receives the latest `phase_transition_summaries` entry as continuity context.
+- Workflow artifact also carries `intent`, `approved_decisions`, and `traceability` so the current phase remains tied to requirements and acceptance criteria.
+- Contradictory, empty, or unverifiable acceptance criteria block BUILD before a builder is assigned.
+- Acceptance criteria must also map to at least one phase/check/proof path and may not conflict with non-goals or unresolved/approved decisions.
+- Planner cannot finalize with contradiction or coverage-gap flags still open.
+- Resume reconstructs the active phase from task state plus workflow artifact, not from stale narrative memory alone.
+- DEBUG uses a workflow-scoped reset marker so attempt counting survives interruption without mixing older workflows.
+- Instruction precedence is explicit: user request > project-local instructions / saved plan / approved decisions > CC-Teams lead protocol > domain skills and heuristics.
+
+Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:259`
+Source: `plugins/cc-teams/skills/session-memory/SKILL.md:74`
+
+## 8.2) Convergence Canon
+
+- Remediation loops are workflow-state transitions, not only task choreography.
+- Workflow artifact persists `remediation_history`, `loop_counts`, and `quality.convergence_state`.
+- `.events.jsonl` provides append-only replay of planner completion, contract validation, and remediation traceability deltas that explain how the artifact reached its current state.
+- Snapshot writes happen before matching replay events, so replay explains the latest state rather than competing with it.
+- Planner completion, builder completion, verifier completion, and remediation transitions use canonical phase-delta shapes.
+- Review Arena conflict resolution is persisted in `challenge_decisions` and replayed through `challenge_decided`.
+- `challenge_decisions.current_phase.resolution_state` distinguishes `clear`, `accepted_risk`, `open_disagreement`, and `reopened_prior_proof`.
+- `challenge_decisions.accepted_risks` uses structured records: `risk`, `scope_boundary`, `accepted_by`, `reason`, `revalidation_trigger`.
+- `challenge_decisions.reopened_proof_regressions` records reopened boundaries with prior phase, current source, and required re-proof.
+- Verifier records reopened-proof retirement as `reproof_closed` or `superseded_by_decision`; silent disappearance of a regression is not valid protocol.
+- `boundary_history.latest` distinguishes active closed boundaries, intentionally open boundaries, accepted-risk boundaries, and retired boundaries for safe phase inheritance.
+- Replay should expose boundary-history deltas whenever verifier retirement changes what later phases inherit.
+- `boundary_history.timeline_tail` keeps a compact recent history of closure/reopen/supersession transitions for resume and audit.
+- Blocking findings force `needs_iteration`; verifier pass on the active phase is required before `phase_cursor` may advance.
+- If a later teammate reopens something a prior verified phase marked as closed, the lead classifies it as a reopened-proof regression and routes explicit remediation.
+- Reopened-proof regressions are persisted in a dedicated artifact lane (`regressions.reopened_proof`), not only inside generic remediation prose.
+- Reopened-proof regressions retire only through explicit verifier retirement records: fresh re-proof or supersession by approved decision.
+- Later phases inherit proof from `boundary_history.latest`, not from raw historical wording alone.
+- A verified phase must produce a compact transition summary that distinguishes `phase_verified`, `pending_next_phase`, and `converged_final`.
+- Builder proof cannot claim satisfied requirements, acceptance criteria, or decision dependencies outside the active phase contract scope.
+- Verifier must explicitly reconcile builder-satisfied claims; unresolved mismatches force remediation.
+- Verifier intake must respect `challenge_decisions.verifier_intake_state`; unresolved conflicts cannot be treated as acceptable risk.
+- `accepted_risk` intake means verifier verifies inside the approved boundary; it does not mean the underlying issue is fixed.
+- Verifier pass is not enough unless requirement traceability is closed for that phase with fresh evidence.
+- If another incomplete phase exists, the workflow returns to `pending`; if not, convergence may become `converged`.
+
+Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:390`
+Source: `plugins/cc-teams/skills/session-memory/SKILL.md:74`
+
 **Agent-level persistent memory (additive to workflow memory, NOT workflow state):**
 - `investigator`: `memory: project` — accumulates codebase-specific bug patterns across sessions. Does not replace `.claude/cc-teams/` workflow memory; it supplements with agent-level codebase intelligence.
 - `security-reviewer`: `memory: user` — accumulates vulnerability patterns across ALL codebases. Cross-project security intelligence.
@@ -250,10 +311,18 @@ Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:945`
 
 ## 10) Hooks and Self-Claim Policy
 
-- Hooks are opt-in via `plugins/cc-teams/settings.json`; core orchestration runs correctly without them.
-- Four hooks implemented: `TeammateIdle` (Router Contract enforcement before idle), `TaskCompleted` (Memory Update file gate), `WorktreeCreate` (memory sync for builder/frontend-builder/backend-builder/planner worktrees), `PreCompact` (checkpoint marker).
+- Hooks are opt-in by merging the repo-owned snippet in `plugins/cc-teams/settings.json` into Claude Code settings; core orchestration runs correctly without them.
+- Baseline hooks include `TeammateIdle`, `TaskCreated`, `TaskCompleted`, `WorktreeCreate`, and `PreCompact`.
+- Optional audit-first hooks may also be enabled for `SessionStart`, `PostCompact`, `Stop`, `StopFailure`, and `InstructionsLoaded`.
+- Runtime hook mode is configured in `plugins/cc-teams/config/hook-mode.json`.
+- Hook commands resolve from `CLAUDE_PROJECT_DIR` so runtime scripts stay stable across nested working directories.
+- `TaskCreated` now validates task identity-stamp metadata before a CC-Teams task enters the task list.
+- `TaskCompleted` now validates task identity-stamp metadata and Memory Update runtime invariants, not only file existence.
 - PreCompact hook writes `CC-TEAMS COMPACT_CHECKPOINT` marker to progress.md; lead emits handoff payload on next turn when marker detected (replaces "30+ tool calls" heuristic).
+- Audit hook scripts may write compact telemetry under `.claude/cc-teams/`, including `.claude/cc-teams/hook-events.log` and `.claude/cc-teams/precompact-state.json`.
+- Expanded hook runtime is covered by a dedicated repo lint: `scripts/lint-cc-teams-hook-runtime.sh`.
 - Self-claim is explicit opt-in and disabled by default for role-specialized flows.
+- Teammates can use project/user MCP and project skills visible in the Claude Code session, but CC-Teams does not rely on subagent-definition `skills:` or `mcpServers:` frontmatter being applied automatically when that definition runs as a teammate.
 
 Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:956`
 Source: `plugins/cc-teams/skills/cc-teams-lead/SKILL.md:989`

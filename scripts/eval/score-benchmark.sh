@@ -75,6 +75,7 @@ if [[ ! -d "$run_dir" ]]; then
 fi
 
 summary_input="$run_dir/summary-input.json"
+cases_manifest="$run_dir/cases-manifest.json"
 case_results="$run_dir/case-results.jsonl"
 summary_out="$run_dir/summary.json"
 scorecard_out="$run_dir/scorecard.json"
@@ -88,6 +89,13 @@ if [[ ! -f "$case_results" ]]; then
   echo "Missing case results file: $case_results" >&2
   exit 1
 fi
+
+if [[ ! -f "$cases_manifest" ]]; then
+  echo "Missing cases manifest: $cases_manifest" >&2
+  exit 1
+fi
+
+python3 "$repo/scripts/check-cc-teams-benchmark-run.py" "$run_dir" >/dev/null
 
 status_json="$(jq -s '{
   total_cases: length,
@@ -111,6 +119,7 @@ fi
 jq -n \
   --arg run_dir "$run_dir" \
   --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --argjson manifest "$(cat "$cases_manifest")" \
   --argjson inputs "$(cat "$summary_input")" \
   --argjson statuses "$status_json" \
   --argjson baseline "$baseline_json" \
@@ -213,6 +222,10 @@ jq -n \
     baseline_id: ($in.baseline_id // null),
     generated_at: $generated_at,
     run_dir: $run_dir,
+    corpus: {
+      total_cases: ($manifest | length),
+      workflows: ($manifest | group_by(.workflow) | map({workflow: .[0].workflow, count: length}))
+    },
     case_status: $statuses,
     inputs: $k,
     kpis: $kpis,

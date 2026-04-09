@@ -11,6 +11,10 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 **Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
 
+Task completion is not goal achievement. Passing a task requires proof, not intent.
+
+**No proof, no PASS. No fresh evidence, no completion claim.**
+
 **Violating the letter of the rules is violating the spirit of the rules.**
 
 ## Test Process Discipline (CRITICAL)
@@ -23,11 +27,31 @@ Write the test first. Watch it fail. Write minimal code to pass.
    - Jest: `CI=true npx jest` or `npx jest --watchAll=false`
    - npm scripts: `CI=true npm test` or `npm test -- --run`
 2. **Prefer CI=true prefix** for all test commands: `CI=true npm test`
-3. **After TDD cycle complete**, verify no orphaned processes:
+3. **Timeout guard:** If CI handling is uncertain, prefix with `timeout 60s` so the Bash tool never hangs indefinitely:
+   ```bash
+   timeout 60s npx vitest run
+   ```
+4. **After TDD cycle complete**, verify no orphaned processes:
    ```bash
    pgrep -f "vitest|jest" || echo "Clean"
    ```
-4. **Kill if found**: `pkill -f "vitest" 2>/dev/null || true`
+5. **Kill if found**: `pkill -f "vitest|jest" 2>/dev/null || true`
+6. **IDE vs CLI truth:** If CLI tests/builds pass with exit 0, trust the CLI over stale IDE/LSP diagnostics during active generation.
+
+## Phase Execution Guard
+
+If you are working from a plan, treat the current approved phase as the contract.
+
+Recover and follow:
+- `objective`
+- `inputs`
+- `files/surfaces`
+- `expected artifacts`
+- `required checks`
+- `checkpoint type`
+- `exit criteria`
+
+If a non-trivial phase is missing these and the work would become guesswork, stop and ask the lead for a clarified phase instead of inventing one.
 
 ## When to Use
 
@@ -72,6 +96,17 @@ Implement fresh from tests. Period.
          └────────────────────────────────────┘
                     Next Feature
 ```
+
+## Vertical Slicing
+
+Implement one behavior at a time:
+- RED -> GREEN for test 1, then RED -> GREEN for test 2
+- not test1, test2, test3 followed by impl1, impl2, impl3
+
+When tests are hard to write, fix the interface:
+- accept dependencies as parameters
+- return results instead of hiding side effects
+- reduce method or component complexity before expanding coverage
 
 ### RED - Write Failing Test
 
@@ -199,6 +234,21 @@ Keep tests green. Don't add behavior.
 ### Repeat
 
 Next failing test for next feature.
+
+## Deviation Discipline
+
+Only absorb work that is directly caused by the current phase's changes or required to satisfy the phase exit criteria.
+
+- Fix inline: direct breakage introduced by this phase, missing glue required by this phase, or test/build failures caused by this phase
+- Surface and stop: broader refactors, unrelated warnings, later-phase work, or architecture choices not already approved
+
+If extra work is not directly traceable to the phase contract, do not quietly absorb it.
+
+## Failure Caps
+
+If GREEN fails **3 consecutive times** on the same test, stop and escalate with the latest error instead of continuing to churn.
+
+If the same linter, type-checker, or build error recurs after **3 fix attempts** in the same file, stop and escalate rather than looping.
 
 ## Good Tests
 

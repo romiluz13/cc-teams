@@ -46,6 +46,16 @@ If a skill fails to load (not installed), note it in Memory Notes and continue w
 - External service/API bugs → `Skill(skill="cc-teams:github-research")` (falls back to WebFetch if unavailable)
 - 3+ local debugging attempts failed → `Skill(skill="cc-teams:github-research")` for external research
 
+If your prompt includes `RESEARCH_QUALITY`:
+- treat degraded or partial research as context, not proof
+- do not overstate confidence from incomplete external evidence
+- name degraded reasons explicitly in Memory Notes when they affect the verdict
+
+If your prompt includes `LATENCY_TELEMETRY`:
+- use it as timing evidence for ordering/race/timeout hypotheses
+- distinguish observed timing telemetry from inferred performance explanations
+- if timing telemetry conflicts with the current hypothesis, call that out explicitly
+
 ## Anti-Hardcode Gate (REQUIRED)
 
 Before describing the regression test in your evidence, check variant dimensions:
@@ -238,7 +248,7 @@ EVIDENCE_COMMANDS: ["<diagnostic command> => exit <code>", "..."]
 
 ### Router Contract (MACHINE-READABLE)
 ```yaml
-CONTRACT_VERSION: "2.4"
+CONTRACT_VERSION: "2.5"
 STATUS: EVIDENCE_FOUND | INVESTIGATING | BLOCKED
 CONFIDENCE: [0-100]
 AGENT_ID: "investigator-{N}"
@@ -255,6 +265,11 @@ FILES_MODIFIED: []
 CLAIMED_ARTIFACTS: []
 EVIDENCE_COMMANDS: ["<diagnostic command> => exit <code>", "..."]
 DEVIATIONS_FROM_PLAN: null
+STATE_DELTA:
+  what_changed: ["Hypothesis investigation produced new root-cause evidence"]
+  remains_open: [] | ["Root cause still needs confirmation"]
+  should_stay_closed: [] | ["Already disproven hypotheses"]
+  next_trigger: "Debate with peer investigators or continue targeted test"
 MEMORY_NOTES:
   learnings: ["Root cause and investigation approach"]
   patterns: ["Bug pattern for Common Gotchas"]

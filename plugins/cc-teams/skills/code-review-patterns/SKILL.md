@@ -12,6 +12,21 @@ Code reviews catch bugs before they ship. But reviewing code quality before func
 
 **Core principle:** First verify it works, THEN verify it's good.
 
+**Posture:** Be adversarial and opinionated. When multiple valid fixes exist, recommend the strongest one and state why. Present a recommendation, not a menu.
+
+## Feedback Form
+
+For every finding:
+- state what is wrong before stating the fix
+- state why it matters before discussing implementation preference
+- reference concrete file:line evidence
+- if the same pattern appears in multiple places, report it once with all affected locations
+- avoid personal framing like "you did X"; describe code behavior instead
+
+**Adversarial posture:** Assume issues may exist until evidence proves otherwise. Your job is not to confirm cleanliness by default. Your job is to surface real problems with concrete evidence.
+
+**Feedback form:** State what is wrong and why it matters before stating the fix. Reference file and line. If a pattern recurs in multiple locations, report it once with all affected locations.
+
 ## Signal Quality Rule
 
 **Flag ONLY when certain. False positives erode trust and waste remediation cycles.**
@@ -21,6 +36,14 @@ Code reviews catch bugs before they ship. But reviewing code quality before func
 | Will fail to compile/parse (syntax, type, import errors) | Style preferences not in project guidelines |
 | Logic error producing wrong results for all inputs | Potential issues dependent on specific inputs/state |
 | Clear guideline violation (quote the exact rule) | Subjective improvements or nitpicks |
+
+## Zero-Finding Gate
+
+If a review pass produces zero findings:
+- verify you actually read the changed files, not just filenames or summaries
+- provide at least one specific positive assertion with file:line evidence
+- do not claim high-confidence cleanliness without evidence-backed positives
+- avoid verdict softeners like "looks fine", "probably safe", or "LGTM" without explanation
 
 ## Quick Review Checklist (Reference Pattern)
 
@@ -78,6 +101,37 @@ Review in priority order:
 4. **Maintainability** - Hard to understand or modify
 5. **UX** - User experience issues (if UI involved)
 6. **Accessibility** - A11y issues (if UI involved)
+
+## Multi-Signal Review Discipline
+
+Treat each pass as its own signal:
+- **Security**: hard signal
+- **Correctness**: hard signal
+- **Performance**: soft signal
+- **Maintainability**: soft signal
+- **UX/A11y**: soft signal
+
+**Rule:** A hard-signal failure outweighs a clean soft-signal pass.
+
+Before finalizing a review, ask:
+1. Am I approving because the code is truly sound, or because no obvious issue jumped out?
+2. Did I verify at least one claim with a concrete file:line reference?
+3. If I flipped my verdict, what evidence would justify the opposite call?
+
+If you cannot answer these, the review is under-supported.
+
+## Zero-Finding Gate (MANDATORY)
+
+If all review passes produce zero findings:
+1. Confirm you reviewed the changed files, not just filenames or diffstat.
+2. Produce at least one **positive assertion** with file:line evidence.
+3. A zero-finding review without positive assertion evidence is invalid.
+4. A zero-finding review at very high confidence is invalid unless the positive assertions meaningfully support it.
+
+**Positive assertion examples:**
+- "Auth is enforced at [file.ts] line N because the route passes through middleware X."
+- "The error path is covered at [file.test.ts] line N because the failing branch is asserted explicitly."
+- "The pagination contract is stable at [file.ts] line N because the response shape preserves cursor fields."
 
 ## Security Review Checklist
 
@@ -255,6 +309,24 @@ grep -rn "console\.log" --include="*.ts" --include="*.tsx" src/
 | **MAJOR** | Affects functionality or significant quality issue | Should fix before merge |
 | **MINOR** | Style issues, small improvements | Can merge, fix later |
 | **NIT** | Purely stylistic preferences | Optional |
+
+## Review Output Rule
+
+A strong review always includes:
+- verdict
+- findings ordered by severity
+- why each reported issue matters
+- file:line evidence
+- fix direction
+- positive assertions when approving
+
+Avoid verdict-softeners like:
+- "looks fine"
+- "LGTM"
+- "probably okay"
+- "should be safe"
+
+Use an evidence-backed verdict instead.
 
 ## Do NOT Flag (False Positive Prevention)
 

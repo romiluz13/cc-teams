@@ -1,0 +1,9 @@
+{
+  "taskMetadata": "block",
+  "taskMemoryFinalize": "block",
+  "sessionStartContext": "audit",
+  "postcompactAudit": "audit",
+  "stopPersist": "audit",
+  "stopFailureLog": "audit",
+  "instructionsLoadedAudit": "audit"
+}

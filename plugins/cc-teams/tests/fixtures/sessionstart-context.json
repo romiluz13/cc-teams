@@ -1,0 +1,57 @@
+{
+  "id": "sessionstart-context",
+  "workflow_type": "BUILD",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-session-build-20260409-132000",
+    "workflow_kind": "BUILD",
+    "project_root": "/workspace/session",
+    "team_name": "cc-teams-session-build-20260409-132000",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "standard",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Resume safely from session start"
+    },
+    "traceability": {},
+    "phase_cursor": "phase-2",
+    "task_ids": {},
+    "results": {},
+    "evidence": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "pending_gate": "checkpoint_decision",
+    "resume_entrypoint": "wait for checkpoint approval",
+    "stale_assumptions": [],
+    "research_quality": {
+      "overall": "medium"
+    },
+    "memory_sync": {
+      "blocking_exit_persisted": true
+    },
+    "boundary_history": {
+      "latest": {
+        "active_closed_boundaries": [
+          "auth invariants"
+        ],
+        "accepted_risk_boundaries": [
+          "temporary flaky integration test"
+        ],
+        "retired_boundaries": []
+      }
+    },
+    "phase_transition_summaries": {
+      "latest_verified": {
+        "phase_id": "phase-1"
+      }
+    }
+  },
+  "expected": {
+    "message_contains": [
+      "research_quality=medium",
+      "memory_sync=persisted",
+      "last_verified_phase=phase-1"
+    ]
+  }
+}

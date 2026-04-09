@@ -1,7 +1,7 @@
 {
   "name": "cc-teams",
-  "version": "0.1.18",
-  "description": "Next-generation orchestration built on Agent Teams. Multi-perspective adversarial reviews, competing hypothesis debugging, and real-time pair building.",
+  "version": "0.2.0",
+  "description": "Production-grade Claude Code Agent Teams harness with adversarial review, competing-hypothesis debugging, and pair building.",
   "author": {
     "name": "Rom Iluz",
     "email": "rom@iluz.net",

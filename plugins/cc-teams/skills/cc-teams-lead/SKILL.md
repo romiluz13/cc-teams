@@ -93,37 +93,37 @@ Project-scope stale-team rule:
 ## Phase-Scoped Teammate Activation (MANDATORY)
 
 To reduce idle confusion, token waste, and premature findings, teammates are spawned by phase.
-**Pre-spawn optimization:** Spawn downstream agents when their predecessor STARTS (not finishes),
-using blocked tasks. Agent is in the team and context-loaded; tasks unblock automatically when
-dependencies complete. Eliminates 1-2 turn spawn latency between phases.
+**Lazy activation rule:** Spawn only the teammate roles that have runnable work in the current phase.
+Create downstream blocked tasks in the task list, but defer teammate spawn until the task is runnable.
+This preserves deterministic ordering, reduces idle token spend, and prevents premature findings from
+non-runnable teammates.
 
 - **BUILD**
   - Team create: `builder`, `live-reviewer`
-  - When builder task **starts**: also pre-spawn `hunter` (queued/blocked by builder — executes immediately when builder finishes)
-  - When hunter task **starts**: also pre-spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer`
+  - Do not spawn `hunter` until the builder task is completed and hunter is runnable
+  - Do not spawn `security-reviewer`, `performance-reviewer`, `quality-reviewer` until hunter is completed and reviewer tasks are runnable
     + **Conditionally** `accessibility-reviewer` if builder's FILES_MODIFIED contains `.tsx|.jsx|.html|.css|.vue`
     + **Conditionally** `api-contract-reviewer` if builder's FILES_MODIFIED contains `routes/|api/|endpoints/|handlers/|controllers/`
-    (all queued/blocked by hunter — execute immediately when hunter finishes)
-  - When review tasks **start**: also pre-spawn `verifier` (queued/blocked by challenge round)
+  - Do not spawn `verifier` until the challenge round is completed and verifier is runnable
 - **DEBUG**
   - Team create: only required `investigator-*`
-  - When investigators **start**: pre-spawn `builder` (queued/blocked by debate verdict)
-  - When builder-fix task **starts**: pre-spawn standard 3 reviewers + conditional reviewers (queued/blocked by builder)
-  - When review tasks **start**: pre-spawn `verifier` (queued/blocked by challenge)
+  - Defer `builder` until the debate verdict completes and the fix task is runnable
+  - Defer standard 3 reviewers + conditional reviewers until builder-fix completes and review tasks are runnable
+  - Defer `verifier` until the challenge round completes and verifier is runnable
 - **BUILD-CROSSLAYER** (see `cc-teams:cross-layer-build` skill)
   - Team create: `backend-builder`
   - When backend-builder completes: extract API contract, spawn `frontend-builder` with contract
   - When both builders complete: spawn `live-reviewer` (async review mode)
-  - Pre-spawn optimization applies same as BUILD from live-reviewer onward
+  - Lazy activation applies same as BUILD from live-reviewer onward
 - **REVIEW**
   - Team create: spawn 3 reviewers + conditional reviewers (phase-1 workers)
 - **PLAN**
   - Team create: spawn `planner`
 
 Non-negotiable rules:
-1. Pre-spawn uses BLOCKED tasks — agent is idle until task unblocks (no output, no cost).
-2. Do NOT treat idle from blocked/pre-spawned teammates as a stall.
-3. Spawn teammate only when at least one task for that role is created (blocked is fine).
+1. Do not pre-spawn downstream teammates for blocked tasks.
+2. Blocked tasks are valid task-list state, not a reason to spawn an idle teammate.
+3. Spawn a teammate only when that teammate has at least one runnable task.
 
 ### Runnable Evidence Gate (MANDATORY)
 
@@ -209,7 +209,7 @@ Only ask user if the workflow instance is truly ambiguous after this sweep (rare
 **Legacy compatibility:** Older CC-Teams versions may have created tasks with subjects starting `BUILD:` / `DEBUG:` / `REVIEW:` / `PLAN:` (without the `CC-TEAMS` prefix).
 - If such tasks exist, ask the user whether to resume the legacy tasks or start a fresh CC-TEAMS-namespaced workflow.
 
-Task lists can be shared across sessions via `CLAUDE_CODE_TASK_LIST_ID`. Treat TaskLists as potentially long-lived; always scope before resuming.
+Task lists persist across compaction and can outlive a single turn. Treat `TaskList()` as potentially long-lived state and always scope before resuming.
 
 **If no active tasks:**
 - Proceed with workflow selection below
@@ -232,21 +232,227 @@ Task lists can be shared across sessions via `CLAUDE_CODE_TASK_LIST_ID`. Treat T
 
 Every `TaskCreate(...)` description must start with identity metadata:
 
-```
+```text
 Workflow Instance: {team_name}
 Workflow Kind: {BUILD|DEBUG|REVIEW|PLAN}
 Project Root: {cwd}
+wf:{team_name}
+kind:{workflow|agent|memory|research}
+origin:lead
+phase:{build|build-implement|build-review|build-hunt|build-verify|debug|debug-investigate|debug-review|debug-verify|review|review-audit|plan|plan-create|memory-finalize|research}
+plan:{plan_file or 'N/A'}
+scope:{task scope or 'N/A'}
+reason:{why this task exists}
 ```
 
 Rules:
 1. Apply this stamp to EVERY CC-TEAMS task (parent + children + remediation tasks).
 2. Use this stamp for orphan sweep and cross-project isolation.
 3. Do not resume or mutate tasks with a different `Project Root`.
-4. If stamp is missing (legacy task):
+4. Use `wf:` as the machine-readable workflow identity in every task from the first write.
+5. If stamp is missing (legacy task):
    a. Do NOT resume or mutate the task
    b. Log to Memory Notes: "Orphan legacy task ignored: {subject}"
    c. Create fresh stamped tasks for current workflow
    d. Do not delete legacy tasks (they may belong to a paused workflow)
+
+## Workflow Artifact (MANDATORY, Lead-Owned)
+
+Every CC-Teams workflow should maintain a lead-owned runtime artifact:
+
+```text
+.claude/cc-teams/workflows/{workflow_instance}.json
+.claude/cc-teams/workflows/{workflow_instance}.events.jsonl
+```
+
+Minimum artifact fields:
+- `workflow_instance`
+- `workflow_kind`
+- `project_root`
+- `team_name`
+- `plan_file`
+- `plan_mode`
+- `verification_rigor`
+- `proof_status`
+- `intent`
+- `approved_decisions`
+- `traceability`
+- `normalized_phases`
+- `active_phase_contract`
+- `phase_cursor`
+- `task_ids`
+- `phase_status`
+- `research_quality`
+- `memory_sync`
+- `latency_telemetry`
+- `planning_review_status`
+- `planning_review_findings`
+- `results`
+- `evidence`
+- `challenge_decisions`
+- `regressions`
+- `boundary_history`
+- `phase_transition_summaries`
+- `loop_counts`
+- `quality`
+- `remediation_history`
+- `memory_notes_collected`
+- `pending_gate`
+- `resume_entrypoint`
+- `stale_assumptions`
+- `debug_reset_marker`
+- `attempt_baseline`
+- `created_at`
+- `updated_at`
+
+Rules:
+1. Lead creates `.claude/cc-teams/workflows/` before the first artifact write.
+2. Lead writes the initial artifact when the workflow/team is created.
+3. Lead appends lifecycle events to `.events.jsonl` on workflow start, planner completion, contract validation milestones, remediation creation, remediation completion, memory finalization, and shutdown.
+4. Resume order of truth is: current `TaskList()` state -> workflow artifact -> Markdown memory.
+5. Workflow artifacts are lead-owned. Teammates contribute through Router Contracts and Memory Notes, not direct artifact edits.
+6. Verifier handoff, Memory Update, and resume reconstruction should prefer structured artifact data over transient chat recovery.
+7. If a BUILD workflow is plan-backed, the artifact must carry normalized phases and an `active_phase_contract` snapshot for the phase at `phase_cursor`.
+8. If a DEBUG workflow is active, the artifact should carry the current debug reset marker and attempt baseline so resume does not double-count old attempts.
+9. Convergence is artifact-owned: remediation loops, re-reviews, re-hunts, and re-verification update `loop_counts`, `quality.convergence_state`, `results`, `evidence`, `regressions`, and `remediation_history`.
+10. `phase_cursor` advances only after the active phase is independently verified and no remediation/re-review/re-hunt blockers remain.
+11. If the workflow is plan-backed, the artifact must persist `intent` and `traceability` so requirement coverage survives compaction, resume, and teammate turnover.
+12. When `intent`, `traceability`, convergence, or remediation state changes, append a matching compact delta event to `.events.jsonl` so replay can explain why the current artifact state exists.
+13. Review Arena outcomes are lead-owned durable state: persist challenge synthesis into `challenge_decisions` before verifier sees the workflow as ready.
+14. When a phase becomes independently verified, synthesize a compact `phase_transition_summary` so later phases consume a durable delta instead of inferring prior work from broad context.
+15. Persist `research_quality` whenever a workflow uses research as an input to planning or debugging so degraded research can be resumed honestly.
+16. Persist `memory_sync` whenever a blocking exit or stop-before-shutdown path is used so stop/resume never guesses whether memory was safely finalized.
+17. Persist `latency_telemetry` as compact timing truth when timestamps are available; prefer approximate but explicit timing over silent omission.
+
+## Artifact Snapshot + Event Delta Protocol (MANDATORY)
+
+When lead-owned workflow state changes:
+
+1. Read the current artifact snapshot.
+2. Compute the next snapshot deterministically from current task state + validated contracts + saved plan state.
+3. Update `updated_at` and any changed artifact fields first.
+4. Write the snapshot before appending any lifecycle event.
+5. Append exactly the matching delta event to `.events.jsonl`.
+6. Every delta event must include at minimum:
+   - `ts`
+   - `wf`
+   - `event`
+   - `workflow_kind`
+   - `phase_cursor`
+   - `pending_gate`
+   - `source`
+   - `summary`
+7. If traceability changed, include a compact `traceability_delta` with only the changed requirement / acceptance / decision / remediation facts.
+8. Never append an event for state that was not successfully persisted into the snapshot.
+9. On replay disagreement, trust the latest snapshot and use the event log only to explain how it got there.
+
+## Pending Gate Canon (MANDATORY)
+
+`pending_gate` is durable runtime truth, not a vague summary string.
+
+Use explicit gate values when they apply:
+- `TEAM_CREATED`
+- `TASKS_CREATED`
+- `RESEARCH_EXECUTED`
+- `PLAN_REVIEW`
+- `scope_decision`
+- `checkpoint_decision`
+- `challenge_resolution`
+- `CONTRACTS_VALIDATED`
+- `MEMORY_UPDATED`
+- `memory_sync`
+- `TEAM_SHUTDOWN`
+
+Rules:
+- If the workflow is waiting on a user scope choice, use `pending_gate="scope_decision"`.
+- If the workflow is waiting on a human checkpoint or approval embedded in a phase contract, use `pending_gate="checkpoint_decision"`.
+- If the workflow cannot safely stop until memory/handoff persistence has been completed, use `pending_gate="memory_sync"`.
+
+## Canonical Phase Delta Shapes (MANDATORY)
+
+Use these canonical delta shapes whenever the related state transition occurs. Keep them compact and replay-safe.
+
+### `planner_completed`
+- `event`: `planner_completed`
+- `phase_delta`:
+  - `kind`: `planner_completed`
+  - `plan_file`
+  - `plan_mode`
+  - `verification_rigor`
+  - `intent_delta`
+  - `traceability_delta.requirements`
+  - `traceability_delta.phases`
+  - `planning_review_status`
+
+### `builder_completed`
+- `event`: `builder_completed`
+- `phase_delta`:
+  - `kind`: `builder_completed`
+  - `phase_id`
+  - `phase_status`
+  - `proof_status`
+  - `what_changed`
+  - `requirements_in_scope`
+  - `requirements_satisfied`
+  - `acceptance_in_scope`
+  - `acceptance_satisfied`
+  - `decision_dependencies`
+  - `decision_dependencies_satisfied`
+  - `evidence_commands`
+
+### `verifier_completed`
+- `event`: `verifier_completed`
+- `phase_delta`:
+  - `kind`: `verifier_completed`
+  - `phase_id`
+  - `traceability_status`
+  - `requirements_verified`
+  - `acceptance_verified`
+  - `decision_dependencies_checked`
+  - `traceability_gaps`
+  - `reopened_proof_status`
+  - `reopened_proof_retirements`
+  - `boundary_history_delta`
+  - `scenario_totals`
+  - `proof_reconciliation`
+  - `transition_outcome`
+  - `intentionally_open`
+  - `next_phase_id`
+
+### `remediation_created`
+- `event`: `remediation_created`
+- `phase_delta`:
+  - `kind`: `remediation_created`
+  - `phase_id`
+  - `source_agent`
+  - `reason`
+  - `traceability_delta.remediation`
+  - `convergence_state`
+
+### `remediation_completed`
+- `event`: `remediation_completed`
+- `phase_delta`:
+  - `kind`: `remediation_completed`
+  - `phase_id`
+  - `reopened_scope`
+  - `traceability_delta.remediation`
+  - `loop_counts`
+  - `convergence_state`
+
+### `challenge_decided`
+- `event`: `challenge_decided`
+- `phase_delta`:
+  - `kind`: `challenge_decided`
+  - `phase_id`
+  - `reviewers_considered`
+  - `winning_priority`
+  - `resolution_state`
+  - `accepted_risks` (`risk`, `scope_boundary`, `accepted_by`, `reason`, `revalidation_trigger`, `evidence_refs`, `status`)
+  - `reopened_proof_regressions` (`boundary`, `prior_phase_id`, `reopened_by`, `required_reproof`, `status`)
+  - `unresolved_conflicts`
+  - `traceability_decision`
+  - `verifier_intake_state`
+  - `boundary_history_delta`
 
 ---
 
@@ -261,6 +467,18 @@ workflow_instance: "cc-teams-build-20260210-150000"
 workflow_kind: "BUILD"
 project_root: "/absolute/path"
 team_name: "cc-teams-build-20260210-150000"
+workflow_artifact: ".claude/cc-teams/workflows/cc-teams-build-20260210-150000.json"
+plan_mode: "execution_plan"
+verification_rigor: "critical_path"
+phase_cursor: "phase-2"
+active_phase_contract:
+  phase_id: "phase-2"
+  objective: "Implement API validation for auth boundary"
+  files_surfaces: ["src/api/auth.ts", "src/api/auth.test.ts"]
+  checkpoint_type: "decision"
+  autonomy: "HITL"
+  exit_criteria: ["Validation rejects malformed token payloads", "Gate command passes"]
+  gate_command: "CI=true npm test -- auth.test.ts"
 teammate_roster:
   spawned: ["builder", "live-reviewer"]      # currently active in team
   pending_spawn: ["hunter"]                  # needed for next phase, not yet spawned
@@ -274,6 +492,80 @@ task_snapshot:
 contracts:
   last_validated: ["builder: PASS", "live-reviewer: PASS"]
   unresolved_blocking: []
+challenge_decisions:
+  current_phase:
+    phase_id: "phase-2"
+    winning_priority: "security"
+    resolution_state: "clear"
+    accepted_risks: []   # objects: risk, scope_boundary, accepted_by, reason, revalidation_trigger
+    reopened_proof_regressions: []   # objects: boundary, prior_phase_id, reopened_by, required_reproof, status
+    unresolved_conflicts: []
+    traceability_decision: "No reviewer-raised requirement risk remains open"
+    verifier_intake_state: "clear"
+regressions:
+  reopened_proof:
+    - boundary: "Malformed token rejection verified in phase-1"
+      prior_phase_id: "phase-1"
+      reopened_by: "verifier"
+      current_source: "#14 CC-TEAMS REM-FIX: reopened-proof regression"
+      required_reproof: "Re-run malformed token rejection scenario and prove closure still holds"
+      status: "open"
+boundary_history:
+  latest:
+    active_closed_boundaries: ["Malformed token rejection verified"]
+    intentionally_open_boundaries: ["Audit logging deferred to phase-2"]
+    accepted_risk_boundaries: []
+    retired_boundaries: []
+    inheritance_note: "Only active_closed_boundaries and intentionally_open_boundaries should flow into the next phase"
+  timeline_tail:
+    - ts: "2026-02-10T22:40:00Z"
+      phase_id: "phase-1"
+      event: "phase_verified"
+      boundary: "Malformed token rejection verified"
+      outcome: "closed"
+      ref: "verifier scenario: invalid token payload => exit 0"
+phase_transition_summaries:
+  latest_verified:
+    phase_id: "phase-1"
+    outcome_state: "pending_next_phase"
+    what_changed: ["Auth validation path implemented"]
+    proof_closed: ["Malformed token rejection verified"]
+    intentionally_open: ["Audit logging deferred to phase-2"]
+    next_phase_id: "phase-2"
+    next_trigger: "Assign builder for phase-2 after hydration"
+quality:
+  convergence_state: "needs_iteration"
+  evidence_complete: false
+research_quality:
+  overall: "strong"
+  sources: ["docs/research/auth-boundary.md"]
+  degraded_reasons: []
+memory_sync:
+  blocking_exit_persisted: true
+  next_action: "stop_after_memory_sync"
+  last_persisted_at: "2026-02-10T23:05:00Z"
+latency_telemetry:
+  workflow_wall_clock_seconds: 420
+  teammate_seconds:
+    builder: 180
+    verifier: 90
+  verifier_workload:
+    tests_seconds: 60
+    build_seconds: 20
+    audit_seconds: 10
+traceability:
+  status: "gaps_found"
+  requirements_open: ["AC-2 audit logging not yet proven"]
+  acceptance_open: ["Invalid token payload rejection"]
+  decisions_pending_verification: []
+loop_counts:
+  re_review: 1
+  re_hunt: 1
+  re_verify: 0
+remediation_history:
+  - id: "#14"
+    reason: "Fix security issues: missing auth check"
+    state: "re-review_pending"
 memory_notes_collected:
   builder: "TDD pattern used: RED-GREEN-REFACTOR for auth module"
   hunter: ""  # empty until hunter completes
@@ -289,11 +581,59 @@ Rules:
 1. Persist latest payload in `.claude/cc-teams/progress.md` under `## Verification`.
 2. Never infer missing facts; use `unknown` when evidence is unavailable.
 3. `stale_assumptions` is required. Use an explicit empty list (`[]`) when none.
-4. Handoff payload is lead-owned and must be based on current TaskList + validated contracts.
+4. Handoff payload is lead-owned and must be based on current TaskList + workflow artifact + validated contracts.
 5. `memory_notes_collected` must be populated:
    - After each teammate completes, extract `MEMORY_NOTES` from their Router Contract
    - Append to handoff payload before context compaction risk
    - Memory Update task uses collected notes, not raw teammate context
+6. If `phase_cursor` is set, `resume_entrypoint` must mention the active phase or next gated teammate explicitly.
+7. If workflow kind is DEBUG, include `debug_reset_marker` and `attempt_baseline` so local attempt counting resumes cleanly.
+8. If remediation is active, include `quality.convergence_state`, `loop_counts`, and `remediation_history` so resume never guesses whether convergence already happened.
+9. If the workflow is plan-backed, include a compact `traceability` summary covering open requirements, open acceptance criteria, and any approved decisions still lacking proof.
+10. If a challenge round has completed, include the latest `challenge_decisions` summary so resume and verifier intake do not guess whether a conflict was accepted, blocked, or unresolved.
+11. If `challenge_decisions.current_phase.verifier_intake_state == "accepted_risk"`, every accepted-risk entry must be structured with:
+   - `risk`
+   - `scope_boundary`
+   - `accepted_by`
+   - `reason`
+   - `revalidation_trigger`
+   - `evidence_refs`
+   - `status` (`accepted_open`)
+   Use an explicit empty list only when no accepted risk exists.
+12. `challenge_decisions.current_phase.resolution_state` must distinguish:
+   - `clear`
+   - `accepted_risk`
+   - `open_disagreement`
+   - `reopened_prior_proof`
+   so resume, verifier intake, and memory-final persistence do not flatten distinct challenge outcomes into one generic "open" state.
+13. If `regressions.reopened_proof` is non-empty, every entry must be structured with:
+   - `boundary`
+   - `prior_phase_id`
+   - `reopened_by`
+   - `current_source`
+   - `required_reproof`
+   - `status`
+14. If reopened-proof regressions are being retired, the retiring verifier contract must record:
+   - `REOPENED_PROOF_STATUS` (`reproof_closed` or `superseded_by_decision`)
+   - `REOPENED_PROOF_RETIREMENTS` with `boundary`, `closure_mode`, `closure_ref`, and `prior_phase_id`
+15. Maintain `boundary_history.latest` as the inheritance-safe summary:
+   - `active_closed_boundaries`
+   - `intentionally_open_boundaries`
+   - `accepted_risk_boundaries`
+   - `retired_boundaries`
+   - `inheritance_note`
+16. Maintain `boundary_history.timeline_tail` as a compact closure history of the most recent boundary transitions (`closed`, `accepted_risk`, `reopened`, `reproof_closed`, `superseded`).
+17. If any earlier phase has already been independently verified, include `phase_transition_summaries.latest_verified` so the next phase preserves closed proof and intentionally open boundaries without guessing.
+18. Include `boundary_history.latest` and `boundary_history.timeline_tail` in handoff payloads and resume reconstruction so later phases do not re-inherit retired proof boundaries by accident.
+19. If research informed the workflow, include `research_quality` with:
+   - `overall`
+   - `sources`
+   - `degraded_reasons`
+20. If the workflow stopped or paused on a blocking exit, include `memory_sync` with:
+   - `blocking_exit_persisted`
+   - `next_action`
+   - `last_persisted_at`
+21. If timing truth is available, include compact `latency_telemetry` instead of leaving timing implicit.
 
 Emit payload at minimum when:
 1. escalation reaches `CRITICAL` (`stalled`);
@@ -310,11 +650,13 @@ Emit payload at minimum when:
 
 On resume or startup with active CC-TEAMS tasks, execute in order:
 
-1. Load memory files and read latest handoff payload from `.claude/cc-teams/progress.md` (if present).
+1. Load memory files, read latest handoff payload from `.claude/cc-teams/progress.md` (if present), and read the workflow artifact if it exists.
 2. Run `TaskList()` and apply Orphan Task Recovery sweep before any assignment.
-3. Rebuild truth from task state, not memory narrative:
+3. Rebuild truth from task state first, then workflow artifact, not memory narrative:
    - identify in-progress, runnable, blocked tasks;
-   - identify latest validated contracts and open remediation tasks.
+   - identify latest validated contracts, plan_mode, verification_rigor, phase_cursor, active_phase_contract, traceability state, `challenge_decisions`, `regressions`, `boundary_history`, and open remediation tasks.
+   - if BUILD is plan-backed and `active_phase_contract` is missing or stale, re-read the saved plan and reconstruct it before assigning a builder or verifier.
+   - if DEBUG is active, reconstruct the current debug reset marker and attempt baseline before spawning investigators.
 4. Validate team continuity:
    - read `~/.claude/teams/{team-name}/config.json`;
    - if missing/empty/non-matching expected roster, recreate team with same name.
@@ -325,8 +667,56 @@ On resume or startup with active CC-TEAMS tasks, execute in order:
 7. Publish a `RESUME_CONFIRMED` note to user:
    - recovered workflow instance;
    - current gate;
-   - next deterministic step.
+   - next deterministic step;
+   - compact explanation of boundary continuity from `boundary_history.timeline_tail` when relevant.
 8. Continue from `resume_entrypoint` only after steps 1-7 succeed.
+
+Blocking-exit rule:
+- If `memory_sync.blocking_exit_persisted != true` during a blocking stop/resume path, do not treat the workflow as safely paused.
+- Persist handoff + workflow-final memory sync first, then set `pending_gate="memory_sync"` until that persistence is complete.
+
+## Convergence And Phase Advancement (MANDATORY)
+
+The workflow artifact is the durable source of truth for whether the current phase may advance.
+
+Convergence states:
+- `pending` - phase work started but independent validation has not yet closed the loop
+- `needs_iteration` - blocking review, hunt, or verifier findings require remediation
+- `phase_verified` - the active phase passed verifier with no unresolved blockers
+- `converged` - no remaining incomplete phases or verifier-blocking loops remain
+
+Rules:
+1. Any blocking reviewer, hunter, or verifier result sets `quality.convergence_state="needs_iteration"`.
+2. Creating a `CC-TEAMS REM-FIX:` appends an entry to `remediation_history`.
+3. Re-review / re-hunt / re-verify runs increment `loop_counts.re_review`, `loop_counts.re_hunt`, and `loop_counts.re_verify`.
+4. Persist current teammate contracts into artifact `results` and `evidence` as they complete.
+5. `phase_cursor` does NOT advance when:
+   - any remediation task is still open
+   - re-review challenge is incomplete
+   - re-hunt is incomplete
+   - verifier has not returned `PASS`
+6. `phase_cursor` may advance only when:
+   - active-phase verifier contract is `PASS`
+   - `PROOF_STATUS=passed`
+   - no unresolved blocking findings remain
+   - `quality.convergence_state` can be set to `phase_verified`
+7. When the active phase reaches `phase_verified`, synthesize/update `phase_transition_summaries.latest_verified` with:
+   - `phase_id`
+   - `outcome_state`
+   - `what_changed`
+   - `proof_closed`
+   - `intentionally_open`
+   - `next_phase_id`
+   - `next_trigger`
+   Also synthesize/update `boundary_history.latest` with:
+   - `active_closed_boundaries`: only proof boundaries still valid after any retirement or supersession
+   - `intentionally_open_boundaries`: boundaries intentionally deferred to later phases
+   - `accepted_risk_boundaries`: still-active accepted-risk exceptions
+   - `retired_boundaries`: boundaries retired by `reproof_closed` or `superseded_by_decision`
+   - `inheritance_note`: concise explanation of what later phases should inherit vs ignore
+   Also append/update `boundary_history.timeline_tail` with the newest proof-boundary transition and keep only the most recent compact entries needed for resume/audit.
+8. If a next incomplete normalized phase exists, advance `phase_cursor` to it and set `quality.convergence_state="pending"`.
+9. If no incomplete phase remains, set `quality.convergence_state="converged"` and continue toward Memory Update / shutdown.
 
 Recovery rules:
 1. Preserve existing task state (do not reset workflow by default).
@@ -337,6 +727,69 @@ Recovery rules:
 `CC-TEAMS COMPACT_CHECKPOINT: {timestamp}` marker to progress.md before every compaction.
 At session start, check for this marker in progress.md — if present, emit handoff payload immediately
 before doing any other work. This replaces the unmeasurable "30+ tool calls" heuristic.
+
+## Build Preparation And Phase Hydration (MANDATORY)
+
+Before spawning a builder for a BUILD workflow:
+
+1. Read `- Plan:` from `activeContext.md ## References`.
+2. If plan path is not `N/A`, read the saved plan before task creation.
+3. Run a plan trust gate:
+   - `Open Decisions` must be empty or explicitly marked approved.
+   - `Differences From Agreement` must be present, even if `None`.
+   - `PLAN_MODE` and `VERIFICATION_RIGOR` must be explicit.
+   - For `execution_plan` or `decision_rfc`, every executable phase must have non-empty objective, inputs, files/surfaces, required checks, checkpoint type, autonomy label, and exit criteria.
+   - `intent.acceptance_criteria` must be present, non-contradictory, and stated in a way a builder and verifier can test.
+   - if any acceptance criterion is empty, self-contradictory, or unverifiable from repo/user-accessible evidence, halt before BUILD and request clarification or planner revision.
+   - every acceptance criterion must map to at least one executable phase, required check, or verifier proof path.
+   - no acceptance criterion may conflict with `intent.non_goals`, unresolved `intent.open_decisions`, or an already approved decision.
+   - if contradiction is detected, record it as a planning/trust failure and do not start BUILD until the saved plan is revised or clarified.
+4. Hydrate `intent` and `traceability` from the saved plan before execution:
+   - `intent.goal`
+   - `intent.non_goals`
+   - `intent.constraints`
+   - `intent.acceptance_criteria`
+   - `intent.open_decisions`
+   - `approved_decisions`
+   - `traceability.requirements`
+   - `traceability.phases`
+   - `traceability.decisions`
+   - initialize `traceability.verification` and `traceability.remediation` if missing
+5. Normalize plan phases into workflow artifact `normalized_phases`.
+6. Initialize `phase_cursor` to the first incomplete phase.
+7. If an earlier phase has already been independently verified, recover `phase_transition_summaries.latest_verified` before spawning the next builder or verifier.
+8. Recover `boundary_history.latest` before spawning the next builder or verifier; if missing, derive it from the latest verified phase plus accepted-risk and reopened-proof retirement state.
+9. Persist an `active_phase_contract` snapshot for that `phase_cursor` including:
+   - `phase_id`
+   - `objective`
+   - `requirement_ids`
+   - `acceptance_ids`
+   - `decision_dependencies`
+   - `inputs`
+   - `files_surfaces`
+   - `expected_artifacts`
+   - `required_checks`
+   - `checkpoint_type`
+   - `autonomy`
+   - `checkpoint_justification`
+   - `exit_criteria`
+   - `gate_command`
+10. Builder may execute only the phase at `phase_cursor`.
+11. Hunter, reviewers, and verifier validate the same active phase before `phase_cursor` advances.
+12. Verifier must close traceability for the active phase by mapping evidence back to `intent.acceptance_criteria`, `traceability.requirements`, and any relevant `approved_decisions`.
+13. Append an event-log entry after hydration summarizing the accepted `intent`, current `phase_cursor`, latest prior phase transition summary (if any), latest `boundary_history`, and any still-open traceability gaps.
+
+If any trusted phase field is missing from a non-trivial plan, halt and ask for clarification or re-plan before BUILD starts.
+
+## Debug Attempt Baseline (MANDATORY)
+
+When starting a DEBUG workflow:
+
+1. Once workflow identity exists, persist a reset marker:
+   - `[DEBUG-RESET: wf:{team_name}]`
+2. Record the marker in the workflow artifact as `debug_reset_marker`.
+3. Set `attempt_baseline` to the number of `[DEBUG-N]:` entries after the latest reset marker.
+4. On resume, investigators count attempts only after that reset marker for the current workflow.
 
 ---
 
@@ -388,11 +841,10 @@ If any condition is false -> choose `FULL`.
 
 **DAG Dependencies:** Use `addBlockedBy` and `addBlocks` to create dependency graphs. Blocked tasks cannot start until their dependencies complete. This enforces phase ordering (e.g., review must finish before challenge round starts).
 
-**Cross-Session Sharing:** Task lists can be shared across sessions via `CLAUDE_CODE_TASK_LIST_ID` environment variable. If resuming a workflow across sessions:
-1. Check if `CLAUDE_CODE_TASK_LIST_ID` is set
-2. If set → `TaskList()` returns tasks from that shared list
-3. Scope tasks by CC-TEAMS prefix before resuming (avoid cross-project collisions)
-4. Resume from task state rather than re-creating the hierarchy
+**Cross-Session Resume:** Task lists are persisted locally by Claude Code. If resuming a workflow across sessions:
+1. Run `TaskList()` first and treat it as the source of truth
+2. Scope tasks by CC-TEAMS prefix before resuming (avoid cross-project collisions)
+3. Resume from task state rather than re-creating the hierarchy
 
 **Task Cleanup:** When tasks are abandoned or obsolete, use `TaskUpdate({ taskId, status: "deleted" })` to clean them up. Run cleanup:
 - After workflow completion (delete parent wrapper tasks if desired)
@@ -429,7 +881,7 @@ This avoids lost/phantom tasks during team initialization.
 | Order | Subject | BlockedBy | Key Description Points |
 |-------|---------|-----------|------------------------|
 | 1 | `CC-TEAMS BUILD: {feature}` | - | Parent task. Team: Builder → Hunter → Review Arena → Verifier |
-| 2 | `CC-TEAMS builder: Implement {feature}` | - | TDD (RED→GREEN→REFACTOR). OWN all writes. Message live-reviewer after each module. |
+| 2 | `CC-TEAMS builder: Implement {feature}` | - | TDD (RED→GREEN→REFACTOR). OWN all writes. Execute only the active phase at `phase_cursor` when plan-backed. Message live-reviewer after each module. |
 | 3 | `CC-TEAMS live-reviewer: Real-time review` | - | READ-ONLY. Reply LGTM or STOP. |
 | 4 | `CC-TEAMS hunter: Silent failure audit` | builder | Scan for empty catches, swallowed exceptions. |
 | 5 | `CC-TEAMS security-reviewer: Security review` | hunter | Auth, injection, secrets, OWASP, XSS/CSRF. |
@@ -438,7 +890,7 @@ This avoids lost/phantom tasks during team initialization.
 | 8a | `CC-TEAMS accessibility-reviewer: Accessibility review` | hunter | **CONDITIONAL** (UI files detected). WCAG 2.1 AA audit. |
 | 8b | `CC-TEAMS api-contract-reviewer: API contract review` | hunter | **CONDITIONAL** (API files detected). Breaking change detection. |
 | 9 | `CC-TEAMS BUILD Review Arena: Challenge round` | sec, perf, qual [+a11y if present] [+api-contract if present] | Share findings, resolve conflicts. Security and a11y/api-contract win on CRITICAL. |
-| 10 | `CC-TEAMS verifier: E2E verification` | challenge | Run tests, verify E2E. Exit code evidence required. |
+| 10 | `CC-TEAMS verifier: E2E verification` | challenge | Run tests, verify E2E and active phase exit criteria. Exit code evidence required. |
 | 11 | `CC-TEAMS Memory Update: Persist build learnings` | verifier | Collect Memory Notes, persist via Read-Edit-Read. ESCAPE: If verifier stalls at CRITICAL, Memory Update runs with partial evidence. |
 
 **QUICK depth:** Skip hunter + reviewers + challenge. Builder → Verifier → Memory Update.
@@ -450,7 +902,7 @@ This avoids lost/phantom tasks during team initialization.
 | 1 | `CC-TEAMS DEBUG: {error}` | - | Parent task. Team: Investigators → Debate → Fix → Review Arena → Verifier |
 | 2-N | `CC-TEAMS investigator-{i}: Test hypothesis - {h_i}` | - | Champion hypothesis, gather evidence FOR it. READ-ONLY. |
 | N+1 | `CC-TEAMS Bug Court: Debate round` | all investigators | Share evidence, determine winning hypothesis. |
-| N+2 | `CC-TEAMS builder: Implement fix` | debate | TDD: regression test FIRST, then minimal fix. |
+| N+2 | `CC-TEAMS builder: Implement fix` | debate | TDD: regression test FIRST, then minimal fix. Execute only the approved fix scope or active phase if plan-backed. |
 | N+3 | `CC-TEAMS security-reviewer: Security review of fix` | builder | Check for security regressions. |
 | N+4 | `CC-TEAMS performance-reviewer: Performance review of fix` | builder | Check for performance regressions. |
 | N+5 | `CC-TEAMS quality-reviewer: Quality review of fix` | builder | Check correctness, patterns. |
@@ -499,9 +951,10 @@ See `cc-teams:cross-layer-build` skill for full protocol. Task structure:
 
 | Order | Subject | BlockedBy | Key Description Points |
 |-------|---------|-----------|------------------------|
-| 1 | `CC-TEAMS PLAN: {feature}` | - | Parent task. Single planner (NO plan mode - planner writes files). |
-| 2 | `CC-TEAMS planner: Create plan` | - | Spawn WITHOUT `mode: "plan"`. Planner writes plan file directly. Lead reviews after. |
-| 3 | `CC-TEAMS Memory Update: Index plan` | planner | Add plan file to activeContext.md ## References. |
+| 1 | `CC-TEAMS PLAN: {feature}` | - | Parent task. Planner writes the plan; fresh plan-gap-reviewer challenges it before memory indexing. |
+| 2 | `CC-TEAMS planner: Create plan` | - | Spawn WITHOUT `mode: "plan"`. Planner writes plan file directly, sets `PLAN_MODE` + `VERIFICATION_RIGOR`, and returns open decisions explicitly. Lead may send revision requests back to this same teammate. |
+| 3 | `CC-TEAMS plan-gap-reviewer: Fresh plan challenge` | planner | Clean-room read-only review. Uses original request + saved plan + current codebase + approved design/research only. No memory, workflow artifact, or planner-summary anchoring. |
+| 4 | `CC-TEAMS Memory Update: Index plan` | planner + plan-gap-reviewer | Add final plan file to activeContext.md ## References and mirror planner + planning review summary into workflow artifact / progress state. |
 
 ---
 
@@ -517,6 +970,10 @@ See `cc-teams:cross-layer-build` skill for full protocol. Task structure:
    - Check if requirements mention BOTH frontend (UI/components/pages) AND backend (API/services/DB)
    - If cross-layer signals → use BUILD-CROSSLAYER path (see `cc-teams:cross-layer-build` skill)
    - Otherwise → continue with standard BUILD (single builder)
+3b. **If a saved plan exists, hydrate executable phase state before task execution:**
+   - run Build Preparation And Phase Hydration
+   - persist `intent`, `approved_decisions`, `traceability`, `normalized_phases`, `phase_cursor`, `active_phase_contract`, `plan_mode`, and `verification_rigor` into the workflow artifact
+   - if plan trust fails, do not start builder work
 4. **Select execution depth (MANDATORY)**:
    - Run Execution Depth Selector
    - Cross-layer work auto-selects FULL (cross-layer disqualifies QUICK by condition 3)
@@ -524,8 +981,8 @@ See `cc-teams:cross-layer-build` skill for full protocol. Task structure:
    - otherwise choose `FULL` (default)
 5. **Create Agent Team (MANDATORY gate)**:
    - `TeamCreate(...)` with deterministic team name
-   - QUICK: spawn `builder` + `live-reviewer`; pre-spawn `verifier` (blocked)
-   - FULL: spawn `builder` + `live-reviewer`; pre-spawn `hunter` (blocked by builder)
+   - QUICK: spawn `builder` + `live-reviewer` only; defer `verifier` until runnable
+   - FULL: spawn `builder` + `live-reviewer` only; defer `hunter` / triad / `verifier` until runnable
    - CROSSLAYER: spawn `backend-builder` only; frontend-builder spawns after contract relay
    - verify teammate reachability via direct message
    - enter delegate mode (`Shift+Tab`)
@@ -567,6 +1024,9 @@ See `cc-teams:cross-layer-build` skill for full protocol. Task structure:
    - **Update memory** → Add to activeContext.md References section
 
 4. **Generate hypotheses** (3-5 based on error/symptoms + memory)
+4a. **Persist current debug attempt baseline:**
+   - write `[DEBUG-RESET: wf:{team_name}]` once workflow identity exists
+   - record `debug_reset_marker` and `attempt_baseline` in the workflow artifact
 5. **Create Agent Team (MANDATORY gate)**:
    - `TeamCreate(...)` with deterministic team name
    - spawn required investigators only
@@ -598,14 +1058,7 @@ See `cc-teams:cross-layer-build` skill for full protocol. Task structure:
 
 ### PLAN
 1. Load memory
-2. **Spawn planner WITHOUT plan mode (CRITICAL):**
-   - **DO NOT use `mode: "plan"`** - this blocks the planner from writing files!
-   - Agent Teams' plan mode is for CODE review, not documentation
-   - Planner writes PLAN FILES (documentation), not code changes
-   - Spawn planner normally → planner writes plan file directly to `docs/plans/`
-   - Lead reviews the saved plan file AFTER planner completes
-   - If changes needed → send message to planner requesting revision
-3. **If external research detected (external tech OR explicit request):**
+2. **If external research detected (external tech OR explicit request):**
    - Execute research FIRST using octocode tools directly (NOT as hint)
    - Use: `mcp__octocode__packageSearch`, `mcp__octocode__githubSearchCode`, etc.
    - **PERSIST research** → Save to `docs/research/YYYY-MM-DD-<topic>-research.md`
@@ -625,9 +1078,10 @@ If research trigger detected:
 Research is a PREREQUISITE, not a hint. Planner cannot skip it.
 **Research without persistence is LOST after context compaction.**
 
-4. **Create Agent Team (MANDATORY gate)**:
+3. **Create Agent Team (MANDATORY gate):**
    - `TeamCreate(...)` with deterministic team name
    - spawn planner teammate **WITHOUT `mode: "plan"`** — use default mode or `dontAsk`
+   - do NOT spawn `plan-gap-reviewer` yet; it is phase-scoped and only becomes runnable after the first saved plan exists
    - **Add this line at the TOP of the planner's spawn prompt:**
      ```
      IMPORTANT: DO NOT ENTER PLAN MODE. You are a documentation writer creating plan files.
@@ -637,16 +1091,67 @@ Research is a PREREQUISITE, not a hint. Planner cannot skip it.
    - enter delegate mode (`Shift+Tab`)
    - run `TaskList()` to confirm team-scoped task context
    - if team gate fails: STOP
-5. **Create task hierarchy in the team-scoped task list** (see Task-Based Orchestration above)
-6. **Invoke planner** (pass research results + file path if step 3 was executed)
-7. **If planner sends `BLOCKED: plan mode detected`:**
+4. **Create task hierarchy in the team-scoped task list** (see Task-Based Orchestration above)
+5. **Invoke planner** (pass research results + file path if step 2 was executed)
+6. **If planner sends `BLOCKED: plan mode detected`:**
    - This is Claude Code auto-enabling plan mode for the planner agent
    - Shut down the current planner teammate
    - Re-spawn planner with `mode: "dontAsk"` to prevent auto-plan-mode
-   - Start the spawn prompt with the anti-plan-mode header (see step 4 above)
+   - Start the spawn prompt with the anti-plan-mode header (see step 3 above)
    - This is a known Claude Code behavior — do not treat as workflow failure
-8. **Review plan file** after planner completes → Request revision via message if needed
-9. Update memory → Reference saved plan, then execute TEAM_SHUTDOWN gate
+7. **Review the saved plan file** after planner completes:
+   - confirm `PLAN_MODE` and `VERIFICATION_RIGOR` are explicit
+   - confirm Agreement Snapshot, `What I Verified vs What Still Needs Confirmation`, `Differences From Agreement`, Codebase Reality Check, Plan-vs-Code Gaps, Assumption Ledger, and phase contract sections are present for non-trivial work
+   - confirm every phase includes explicit autonomy labeling (`AFK` vs `HITL`) and that HITL phases justify the checkpoint
+   - if baseline gaps remain → request planner revision via message before fresh review
+8. **Spawn `plan-gap-reviewer` only after the initial plan is saved and baseline review passes:**
+   - use a CLEAN-ROOM prompt, not the generic teammate template
+   - pass only:
+     - original user request
+     - saved plan path
+     - requirements snapshot
+     - approved design file path (if any)
+     - approved research file paths / summary (if any)
+     - optional touched-surfaces hint from the plan
+   - explicitly exclude:
+     - `Memory Summary`
+     - `Project Patterns`
+     - `.claude/cc-teams/*`
+     - workflow artifact path/content
+     - planner confidence as authority
+9. **If `plan-gap-reviewer` returns `STATUS: PASS`:**
+   - proceed to workflow artifact persistence
+10. **If `plan-gap-reviewer` returns `STATUS: FINDINGS`:**
+   - send findings back to the same planner teammate
+   - planner revises the SAME saved plan file and records accepted / rejected findings under `Fresh Review Resolution`
+   - re-run `plan-gap-reviewer` once with the same clean-room rules
+   - if blocking findings persist after the allowed revision pass → AskUserQuestion before indexing the plan
+11. Persist planner contract summary into workflow artifact:
+   - `plan_file`
+   - `plan_mode`
+   - `verification_rigor`
+   - `intent.goal`
+   - `intent.non_goals`
+   - `intent.constraints`
+   - `intent.acceptance_criteria`
+   - `open_decisions`
+   - `approved_decisions`
+   - `traceability.requirements`
+   - `traceability.phases`
+   - `traceability.decisions`
+   - `risks_identified`
+   - `planning_review_status`
+   - `planning_review_blockers`
+12. Append a `planner_completed` event to `.events.jsonl` with:
+   - required event base fields (`ts`, `wf`, `event`, `workflow_kind`, `phase_cursor`, `pending_gate`, `source`, `summary`)
+   - canonical `phase_delta.kind=planner_completed`
+   - `plan_file`
+   - `plan_mode`
+   - `verification_rigor`
+   - compact `intent`
+   - compact `traceability.requirements` / `traceability.phases`
+   - planning review status
+13. Update memory -> Reference saved plan, record fresh review verdict, then execute TEAM_SHUTDOWN gate
 
 **PLANNER MODE RULE (CRITICAL):**
 ```
@@ -686,6 +1191,20 @@ When spawning a teammate, include this structured context:
 ## Project Patterns
 {key patterns from patterns.md}
 
+## Workflow State
+- **Workflow Instance:** {team_name}
+- **Workflow Artifact:** `.claude/cc-teams/workflows/{team_name}.json`
+- **Plan Mode:** {plan_mode or 'unknown'}
+- **Verification Rigor:** {verification_rigor or 'unknown'}
+- **Phase Cursor:** {phase_cursor or 'N/A'}
+- **Previous Phase Summary:** {phase_transition_summaries.latest_verified or 'N/A'}
+- **Effective Prior Boundaries:** {boundary_history.latest or 'N/A'}
+- **Pending Gate:** {pending_gate or 'N/A'}
+- **Intent Goal:** {intent.goal or 'N/A'}
+- **Acceptance Criteria:** {intent.acceptance_criteria or 'N/A'}
+- **Approved Decisions:** {approved_decisions or '[]'}
+- **Traceability Status:** {traceability.status or 'unknown'}
+
 ## SKILL_HINTS (INVOKE via Skill() - not optional)
 {detected skills from table below}
 **If skills listed:** Call `Skill(skill="{skill-name}")` immediately after memory load.
@@ -697,6 +1216,11 @@ IMPORTANT:
   - **Learnings:** [insights for activeContext.md]
   - **Patterns:** [gotchas for patterns.md]
   - **Verification:** [results for progress.md]
+- Every teammate Router Contract MUST include `STATE_DELTA` with:
+  - `what_changed`
+  - `remains_open`
+  - `should_stay_closed`
+  - `next_trigger`
 - Every teammate status reply MUST include one of:
   - `WORKING` (actively progressing)
   - `BLOCKED: {reason}` (cannot proceed)
@@ -707,6 +1231,8 @@ Execute the task and include 'Task {TASK_ID}: COMPLETED' in your output when don
 ```
 
 **TASK ID is REQUIRED in prompt.**
+
+**Exception:** `plan-gap-reviewer` does NOT use the generic template above. It must use the clean-room override below and must not receive memory summaries, workflow artifact state, or planner-authored anchoring context.
 
 ## Per-Agent Spawn Context Requirements (MANDATORY)
 
@@ -720,6 +1246,29 @@ TEST_CMD:   {exact command, e.g. "CI=true npm test" or "npx vitest run"}
 BUILD_CMD:  {exact command, e.g. "npm run build" or "N/A if no build step"}
 SCOPE:      {files/modules this implementation touches}
 REQUIREMENTS: {all AskUserQuestion responses from requirements clarification}
+WORKFLOW_ARTIFACT: .claude/cc-teams/workflows/{team_name}.json
+PHASE_CURSOR: {phase_cursor or 'ad-hoc-scope'}
+ACTIVE_PHASE_ID: {phase id or 'ad-hoc-scope'}
+ACTIVE_PHASE_OBJECTIVE: {objective or task scope}
+ACTIVE_PHASE_REQUIREMENT_IDS: {requirement ids or 'N/A'}
+ACTIVE_PHASE_ACCEPTANCE_IDS: {acceptance ids or 'N/A'}
+ACTIVE_PHASE_DECISION_DEPENDENCIES: {decision dependencies or 'N/A'}
+ACTIVE_PHASE_INPUTS: {inputs or 'N/A'}
+ACTIVE_PHASE_SURFACES: {files/surfaces or task scope}
+ACTIVE_PHASE_EXPECTED_ARTIFACTS: {expected artifacts or 'N/A'}
+ACTIVE_PHASE_REQUIRED_CHECKS: {required checks or TEST_CMD/BUILD_CMD}
+ACTIVE_PHASE_CHECKPOINT_TYPE: {none|human_verify|decision|human_action}
+ACTIVE_PHASE_AUTONOMY: {AFK|HITL|N/A}
+ACTIVE_PHASE_CHECKPOINT_JUSTIFICATION: {reason or 'N/A'}
+ACTIVE_PHASE_EXIT_CRITERIA: {exit criteria or 'N/A'}
+ACTIVE_PHASE_GATE_CMD: {gate command or 'N/A'}
+PRIOR_PHASE_SUMMARY: {phase_transition_summaries.latest_verified or 'N/A'}
+EFFECTIVE_PRIOR_BOUNDARIES: {boundary_history.latest or 'N/A'}
+INTENT_GOAL: {intent.goal or task scope}
+INTENT_CONSTRAINTS: {intent.constraints or 'N/A'}
+INTENT_ACCEPTANCE_CRITERIA: {intent.acceptance_criteria or 'N/A'}
+APPROVED_DECISIONS: {approved_decisions or '[]'}
+TRACEABILITY_TARGETS: {traceability.requirements / traceability.phases entries for ACTIVE_PHASE_ID or 'N/A'}
 ```
 
 ### investigator-{N}
@@ -731,6 +1280,9 @@ ERROR_CONTEXT: {full error message / stack trace / observed symptom}
 REPRODUCTION:  {exact steps or command to reproduce}
 GIT_CONTEXT:   {output of: git log --oneline -5 -- <affected-files>}
 ALL_HYPOTHESES: {list of all HN titles so investigator can challenge others}
+WORKFLOW_ARTIFACT: .claude/cc-teams/workflows/{team_name}.json
+DEBUG_RESET_MARKER: [DEBUG-RESET: wf:{team_name}]
+ATTEMPT_BASELINE: {count of [DEBUG-N] entries after latest reset marker}
 ```
 
 ### security-reviewer / performance-reviewer / quality-reviewer
@@ -751,6 +1303,22 @@ HUNTER_FINDINGS:   {STATUS + CRITICAL_ISSUES count from hunter Router Contract}
 REVIEWER_FINDINGS: {STATUS + CRITICAL_ISSUES from each active reviewer Router Contract (3–5)}
 PLAN_EXIT_CRITERIA: {prose exit criteria from plan phase, or N/A}
 PHASE_GATE_CMD:    {gate_command from plan phase, or N/A}
+WORKFLOW_ARTIFACT: .claude/cc-teams/workflows/{team_name}.json
+PHASE_CURSOR: {phase_cursor or 'N/A'}
+ACTIVE_PHASE_ID: {phase id or 'N/A'}
+ACTIVE_PHASE_OBJECTIVE: {objective or 'N/A'}
+ACTIVE_PHASE_REQUIREMENT_IDS: {requirement ids or 'N/A'}
+ACTIVE_PHASE_ACCEPTANCE_IDS: {acceptance ids or 'N/A'}
+ACTIVE_PHASE_DECISION_DEPENDENCIES: {decision dependencies or 'N/A'}
+ACTIVE_PHASE_REQUIRED_CHECKS: {required checks or 'N/A'}
+ACTIVE_PHASE_CHECKPOINT_TYPE: {none|human_verify|decision|human_action|N/A}
+ACTIVE_PHASE_AUTONOMY: {AFK|HITL|N/A}
+INTENT_ACCEPTANCE_CRITERIA: {intent.acceptance_criteria or 'N/A'}
+APPROVED_DECISIONS: {approved_decisions or '[]'}
+TRACEABILITY_TARGETS: {traceability.requirements / traceability.phases / traceability.decisions relevant to ACTIVE_PHASE_ID or 'N/A'}
+CHALLENGE_DECISION_RECORD: {resolution_state / accepted_risks / reopened_proof_regressions / unresolved_conflicts / traceability_decision / verifier_intake_state or 'N/A'}
+PRIOR_PHASE_SUMMARY: {phase_transition_summaries.latest_verified or 'N/A'}
+EFFECTIVE_PRIOR_BOUNDARIES: {boundary_history.latest or 'N/A'}
 ```
 
 ### planner
@@ -759,28 +1327,45 @@ RESEARCH_SUMMARY:  {if research was executed — key findings + path to research
 EXISTING_PATTERNS: {top 3 relevant entries from patterns.md for this feature}
 PRIOR_DECISIONS:   {decisions from activeContext.md ## Decisions relevant to this feature}
 REQUIREMENTS:      {all AskUserQuestion responses}
+DESIGN_FILE:       {approved design file path or N/A}
+PLANNING_REVIEW_FINDINGS: {fresh review findings when revising a plan, else N/A}
+WORKFLOW_ARTIFACT: .claude/cc-teams/workflows/{team_name}.json
+LATEST_PHASE_TRANSITION_SUMMARY: {phase_transition_summaries.latest_verified or 'N/A'}
+EFFECTIVE_PRIOR_BOUNDARIES: {boundary_history.latest or 'N/A'}
 ``` Lead updates task status after teammate returns.
+
+### plan-gap-reviewer (CLEAN-ROOM OVERRIDE — do NOT use generic template)
+```
+ORIGINAL_USER_REQUEST: {verbatim user request}
+PLAN_FILE:            {saved plan path}
+REQUIREMENTS:         {requirements snapshot or "See plan file"}
+DESIGN_FILE:          {approved design file path or N/A}
+RESEARCH_FILES:       {approved research paths or N/A}
+TOUCHED_SURFACES_HINT:{files/modules named by plan or N/A}
+
+FRESHNESS_RULE:
+- Do NOT read `.claude/cc-teams/*`
+- Do NOT use Memory Summary, Project Patterns, or Workflow Artifact
+- Do NOT treat planner confidence or prior summaries as authority
+- Use only request + saved plan + current codebase + explicitly approved design/research files
+```
 
 ## Skill Loading Hierarchy (DEFINITIVE)
 
 **Two mechanisms exist:**
 
-### 1. Agent Definition `skills:` (PRELOAD - Automatic)
+### 1. Agent Definition `skills:` (Subagent-Only Convenience)
 ```yaml
 # In agent .md frontmatter:
 skills: cc-teams:session-memory, cc-teams:verification
 ```
-- Loaded AUTOMATICALLY when agent starts
-- Full skill content injected into agent context
-- Agent does NOT need to call `Skill()` for these
-- **This is the PRIMARY mechanism for all CC-Teams internal skills**
+- Useful when the definition runs as a standalone subagent.
+- Do NOT rely on `skills:` frontmatter being applied when this definition is used as an Agent Teams teammate.
 
-**Agent Teams difference:** Unlike CC10x subagents, Agent Teams teammates CAN see CLAUDE.md + project skills. This means project-level skills from `plugins/cc-teams/skills/` are already available to teammates. SKILL_HINTS is still needed for:
-- Conditional skills (e.g., `github-research` only when research triggers fire)
-- User-global skills from `~/.claude/CLAUDE.md` Complementary Skills table
+**Agent Teams difference:** Teammates run with normal Claude Code session context, so they can use `CLAUDE.md`, project skills, and configured project/user MCP. But teammate startup does **not** guarantee subagent-definition `skills:` or `mcpServers:` frontmatter will be applied. For CC-Teams, SKILL_HINTS + explicit `Skill()` invocation remains the authoritative teammate skill-loading path.
 
 ### 2. Lead's SKILL_HINTS (Conditional - On Demand)
-- Lead passes SKILL_HINTS for skills not loaded via agent frontmatter
+- Lead passes SKILL_HINTS for teammate skills that must be invoked explicitly on the Agent Teams path
 - **Source 1:** Lead detection table — `github-research` when research triggers fire
 - **Source 2:** CLAUDE.md Complementary Skills table — domain skills matching task signals
 - Agent calls `Skill(skill="{name}")` for each skill in SKILL_HINTS after memory load
@@ -810,6 +1395,16 @@ skills: cc-teams:session-memory, cc-teams:verification
 **Note:** `cc-teams:router-contract`, `cc-teams:verification`, and `cc-teams:session-memory` are NOT in this table because they load via agent frontmatter (unconditional). Every agent gets router-contract + verification; builder/planner also load session-memory for memory read discipline and Memory Notes structure. These do NOT need SKILL_HINTS.
 
 **Also check CLAUDE.md Complementary Skills table and include matching skills in SKILL_HINTS.**
+
+## Instruction Precedence (MANDATORY)
+
+When repo instructions, saved plan constraints, or explicit user requirements conflict with a stylistic or heuristic skill suggestion:
+1. explicit user request
+2. project-local instructions / saved plan / approved decisions
+3. CC-Teams lead protocol
+4. domain skills and heuristics
+
+Skills fill gaps. They do not override explicit repo or workflow contracts.
 
 ---
 
@@ -854,17 +1449,65 @@ After each teammate completes, validate:
 3. PARSE AND VALIDATE CONTRACT
    Circuit Breaker: If ≥3 REM-FIX tasks exist → AskUserQuestion (Research/Fix locally/Skip/Abort).
 
+   If contract.AGENT_ID=="plan-gap-reviewer" AND contract.STATUS=="FINDINGS":
+     → Do NOT create REM-FIX
+     → Route findings back to planner revision in PLAN
+     → Re-run fresh review only after planner revises the same saved plan
+     → AskUserQuestion only if blocking findings persist after the allowed revision pass
+     → STOP
+
    If contract.BLOCKING=true OR contract.REQUIRES_REMEDIATION=true:
      → Create `CC-TEAMS REM-FIX: {teammate_name}` with contract.REMEDIATION_REASON
      → Assign to builder (default) or ask user if builder's own output
+     → Set workflow artifact `quality.convergence_state="needs_iteration"`
+     → Append `{reason, source_agent, ts}` to `remediation_history`
+     → Append matching traceability regression / gap entry to `traceability.remediation`
+     → Append `remediation_created` event to `.events.jsonl` with required event base fields and canonical `phase_delta.kind=remediation_created`
      → Block all downstream tasks via TaskUpdate(..., addBlockedBy)
      → STOP until remediation completes
 
    If contract.CRITICAL_ISSUES > 0 in parallel phase:
      → Conflict check between reviewers → AskUserQuestion if disagreement
 
+   If contract.AGENT_ID=="plan-gap-reviewer" AND contract.STATUS=="PASS" AND (contract.CRITICAL_ISSUES != 0 OR contract.REPLAN_NEEDED != false):
+     → Create `CC-TEAMS REM-EVIDENCE: plan review contract mismatch`, STOP
+
+   If contract.AGENT_ID=="planner" AND contract.STATUS=="PLAN_CREATED" AND (contract.CONTRADICTIONS_FOUND != 0 OR contract.REQUIREMENT_PHASE_COVERAGE != "complete" OR contract.ACCEPTANCE_PROOF_COVERAGE != "complete"):
+     → Create `CC-TEAMS REM-EVIDENCE: planner contradiction or coverage mismatch`
+     → Route back to planner revision before fresh review
+     → STOP
+
    If EVIDENCE_COMMANDS missing/inconsistent for evidence-required roles:
      → Create `CC-TEAMS REM-EVIDENCE`, STOP.
+
+   If contract.STATE_DELTA missing or any of `what_changed`, `remains_open`, `should_stay_closed`, `next_trigger` is missing:
+     → Create `CC-TEAMS REM-EVIDENCE: state delta missing`
+     → Block all downstream tasks via TaskUpdate
+     → STOP until corrected evidence is provided
+
+   If prior `phase_transition_summaries.latest_verified` exists AND contract.STATE_DELTA.remains_open overlaps prior `proof_closed` or `should_stay_closed` boundaries:
+     → Create `CC-TEAMS REM-FIX: reopened-proof regression`
+     → Set workflow artifact `quality.convergence_state="needs_iteration"`
+     → Append reopened-proof details to `traceability.remediation`
+     → Append/update structured entry in artifact `regressions.reopened_proof`
+     → Record regression against the prior verified phase in `results` / `evidence`
+     → Append `remediation_created` event to `.events.jsonl` with reopened-proof summary
+     → STOP until remediation proves the prior closure still holds or intentionally supersedes it
+
+   If teammate is builder/frontend-builder/backend-builder AND contract.STATUS == "PASS":
+     - require contract.PHASE_STATUS == "completed"
+     - require contract.PHASE_EXIT_READY == true
+     - require contract.PROOF_STATUS == "passed"
+     - require contract.TDD_RED_EXIT == 1 AND contract.TDD_GREEN_EXIT == 0
+     - require at least one passing scenario in contract.SCENARIOS
+     - require traceability coverage fields (`REQUIREMENT_IDS_IN_SCOPE`, `ACCEPTANCE_CRITERIA_IN_SCOPE`, `APPROVED_DECISION_DEPENDENCIES`, `REQUIREMENTS_SATISFIED`, `ACCEPTANCE_CRITERIA_SATISFIED`, `DECISION_DEPENDENCIES_SATISFIED`) to be present for plan-backed phases
+     - require `REQUIREMENTS_SATISFIED ⊆ REQUIREMENT_IDS_IN_SCOPE`
+     - require `ACCEPTANCE_CRITERIA_SATISFIED ⊆ ACCEPTANCE_CRITERIA_IN_SCOPE`
+     - require `DECISION_DEPENDENCIES_SATISFIED ⊆ APPROVED_DECISION_DEPENDENCIES`
+     If any are missing/inconsistent:
+       → Create `CC-TEAMS REM-EVIDENCE: builder proof contract incomplete`
+       → Block all downstream tasks via TaskUpdate
+       → STOP until corrected evidence is provided
 
    If contract.PHASE_GATE_RESULT == "FAIL":
      → Create `CC-TEAMS REM-FIX: phase-gate failed — {contract.PHASE_GATE_CMD}`
@@ -876,7 +1519,58 @@ After each teammate completes, validate:
      → Create `CC-TEAMS REM-FIX: dependency vulnerabilities — {contract.DEPENDENCY_AUDIT_DETAIL}`
      → Block Memory Update until resolved
 
+   If contract.AGENT_ID is verifier AND contract.STATUS=="PASS" AND contract.TRACEABILITY_STATUS != "verified":
+     → Create `CC-TEAMS REM-EVIDENCE: verifier traceability proof incomplete`
+     → Block all downstream tasks via TaskUpdate
+     → STOP until requirement / acceptance-criteria proof is corrected
+
+   If contract.AGENT_ID is verifier AND artifact `regressions.reopened_proof` has any `status: "open"` entries:
+     - require contract.REOPENED_PROOF_STATUS in {"reproof_closed", "superseded_by_decision"}
+     - require contract.REOPENED_PROOF_RETIREMENTS to cover every open reopened-proof boundary
+     If missing/incomplete:
+       → Create `CC-TEAMS REM-EVIDENCE: reopened-proof retirement incomplete`
+       → Block all downstream tasks via TaskUpdate
+       → STOP until verifier proves the regression was re-closed or explicitly superseded by approved decision
+
+   If contract.AGENT_ID is verifier AND prior builder contract for the active phase exists:
+     - require `builder.REQUIREMENTS_SATISFIED ⊆ verifier.REQUIREMENTS_VERIFIED`
+     - require `builder.ACCEPTANCE_CRITERIA_SATISFIED ⊆ verifier.ACCEPTANCE_CRITERIA_VERIFIED`
+     - require `builder.DECISION_DEPENDENCIES_SATISFIED ⊆ verifier.DECISION_DEPENDENCIES_CHECKED`
+     If any mismatch exists:
+       → Create `CC-TEAMS REM-FIX: builder-verifier traceability mismatch`
+       → Set workflow artifact `quality.convergence_state="needs_iteration"`
+       → Append mismatch details to `traceability.remediation`
+       → Append `remediation_created` event to `.events.jsonl` with mismatch summary
+       → STOP until remediation resolves the mismatch
+
    Collect contract.MEMORY_NOTES for workflow-final persistence.
+   Persist contract summary into workflow artifact `results` / `evidence`, including `STATE_DELTA`.
+   Append a `contract_validated` event to `.events.jsonl` with required event base fields, agent id, status, active phase, and any traceability delta.
+   If contract.AGENT_ID is hunter/live-reviewer/security-reviewer/performance-reviewer/quality-reviewer/accessibility-reviewer/api-contract-reviewer:
+     → persist traceability risk summary from `TRACEABILITY_IMPACT`, `REQUIREMENTS_AT_RISK`, `ACCEPTANCE_CRITERIA_AT_RISK`, and `DECISION_DEPENDENCIES_AT_RISK` into workflow artifact `results` / `evidence`
+   If contract.AGENT_ID is builder/frontend-builder/backend-builder:
+     → append companion `builder_completed` event with canonical `phase_delta.kind=builder_completed`
+   If contract.AGENT_ID is verifier:
+     → persist verifier traceability summary into workflow artifact `traceability.verification`
+     → update open requirement / acceptance / decision proof gaps from contract.TRACEABILITY_GAPS
+     → if contract.REOPENED_PROOF_STATUS in {"reproof_closed", "superseded_by_decision"}:
+       - update matching artifact `regressions.reopened_proof[*].status` to `reclosed` or `superseded`
+       - persist retirement details into workflow artifact `results` / `evidence`
+     → synthesize/update `phase_transition_summaries.latest_verified` from:
+       - `phase_id`: active phase id
+       - `what_changed`: contract.STATE_DELTA.what_changed
+       - `proof_closed`: contract.STATE_DELTA.should_stay_closed
+       - `intentionally_open`: contract.STATE_DELTA.remains_open
+       - `next_trigger`: contract.STATE_DELTA.next_trigger
+       - `outcome_state`: `converged_final` if no incomplete phase remains, else `pending_next_phase`
+     → append companion `verifier_completed` event with canonical `phase_delta.kind=verifier_completed`
+   If contract.AGENT_ID is hunter/reviewer/verifier and contract is non-blocking:
+     → update artifact `quality.evidence_complete` toward true as coverage closes
+   If contract.AGENT_ID is verifier AND `challenge_decisions` for active phase shows `verifier_intake_state == "blocked_by_conflict"`:
+     → Create `CC-TEAMS REM-EVIDENCE: unresolved challenge conflict reached verifier`
+     → STOP until challenge decision record is resolved
+   If contract.AGENT_ID is verifier AND contract.STATUS=="PASS":
+     → apply Convergence And Phase Advancement rules before proceeding
 
 4. OUTPUT VALIDATION EVIDENCE
    ### Agent Validation: {teammate_name}
@@ -912,6 +1606,13 @@ REM-EVIDENCE tasks follow the Task Status Lag escalation ladder:
 WHEN any remediation task COMPLETES
 (`CC-TEAMS REM-FIX:` OR legacy `CC-TEAMS REMEDIATION:`):
   │
+  ├─→ 0. Update workflow artifact:
+  │      - increment `loop_counts.re_review`
+  │      - set `quality.convergence_state="needs_iteration"`
+  │      - update matching `remediation_history` entry to `state: "re-review_started"`
+  │      - append / update `traceability.remediation` with reopened requirement or acceptance-criteria gaps
+  │      - append `remediation_completed` event to `.events.jsonl` with required event base fields and canonical `phase_delta.kind=remediation_completed`
+  │
   ├─→ 1. TaskCreate({ subject: "CC-TEAMS security-reviewer: Re-review after remediation" })
   │      → Returns re_sec_id
   │
@@ -927,6 +1628,7 @@ WHEN any remediation task COMPLETES
   │
   ├─→ 5. TaskCreate({ subject: "CC-TEAMS hunter: Re-hunt after remediation" })
   │      → Returns re_hunter_id
+  │      → increment `loop_counts.re_hunt`
   │
   ├─→ 6. Find verifier task:
   │      TaskList() → Find task where subject contains "verifier"
@@ -934,6 +1636,7 @@ WHEN any remediation task COMPLETES
   │
   ├─→ 7. Block verifier on re-reviews:
   │      TaskUpdate({ taskId: verifier_task_id, addBlockedBy: [re_challenge_id, re_hunter_id] })
+  │      → next verifier pass increments `loop_counts.re_verify`
   │
   └─→ 8. Resume execution (re-reviews run before verifier)
 ```
@@ -976,6 +1679,7 @@ Run this guard before starting execution and again before starting verifier task
 ### Required BUILD blockers
 - hunter blocked by builder
 - each active reviewer blocked by hunter
+- challenge blocked by all 3 reviewers (security/performance/quality) plus conditional reviewers if present
 - challenge blocked by all active reviewers (3–5 depending on signals)
 - verifier blocked by challenge
 - memory update blocked by verifier
@@ -988,6 +1692,7 @@ If any required task or blocker is missing:
 - Canonical remediation task prefix is `CC-TEAMS REM-FIX:`.
 - Legacy prefix `CC-TEAMS REMEDIATION:` may appear in older runs; treat it as remediation too.
 - Any remediation completion must trigger re-review triad + remediation challenge + re-hunt, then re-block verifier.
+- Do not mark remediation converged in chat alone; convergence state must be reflected in the workflow artifact.
 
 ---
 
@@ -1173,11 +1878,67 @@ When parallel teammates complete (3–5 reviewers in Review Arena depending on s
    - A11y says CRITICAL, others disagree → A11y wins (regulatory/compliance impact)
    - API contract says CRITICAL, others disagree → API contract wins (client-breaking impact)
    - Performance vs Quality conflict → Present both to user with trade-off analysis
+   - Traceability conflict (different requirements / acceptance criteria at risk) → preserve the union and mark `TRACEABILITY_IMPACT=conflict_detected` for synthesis
    - No consensus → Present all active reviewer perspectives to user, let them decide
+
+   After challenge responses arrive, lead MUST persist a `challenge_decision_record` into workflow artifact `challenge_decisions`:
+   - `phase_id`
+   - `reviewers_considered`
+   - `winning_priority`
+   - `resolution_state`
+   - `accepted_risks`
+   - `reopened_proof_regressions`
+   - `unresolved_conflicts`
+   - `traceability_decision`
+   - `verifier_intake_state`
+   - `boundary_history_delta`
+
+   Each `accepted_risks` entry is a bounded exception record:
+   - `risk` - concise statement of the accepted exposure or deviation
+   - `scope_boundary` - exact requirement / acceptance / surface boundary verifier must preserve
+   - `accepted_by` - who approved carrying the risk
+   - `reason` - why this risk is tolerated for now
+   - `revalidation_trigger` - condition that forces the risk to be revisited
+   - `evidence_refs` - proof, review finding, or decision references that justify the current boundary
+   - `status` - `accepted_open` until a later workflow explicitly retires it
+
+   Verifier intake states:
+   - `clear` → no unresolved challenge conflict remains
+   - `accepted_risk` → risk accepted explicitly and verifier should verify within that accepted boundary; this is NOT equivalent to resolved
+   - `blocked_by_conflict` → unresolved conflict remains; verifier must not proceed
+
+   Challenge resolution states:
+   - `clear` → no exception or conflict remains
+   - `accepted_risk` → verifier proceeds inside an explicitly bounded accepted-risk exception
+   - `open_disagreement` → reviewer disagreement remains unresolved and verifier must not proceed
+   - `reopened_prior_proof` → a previously closed boundary has been reopened and must be re-proven before normal convergence resumes
+
+   Resolution-state mapping rules:
+   - if `reopened_proof_regressions` is non-empty → `resolution_state="reopened_prior_proof"` and `verifier_intake_state="blocked_by_conflict"`
+   - else if `accepted_risks` is non-empty and `unresolved_conflicts` is empty → `resolution_state="accepted_risk"` and `verifier_intake_state="accepted_risk"`
+   - else if `unresolved_conflicts` is non-empty → `resolution_state="open_disagreement"` and `verifier_intake_state="blocked_by_conflict"`
+   - else → `resolution_state="clear"` and `verifier_intake_state="clear"`
+
+   `boundary_history_delta` should capture only what changed for later-phase inheritance:
+   - boundaries newly accepted as risk
+   - boundaries newly reopened
+   - boundaries no longer safe to inherit without re-proof
+   - inheritance note changes caused by the challenge outcome
+
+   Each `reopened_proof_regressions` entry is a durable regression record:
+   - `boundary` - exact proof boundary that was previously closed
+   - `prior_phase_id` - the last phase that independently proved the boundary
+   - `reopened_by` - teammate or synthesis source that surfaced the regression
+   - `current_source` - remediation task, finding id, or contract reference for the reopened state
+   - `required_reproof` - the concrete proof that must be re-established
+   - `status` - `open` until the regression is re-proved or superseded by an approved decision
+     later becomes `reclosed` or `superseded` when verifier retires it with explicit evidence or approved-decision reference
+
+   Append a `challenge_decided` event to `.events.jsonl` with canonical `phase_delta.kind=challenge_decided` after the snapshot is updated.
 
 4. For downstream teammates (e.g., verifier after hunt + review challenge):
    Include ALL findings in teammate prompt:
-   "## Previous Findings\n### Hunter\n{HUNTER_FINDINGS}\n### Reviewer\n{REVIEWER_FINDINGS}"
+   "## Previous Findings\n### Hunter\n{HUNTER_FINDINGS}\n### Reviewer\n{REVIEWER_FINDINGS}\n### Traceability Risks\nRequirements at risk: {union}\nAcceptance criteria at risk: {union}\nDecision dependencies at risk: {union}"
 
 5. Before invoking verifier, run a contract-diff checkpoint:
    - Compare upstream contract claims vs downstream usage assumptions
@@ -1186,11 +1947,13 @@ When parallel teammates complete (3–5 reviewers in Review Arena depending on s
      b. EVIDENCE_COMMANDS executed and passed (red/green exits present)
      c. CLAIMED_ARTIFACTS match claimed vs actual files (if any)
      d. SPEC_COMPLIANCE alignment (builder claims PASS, but reviewer finds gap?)
+     e. TRACEABILITY alignment (reviewer/hunter risk sets vs builder/verifier satisfied/proven sets)
    - If mismatch exists:
      - Log: "Contract-diff mismatch: {dimension} - upstream={X}, downstream={Y}"
      - Create `CC-TEAMS REM-FIX: Contract-diff` task with mismatch details
      - Block verifier until mismatch resolved
    - Only invoke verifier when contract diff is clean
+   - If `challenge_decision_record.verifier_intake_state == blocked_by_conflict`, do NOT invoke verifier
 ```
 
 ### Why Both Task System AND Results Passing
@@ -1211,8 +1974,49 @@ Memory persistence is enforced via the "CC-TEAMS Memory Update" task in the task
 **When you see this task become available:**
 1. Review teammate outputs for `### Memory Notes` sections
 2. Follow the task description to persist learnings
-3. Use Read-Edit-Read pattern for each memory file
-4. Mark task completed
+3. Journal the workflow outcome canonically so Markdown memory mirrors the latest workflow artifact:
+   - `activeContext.md ## Recent Changes` → workflow kind, active phase outcome, and whether the workflow closed cleanly, converged to a next phase, or ended with an intentional boundary
+   - `activeContext.md ## Learnings` → concise phase or workflow insights worth carrying forward
+   - `progress.md ## Completed` → workflow or phase result with compact evidence reference
+   - `progress.md ## Verification` → latest artifact truth: workflow instance, phase id, convergence state, traceability status, evidence pointers, and anything intentionally left open
+4. If latest `challenge_decisions.current_phase.verifier_intake_state == "accepted_risk"`, persist the accepted-risk boundary explicitly:
+   - `activeContext.md ## Decisions` → decision statement with owner + rationale
+   - `activeContext.md ## Recent Changes` → record that workflow closed with a bounded accepted-risk exception
+   - `progress.md ## Verification` → current proof boundary, accepted exposure, and revalidation trigger
+   - `patterns.md` only when the accepted-risk handling teaches a reusable guardrail
+5. If traceability is still intentionally open after a successful checkpoint, state the boundary explicitly instead of implying closure:
+   - open next-phase requirements
+   - accepted-risk exceptions
+   - approved deferred TODO scope
+6. If `regressions.reopened_proof` is non-empty, persist reopened proof separately from accepted risk or normal deferred scope:
+   - `activeContext.md ## Recent Changes` → note that previously closed proof was reopened and is back in active remediation
+   - `progress.md ## Verification` → name the reopened boundary, prior proving phase, and required re-proof
+   - avoid compressing reopened proof into a vague "still open" note
+7. Do NOT rewrite accepted risk, reopened proof, or intentionally open scope as "resolved" or "completed"; they remain bounded exceptions until a later workflow closes them with proof or a superseding decision
+8. Use Read-Edit-Read pattern for each memory file
+9. Mark task completed
+
+Canonical workflow-final journaling expectations:
+- `activeContext.md ## Recent Changes`
+  - one line that names workflow kind, active phase, and outcome
+  - include whether the next state is `pending`, `phase_verified`, or `converged`
+- `activeContext.md ## Decisions`
+  - record any new approved decision or accepted-risk boundary created during the workflow
+- `activeContext.md ## Learnings`
+  - only distilled insights, not a replay transcript
+- `progress.md ## Completed`
+  - index the completed workflow or completed phase with the strongest evidence reference
+- `progress.md ## Verification`
+  - mirror workflow artifact truth in compact form:
+    - `workflow_instance`
+    - `phase_id` / `phase_cursor`
+    - `quality.convergence_state`
+    - `traceability.status`
+    - `challenge_decisions.current_phase.resolution_state` when present
+    - `regressions.reopened_proof` when present
+    - `phase_transition_summaries.latest_verified` when present
+    - evidence references or commands
+    - intentionally open items with their boundary or next trigger
 
 **Why task-enforced:**
 - Tasks survive context compaction
@@ -1265,7 +2069,7 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 2. **No session resumption.** `/resume` does NOT restore teammates. See Session Interruption Recovery above.
 3. **No nested teams.** Bug Court/Pair Build post-fix or post-hunt review gates must reuse the existing team, not spawn a new team. Spawn reviewer teammates into the existing team instead.
 4. **Lead's history doesn't carry over.** When creating a team, lead's conversation history is NOT available to teammates. All context must be passed via task descriptions, messages, or memory files.
-5. **Teammates CAN see CLAUDE.md + project skills.** Unlike CC10x subagents, Agent Teams teammates load CLAUDE.md and project-level skills automatically.
+5. **Teammates use normal Claude Code session context.** They can use `CLAUDE.md`, project skills, and configured project/user MCP, but do NOT assume subagent-definition `skills:` or `mcpServers:` frontmatter is applied automatically on the teammate path.
 6. **No synchronization primitives.** Pair Build's builder-reviewer sync uses message-based polling, not blocking waits.
 7. **Delegate mode is MANDATORY.** Lead must enter delegate mode (Shift+Tab) after team creation to prevent accidentally implementing code.
 8. **Token cost awareness.** Agent Teams uses significantly more tokens than single-agent workflows. Each teammate has its own context window. Minimize unnecessary parallel spawns — only parallelize when the protocol requires it (e.g., 3 reviewers in Review Arena, multiple investigators in Bug Court).
@@ -1285,20 +2089,26 @@ These constraints come from the Agent Teams architecture. Violating them causes 
 | Kill all background agents | **Ctrl+F** (two-press confirm) | Emergency stop all teammates |
 | Interrupt teammate | **Escape** | Stop a teammate that's stuck or off-track |
 
-## Hook-Driven Quality Gates (Opt-in via `plugins/cc-teams/settings.json`)
+## Hook-Driven Quality Gates (Opt-in by merging `plugins/cc-teams/settings.json` into Claude Code settings)
 
 CC-Teams core orchestration works without hooks. Hooks add an automated safety net layer on top.
-When `plugins/cc-teams/settings.json` is loaded, four hooks activate:
+When the hook snippet from `plugins/cc-teams/settings.json` is merged into Claude Code settings, baseline hooks activate and optional audit hooks may also run. Hook commands must resolve from `CLAUDE_PROJECT_DIR`, not from whatever nested `cwd` the hook fired under.
 
 | Hook | Trigger | CC-Teams Effect |
 |------|---------|-----------------|
 | `TeammateIdle` | Teammate going idle | Enforces Router Contract YAML presence |
-| `TaskCompleted` | Task marked complete | Enforces Memory Update file existence |
+| `TaskCreated` | Task being created | Enforces task identity-stamp metadata before creation |
+| `TaskCompleted` | Task marked complete | Enforces task identity-stamp metadata + Memory Update runtime invariants |
 | `WorktreeCreate` | Builder worktree created | Syncs `.claude/cc-teams/` to new worktree |
 | `PreCompact` | Context compaction imminent | Writes checkpoint marker to `progress.md` |
+| `SessionStart` | Session opens/resumes | Injects compact workflow context for safe resume |
+| `PostCompact` | Context compaction completed | Appends compact replay telemetry |
+| `Stop` | Session stop | Persists compact stop snapshot for resume |
+| `StopFailure` | Stop API failure | Logs stop-failure telemetry for audit |
+| `InstructionsLoaded` | Instructions file load | Audits instruction-loading events |
 
-Hook scripts: `plugins/cc-teams/hooks/`
-Core behavior is unchanged if hooks are not installed or `settings.json` is not loaded.
+Hook scripts: `plugins/cc-teams/hooks/` and `plugins/cc-teams/scripts/`
+Core behavior is unchanged if hooks are not installed or the hook settings snippet is not merged into Claude Code settings.
 
 ## Model Selection Guidance
 
@@ -1376,7 +2186,7 @@ After workflow completes AND memory is updated AND test processes cleaned:
    - **If rejected with non-task reason** (error, bug, other): AskUserQuestion IMMEDIATELY
    - **Never retry more than once per rejection** — infinite retry loops cause workflow hang
 3. After approvals → `TeamDelete()`
-4. If `TeamDelete()` fails 3x → AskUserQuestion: "Proceed (manual cleanup) or Abort?"
+4. If `TeamDelete()` fails, retry up to 3 times, then AskUserQuestion: "Proceed (manual cleanup) or Abort?"
 5. Report results only after cleanup succeeds OR user chose "Proceed"
 
 **Team Naming:** `cc-teams-{project_key}-{workflow}-{YYYYMMDD-HHMMSS}`

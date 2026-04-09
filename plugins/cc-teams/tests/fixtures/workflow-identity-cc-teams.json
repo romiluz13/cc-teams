@@ -1,0 +1,57 @@
+{
+  "id": "workflow-identity-cc-teams",
+  "workflow_type": "BUILD",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-shop-build-20260409-120000",
+    "workflow_kind": "BUILD",
+    "project_root": "/workspace/shop",
+    "team_name": "cc-teams-shop-build-20260409-120000",
+    "plan_file": "docs/plans/2026-04-09-checkout-plan.md",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "standard",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Implement checkout flow"
+    },
+    "traceability": {
+      "requirements": [],
+      "phases": [],
+      "verification": [],
+      "remediation": []
+    },
+    "normalized_phases": [],
+    "active_phase_contract": {},
+    "phase_cursor": "phase-1",
+    "task_ids": {},
+    "phase_status": {},
+    "results": {},
+    "evidence": {},
+    "challenge_decisions": {},
+    "regressions": {},
+    "boundary_history": {},
+    "phase_transition_summaries": {},
+    "loop_counts": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "memory_notes_collected": [],
+    "pending_gate": "TEAM_CREATED",
+    "resume_entrypoint": "spawn builder",
+    "stale_assumptions": [],
+    "debug_reset_marker": null,
+    "attempt_baseline": null,
+    "created_at": "2026-04-09T12:00:00Z",
+    "updated_at": "2026-04-09T12:00:00Z"
+  },
+  "relevant_tasks": {
+    "previous_session_ids": [
+      "cc-teams-shop-build-20260408-103000",
+      "cc-teams-shop-build-20260408-220000"
+    ]
+  },
+  "agent_outputs": {},
+  "expected": {
+    "collides_with_previous_session": false
+  }
+}

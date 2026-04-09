@@ -1,0 +1,47 @@
+{
+  "id": "task-created-guard",
+  "starting_artifact": {
+    "workflow_instance": "wf-build-1700000012",
+    "team_name": "wf-build-1700000012",
+    "workflow_kind": "BUILD",
+    "project_root": "/workspace/build",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "strict",
+    "proof_status": "pending",
+    "intent": {
+      "goal": "Block unstamped CC-Teams task creation"
+    },
+    "traceability": {},
+    "phase_cursor": "phase-1",
+    "task_ids": {},
+    "results": {},
+    "evidence": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "pending_gate": "task_created_guard",
+    "resume_entrypoint": "recreate task with identity stamp",
+    "stale_assumptions": []
+  },
+  "expected": {
+    "event": "task_creation_blocked",
+    "required_fields": [
+      "wf",
+      "event",
+      "phase_cursor",
+      "pending_gate",
+      "source",
+      "summary",
+      "task_subject",
+      "task_id"
+    ]
+  },
+  "hook_input": {
+    "task_id": "task-cc-teams-001",
+    "task_subject": "CC-TEAMS builder: Implement auth fix",
+    "task_description": "Missing required identity stamp",
+    "teammate_name": "builder",
+    "team_name": "wf-build-1700000012"
+  }
+}

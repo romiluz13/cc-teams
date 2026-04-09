@@ -55,7 +55,7 @@ line_of_file() {
 # Required protocol sections
 require_pattern "^## Remediation Re-Review Loop" "Lead must define Remediation Re-Review Loop section"
 require_pattern "^##+# Task Status Lag \(Agent Teams\)" "Lead must define Task Status Lag escalation section"
-require_pattern "^## Team Shutdown \(Gate #13\)" "Lead must define Team Shutdown gate section"
+require_pattern "^## Team Shutdown \(Gate #14\)" "Lead must define Team Shutdown gate section"
 require_pattern "^## Gates \(Must Pass\)" "Lead must define mandatory gates section"
 require_pattern "^## Phase-Scoped Teammate Activation \(MANDATORY\)" "Lead must define phase-scoped teammate activation"
 require_pattern "^## Orphan Task Recovery \(MANDATORY\)" "Lead must define deterministic orphan task recovery"
@@ -132,7 +132,8 @@ for gate in \
   "10\\. \*\*CONTRACTS_VALIDATED\*\*" \
   "11\\. \*\*ALL_TASKS_COMPLETED\*\*" \
   "12\\. \*\*MEMORY_UPDATED\*\*" \
-  "13\\. \*\*TEAM_SHUTDOWN\*\*"; do
+  "13\\. \*\*TEST_PROCESSES_CLEANED\*\*" \
+  "14\\. \*\*TEAM_SHUTDOWN\*\*"; do
   require_pattern "$gate" "Missing gate definition: $gate"
 done
 

@@ -1,0 +1,40 @@
+{
+  "id": "stop-failure-log",
+  "workflow_type": "BUILD",
+  "starting_artifact": {
+    "workflow_instance": "cc-teams-proof-build-20260409-130500",
+    "workflow_kind": "BUILD",
+    "project_root": "/workspace/proof",
+    "team_name": "cc-teams-proof-build-20260409-130500",
+    "plan_mode": "execution_plan",
+    "verification_rigor": "standard",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Ship proof flow safely"
+    },
+    "traceability": {},
+    "phase_cursor": "phase-1",
+    "task_ids": {},
+    "results": {},
+    "evidence": {},
+    "quality": {
+      "convergence_state": "pending"
+    },
+    "remediation_history": [],
+    "pending_gate": "memory_sync",
+    "resume_entrypoint": "persist workflow-final memory sync",
+    "stale_assumptions": [],
+    "memory_sync": {
+      "blocking_exit_persisted": false
+    }
+  },
+  "expected": {
+    "event": "stop_failure",
+    "required_fields": [
+      "error_type",
+      "pending_gate",
+      "memory_sync_persisted",
+      "resume_entrypoint"
+    ]
+  }
+}

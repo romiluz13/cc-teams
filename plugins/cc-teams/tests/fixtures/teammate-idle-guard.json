@@ -1,0 +1,49 @@
+{
+  "id": "teammate-idle-guard",
+  "starting_artifact": {
+    "workflow_instance": "wf-review-1700000011",
+    "team_name": "wf-review-1700000011",
+    "workflow_kind": "REVIEW",
+    "project_root": "/workspace/review",
+    "plan_mode": "review_plan",
+    "verification_rigor": "strict",
+    "proof_status": "gaps_found",
+    "intent": {
+      "goal": "Keep hunter from idling without a Router Contract"
+    },
+    "task_ids": {},
+    "results": {},
+    "evidence": {},
+    "phase_cursor": "challenge",
+    "phase_status": {
+      "state": "active"
+    },
+    "quality": {
+      "convergence_state": "needs_iteration"
+    },
+    "remediation_history": [],
+    "pending_gate": "teammate_idle_guard",
+    "resume_entrypoint": "re-request Router Contract from hunter",
+    "stale_assumptions": [],
+    "traceability": {}
+  },
+  "expected": {
+    "event": "teammate_idle_blocked",
+    "required_fields": [
+      "wf",
+      "event",
+      "workflow_kind",
+      "phase_cursor",
+      "pending_gate",
+      "source",
+      "summary",
+      "teammate",
+      "reason"
+    ]
+  },
+  "hook_input": {
+    "teammate_name": "hunter",
+    "team_name": "wf-review-1700000011",
+    "last_assistant_message": "No contract emitted yet."
+  }
+}

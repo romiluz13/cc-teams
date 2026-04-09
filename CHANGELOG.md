@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0] - 2026-04-09
+
+### Added
+
+- Claude Code capability validation matrix and enforced `check:claude-doc-validation` gate
+- `TaskCreated` guard coverage in the optional hook runtime and replay fixtures
+- Canonical 26-case benchmark corpus parity and deterministic fixture-index validation
+- Replay-readiness, release-audit, and hook-runtime validation under `npm run check:cc-teams`
+
+### Changed
+
+- Promoted CC-Teams to the `0.2.0` production release baseline
+- Aligned hook/runtime doctrine to official Claude Code docs, including `CLAUDE_PROJECT_DIR` path resolution and documented `WorktreeCreate` semantics
+- Clarified that plugin `settings.json` is a repo-shipped settings snippet, not an undocumented auto-load contract
+- Clarified teammate skill/MCP doctrine so CC-Teams relies on normal session context plus explicit `Skill()` loading, not undocumented subagent-frontmatter behavior
+- Refreshed README and governance docs to describe the shipped release baseline
+
+### Fixed
+
+- README agent roster now matches the actual 14-agent runtime by documenting `plan-gap-reviewer`
+- Expected behavior runbook now points at the correct repository root and release version
+
 ## [0.1.18] - 2026-02-22
 
 ### Added
